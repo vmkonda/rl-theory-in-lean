@@ -119,6 +119,11 @@ where $\Sigma$ is the unique solution of the Lyapunov equation
 \end{equation}
 \end{theorem}
 
+\noindent\emph{Lean:} \texttt{tendsto\_secondMoment\_of\_markov\_noise}, fully formalized.
+There, stability takes the form of Remark~\ref{rem:posdef}; the martingale property is stated
+componentwise, $\E[(M_{k+1})_j\mid\F_k] = 0$; and the moment conditions are
+$h_k, M_{k+1} \in L^2$ with $\sup_k\E\|h_k\|^2 < \infty$ and $\sup_k\E\|M_{k+1}\|^2 < \infty$.
+
 The proof occupies the rest of this section. Throughout, $C$ denotes a constant that
 does not depend on $k$ and may change from line to line.
 
@@ -160,6 +165,8 @@ Now $\theta_k + \beta_kh_k = \theta'_k$ and
 $-\beta_kA\theta_k = -\beta_kA\theta'_k + \beta_k^2Ah_k$. The bound follows from
 Lemma~\ref{lem:step} and $\sup_k\E\|h_k\|^2 < \infty$.
 \end{proof}
+\noindent\emph{Lean:} \texttt{shifted\_iterate} (the identity, pointwise); adaptedness and
+square integrability of the iterates are \texttt{iterates\_adapted}.
 
 \subsection{The second-moment recursion}
 
@@ -181,6 +188,11 @@ By Cauchy--Schwarz, $\|\E[ac^\top]\| \le \sqrt{\E\|a\|^2\,\E\|c\|^2} \le C\sqrt{
 $\|\E[bc^\top]\| \le C\beta_k\cdot\beta_k^2$ and $\|\E[cc^\top]\| \le C\beta_k^4$, using
 Lemma~\ref{lem:cov}.
 \end{proof}
+\noindent\emph{Lean:} \texttt{secondMoment\_recursion}, built on \texttt{crossMoment\_eq\_zero}
+(tower property, via the pull-out property of conditional expectation),
+\texttt{norm\_crossMoment\_le} (Cauchy--Schwarz), \texttt{secondMoment\_sub\_smul} (the term
+$\E[aa^\top]$), and \texttt{integral\_norm\_sq\_le} ($\E\|x\|^2 \le d\,\|\E[xx^\top]\|$, used in
+place of $\tr P_k$).
 
 \subsection{An a priori bound}
 

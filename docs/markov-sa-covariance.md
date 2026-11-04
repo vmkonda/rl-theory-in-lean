@@ -68,6 +68,8 @@ where $`\Sigma`$ is the unique solution of the Lyapunov equation
 
 </div>
 
+*Lean:* `tendsto_secondMoment_of_markov_noise`, fully formalized. There, stability takes the form of Remark [1.3](#rem:posdef); the martingale property is stated componentwise, $`\mathbb{E}[(M_{k+1})_j\mid\mathcal{F}_k] = 0`$; and the moment conditions are $`h_k, M_{k+1} \in L^2`$ with $`\sup_k\mathbb{E}\|h_k\|^2 < \infty`$ and $`\sup_k\mathbb{E}\|M_{k+1}\|^2 < \infty`$.
+
 The proof occupies the rest of this section. Throughout, $`C`$ denotes a constant that does not depend on $`k`$ and may change from line to line.
 
 ### 2.1 Step sizes
@@ -111,6 +113,8 @@ Now $`\theta_k + \beta_kh_k = \theta'_k`$ and $`-\beta_kA\theta_k = -\beta_kA\th
 
 </div>
 
+*Lean:* `shifted_iterate` (the identity, pointwise); adaptedness and square integrability of the iterates are `iterates_adapted`.
+
 ### 2.3 The second-moment recursion
 
 <div id="lem:rec" class="lemma">
@@ -129,6 +133,8 @@ P_{k+1} = (I - \beta_kA)P_k(I - \beta_kA)^\top + \beta_k^2\Gamma_k + R_k,
 *Proof.* Write $`\theta'_{k+1} = a + b + c`$ with $`a = (I - \beta_kA)\theta'_k`$, $`b = \beta_kM_{k+1}`$, $`c = \varepsilon_{k+1}`$. Since $`a`$ is $`\mathcal{F}_k`$-measurable and $`\mathbb{E}[M_{k+1}\mid\mathcal{F}_k] = 0`$, the tower property gives $`\mathbb{E}[ab^\top] = 0`$. Hence $`P_{k+1} = \mathbb{E}[aa^\top] + \mathbb{E}[bb^\top] + R_k`$ with $`R_k = \mathbb{E}[ac^\top + ca^\top + bc^\top + cb^\top + cc^\top]`$, and $`\mathbb{E}[bb^\top] = \beta_k^2\Gamma_k`$. By Cauchy–Schwarz, $`\|\mathbb{E}[ac^\top]\| \le \sqrt{\mathbb{E}\|a\|^2\,\mathbb{E}\|c\|^2} \le C\sqrt{\mathop{\mathrm{tr}}P_k}\,\beta_k^2`$, $`\|\mathbb{E}[bc^\top]\| \le C\beta_k\cdot\beta_k^2`$ and $`\|\mathbb{E}[cc^\top]\| \le C\beta_k^4`$, using Lemma [2.3](#lem:cov). ◻
 
 </div>
+
+*Lean:* `secondMoment_recursion`, built on `crossMoment_eq_zero` (tower property, via the pull-out property of conditional expectation), `norm_crossMoment_le` (Cauchy–Schwarz), `secondMoment_sub_smul` (the term $`\mathbb{E}[aa^\top]`$), and `integral_norm_sq_le` ($`\mathbb{E}\|x\|^2 \le d\,\|\mathbb{E}[xx^\top]\|`$, used in place of $`\mathop{\mathrm{tr}}P_k`$).
 
 ### 2.4 An a priori bound
 

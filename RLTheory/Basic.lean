@@ -8,3 +8,4 @@ import RLTheory.MarkovDecisionProcess.PolicyGradient
 import RLTheory.StochasticApproximation.GradientAscent
 import RLTheory.MarkovDecisionProcess.PolicyGradientLipschitz
 import RLTheory.StochasticApproximation.CovarianceRecursion
+import RLTheory.StochasticApproximation.MarkovNoiseCovariance
