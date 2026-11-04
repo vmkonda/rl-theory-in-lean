@@ -1,0 +1,624 @@
+% Policy gradient for discounted finite MDPs: a human-readable account of
+%   RLTheory/MarkovDecisionProcess/PolicyFamily.lean
+%   RLTheory/MarkovDecisionProcess/PolicyGradient.lean
+%   RLTheory/Analysis/Calculus/Gradient.lean
+%
+% Compile with:  pdflatex policy-gradient.tex   (run twice for cross-references)
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{booktabs}
+\usepackage[margin=1.1in]{geometry}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+
+% Lean declaration names, printed verbatim (underscores allowed).
+\newcommand{\lean}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\leanref}[1]{\par{\raggedleft\small Lean:~\lean{#1}\par}}
+\emergencystretch=3em
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\X}{\mathcal{S}}
+\newcommand{\U}{\mathcal{A}}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\inner}[2]{\langle #1, #2\rangle}
+\DeclareMathOperator{\adj}{adj}
+\DeclareMathOperator{\sgn}{sgn}
+
+\title{Policy Gradients for Discounted Finite MDPs:\\ A Formalized Account}
+\author{Vijaymohan Konda}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We give a self-contained account of the policy gradient theorem for discounted
+Markov decision processes with finite state and action spaces, following the
+formalization in Lean~4 contained in the \lean{rl-theory-in-lean} project. The
+results are finite-MDP counterparts of the gradient formulas of Chapter~2 of
+\emph{Actor-Critic Algorithms} (Konda, 2002), and are the first step towards
+formalizing the convergence of actor-critic algorithms. Every definition,
+lemma and theorem below has been machine-checked; the name of the corresponding
+Lean declaration is given after each statement.
+\end{abstract}
+
+\tableofcontents
+
+%======================================================================
+\section{Introduction}
+%======================================================================
+
+Actor-critic algorithms search for a good policy within a parameterized family
+$\{\pi_\theta : \theta \in \R^n\}$ by following an estimate of the gradient of the
+overall reward with respect to $\theta$. The starting point of their analysis is
+a formula expressing that gradient in terms of quantities that can be estimated
+from simulation: the stationary (or discounted) distribution of state-decision
+pairs, the state-decision value function $Q_\theta$, and the \emph{score}
+$\psi_\theta = \nabla_\theta \log \pi_\theta$.
+
+This note proves that formula for discounted finite MDPs. Two features of the
+setting simplify matters considerably compared to the general state spaces of
+the thesis.
+\begin{enumerate}
+\item All objects are finite-dimensional, so value functions are obtained by
+  inverting a matrix, and differentiability can be established by elementary
+  means (Cramer's rule), with no uniform integrability arguments.
+\item We work with \emph{strictly positive} policies. Then the support of the
+  induced Markov chain does not depend on $\theta$, so irreducibility and
+  aperiodicity need only be checked at a single parameter value.
+\end{enumerate}
+
+The proof of the main theorem (Theorem~\ref{thm:pg}) avoids differentiating a
+matrix inverse altogether. Instead we differentiate the Bellman equation and
+observe that the gradient of the value function solves a Bellman equation of
+its own, whose unique solution is given by the same resolvent.
+
+\paragraph{Organization.} Section~\ref{sec:setting} fixes the model.
+Section~\ref{sec:policies} introduces parameterized policies and the softmax
+family. Section~\ref{sec:values} develops the value function of a fixed policy.
+Section~\ref{sec:differentiability} establishes differentiability, and
+Section~\ref{sec:gradient} proves the policy gradient theorem.
+Section~\ref{sec:lean} lists the correspondence with the Lean code and the
+relation to the thesis.
+
+%======================================================================
+\section{Setting}\label{sec:setting}
+%======================================================================
+
+Throughout, $\X$ and $\U$ are finite nonempty sets of states and decisions
+(actions). A vector $x \in \R^{\X}$ is \emph{stochastic} if $x(s) \ge 0$ for all
+$s$ and $\sum_s x(s) = 1$; a matrix is \emph{row stochastic} if each of its rows is
+stochastic.
+
+\begin{definition}[Finite MDP]\label{def:mdp}
+A \emph{finite MDP} consists of
+\begin{itemize}
+\item transition probabilities $P(s' \mid s, a)$, such that $P(\cdot \mid s, a)$ is
+  stochastic for each $(s,a) \in \X \times \U$;
+\item a one-stage reward $r : \X \times \U \to \R$;
+\item an initial distribution $p_0$ on $\X$;
+\item a discount factor $\gamma \in [0, 1)$.
+\end{itemize}
+\leanref{TabularMDP}
+\end{definition}
+
+A (randomized stationary) \emph{policy} is a map $\pi : \X \times \U \to \R$ such
+that $\pi(\cdot \mid s)$ is stochastic for every $s$. A policy induces
+\begin{align*}
+  P_\pi(s, s') &= \sum_{a} \pi(a \mid s)\, P(s' \mid s, a)
+    && \text{(state transition matrix)}, \\
+  r_\pi(s) &= \sum_{a} \pi(a \mid s)\, r(s, a)
+    && \text{(expected one-stage reward)}, \\
+  \bar P_\pi\big((s,a), (s',a')\big) &= P(s' \mid s, a)\, \pi(a' \mid s')
+    && \text{(state-decision transition matrix)}.
+\end{align*}
+\leanref{TabularMDP.stateMat, TabularMDP.stateReward, TabularMDP.saMat}
+
+\begin{lemma}\label{lem:rowstoch}
+If $\pi$ is a policy, then $P_\pi$ and $\bar P_\pi$ are row stochastic.
+\end{lemma}
+\begin{proof}
+Nonnegativity is clear. For the row sums,
+$\sum_{s'} P_\pi(s,s') = \sum_a \pi(a\mid s) \sum_{s'} P(s'\mid s,a) = \sum_a \pi(a\mid s) = 1$,
+and similarly
+$\sum_{s',a'} \bar P_\pi((s,a),(s',a')) = \sum_{s'} P(s'\mid s,a) \sum_{a'} \pi(a'\mid s') = 1$.
+\end{proof}
+\leanref{TabularMDP.rowStochastic_stateMat, TabularMDP.rowStochastic_saMat}
+
+\begin{remark}
+The existing development in \lean{rl-theory-in-lean} represents an MDP through
+probability measures and Markov kernels (\lean{MDPSpec}, \lean{FiniteMDP}). The
+real-valued representation above is equivalent for finite spaces and is far more
+convenient for calculus. The two are connected: every \lean{MDPSpec} yields a
+\lean{TabularMDP} (\lean{MDPSpec.toTabular}), and the state-decision chain of a
+\lean{FiniteMDP} used in the existing TD and Q-learning results is exactly
+$\bar P_\pi$ (\lean{FiniteMDP.MRP_P_eq_saMat}).
+\end{remark}
+
+%======================================================================
+\section{Parameterized policies}\label{sec:policies}
+%======================================================================
+
+\begin{definition}[Policy family]\label{def:family}
+A \emph{policy family} with $n$ parameters is a map
+$\theta \mapsto \pi_\theta$ from $\R^n$ to policies such that
+\begin{enumerate}
+\item $\pi_\theta(a \mid s) > 0$ for all $\theta$, $s$, $a$; and
+\item $\theta \mapsto \pi_\theta(a \mid s)$ is differentiable for all $s$, $a$.
+\end{enumerate}
+The \emph{score} of the family is
+\[
+  \psi_\theta(s, a) = \nabla_\theta \log \pi_\theta(a \mid s) \in \R^n .
+\]
+\leanref{PolicyFamily, PolicyFamily.score}
+\end{definition}
+
+\begin{lemma}[Likelihood ratio]\label{lem:lr}
+For all $\theta$, $s$, $a$,
+\[
+  \nabla_\theta\, \pi_\theta(a \mid s) = \pi_\theta(a \mid s)\, \psi_\theta(s,a).
+\]
+\end{lemma}
+\begin{proof}
+Since $\pi_\theta(a\mid s) > 0$, the chain rule gives
+$\psi_\theta(s,a) = \pi_\theta(a\mid s)^{-1}\, \nabla_\theta \pi_\theta(a\mid s)$.
+Multiply by $\pi_\theta(a\mid s)$.
+\end{proof}
+\leanref{PolicyFamily.hasGradientAt_pi}
+
+\begin{lemma}[The score has mean zero]\label{lem:mean-zero}
+For all $\theta$ and $s$,
+\[
+  \sum_{a} \pi_\theta(a \mid s)\, \psi_\theta(s,a) = 0 .
+\]
+\end{lemma}
+\begin{proof}
+By Lemma~\ref{lem:lr}, the left side is
+$\nabla_\theta \sum_a \pi_\theta(a\mid s) = \nabla_\theta 1 = 0$.
+\end{proof}
+\leanref{PolicyFamily.sum_smul_score_eq_zero}
+
+\subsection{The softmax family}
+
+Let $\phi : \X \times \U \to \R^n$ be a feature map. The \emph{softmax} (or Gibbs)
+policy is
+\[
+  \pi_\theta(a \mid s) =
+  \frac{\exp \inner{\theta}{\phi(s,a)}}{\sum_{b} \exp \inner{\theta}{\phi(s,b)}} .
+\]
+\leanref{softmax, softmaxFamily}
+
+\begin{proposition}\label{prop:softmax}
+The softmax policies form a policy family, and its score is the centered feature:
+\[
+  \psi_\theta(s,a) = \phi(s,a) - \sum_{b} \pi_\theta(b\mid s)\, \phi(s,b).
+\]
+\end{proposition}
+\begin{proof}
+The denominator $Z_\theta(s) = \sum_b \exp\inner{\theta}{\phi(s,b)}$ is positive, so
+$\pi_\theta(a\mid s) > 0$; the probabilities clearly sum to one; and
+$\pi_\theta(a\mid s)$ is a product of the differentiable functions
+$\exp\inner{\theta}{\phi(s,a)}$ and $Z_\theta(s)^{-1}$. For the score, write
+$\log \pi_\theta(a\mid s) = \inner{\theta}{\phi(s,a)} - \log Z_\theta(s)$ and note that
+$\nabla_\theta Z_\theta(s) = \sum_b \exp\inner{\theta}{\phi(s,b)}\, \phi(s,b)$, so that
+$\nabla_\theta \log Z_\theta(s) = \sum_b \pi_\theta(b\mid s)\,\phi(s,b)$.
+\end{proof}
+\leanref{softmax_pos, softmax_stochastic, differentiable_softmax, softmaxFamily_score}
+
+\subsection{Irreducibility and aperiodicity}
+
+Convergence results for simulation-based algorithms require the Markov chain
+of state-decision pairs to be irreducible and aperiodic for every policy in the
+family (Assumption~2.4 of the thesis). For strictly positive families it is
+enough to check this at a single parameter.
+
+\begin{lemma}\label{lem:pattern}
+Let $B$ and $C$ be square matrices with nonnegative entries and the same
+positivity pattern, i.e.\ $B_{ij} > 0 \iff C_{ij} > 0$. Then for every $m \ge 0$,
+$B^m$ and $C^m$ have the same positivity pattern.
+\end{lemma}
+\begin{proof}
+Induction on $m$, the case $m = 0$ being trivial. Since all entries are
+nonnegative,
+$(B^{m+1})_{ij} = \sum_k (B^m)_{ik} B_{kj} > 0$ if and only if there is $k$ with
+$(B^m)_{ik} > 0$ and $B_{kj} > 0$. By the induction hypothesis and the assumption,
+the same condition characterizes $(C^{m+1})_{ij} > 0$.
+\end{proof}
+\leanref{pow_pos_iff_of_pos_iff}
+
+\begin{proposition}\label{prop:support}
+Let $\{\pi_\theta\}$ be a policy family and $\theta_0, \theta \in \R^n$. If
+$\bar P_{\pi_{\theta_0}}$ is irreducible (respectively aperiodic), then so is
+$\bar P_{\pi_\theta}$.
+\end{proposition}
+\begin{proof}
+Since $\pi_\theta(a'\mid s') > 0$, the entry
+$\bar P_{\pi_\theta}((s,a),(s',a')) = P(s'\mid s,a)\,\pi_\theta(a'\mid s')$ is positive
+if and only if $P(s'\mid s,a) > 0$, a condition independent of $\theta$. By
+Lemma~\ref{lem:pattern}, all powers of $\bar P_{\pi_{\theta_0}}$ and
+$\bar P_{\pi_\theta}$ have the same positivity pattern. Irreducibility (for all
+$y, z$ some power has a positive $(y,z)$ entry) and aperiodicity (for each $y$ the
+set of return times $\{m \ge 1 : (\bar P^m)_{yy} > 0\}$ has greatest common divisor
+one) depend only on these patterns.
+\end{proof}
+\leanref{PolicyFamily.saMat_pow_pos_iff, PolicyFamily.irreducible_saMat, PolicyFamily.aperiodic_saMat}
+
+\begin{remark}
+Proposition~\ref{prop:support} does \emph{not} give mixing rates that are uniform
+in $\theta$; for the softmax family the chain can mix arbitrarily slowly as
+$\|\theta\| \to \infty$. Uniform geometric ergodicity (Assumption~2.5 of the
+thesis) therefore remains a genuine assumption for the convergence analysis of
+actor-critic algorithms, to be imposed later.
+\end{remark}
+
+%======================================================================
+\section{Value functions of a fixed policy}\label{sec:values}
+%======================================================================
+
+Fix a policy $\pi$ and abbreviate $P = P_\pi$. Define the \emph{resolvent}
+\[
+  R_\pi = (I - \gamma P_\pi)^{-1},
+\]
+and the value functions and objective
+\begin{align*}
+  V_\pi &= R_\pi\, r_\pi, \\
+  Q_\pi(s,a) &= r(s,a) + \gamma \sum_{s'} P(s' \mid s,a)\, V_\pi(s'), \\
+  J(\pi) &= \sum_s p_0(s)\, V_\pi(s).
+\end{align*}
+Finally define the normalized discounted state visitation distribution and the
+corresponding state-decision occupancy measure
+\[
+  d_\pi = (1 - \gamma)\, p_0^\top R_\pi, \qquad
+  \eta_\pi(s, a) = d_\pi(s)\, \pi(a \mid s).
+\]
+\leanref{TabularMDP.resolvent, TabularMDP.V, TabularMDP.Q, TabularMDP.J, TabularMDP.visitation, TabularMDP.occupancy}
+
+Since $R_\pi = \sum_{k \ge 0} \gamma^k P_\pi^k$ when the series converges, $d_\pi(s)$ is
+the (normalized) expected discounted number of visits to $s$ starting from $p_0$.
+We do not use this series; all properties of $R_\pi$ needed below are derived
+from two maximum/minimum principles.
+
+\begin{lemma}\label{lem:invertible}
+$I - \gamma P_\pi$ is invertible.
+\end{lemma}
+\begin{proof}
+It suffices to show that $(I - \gamma P)v = 0$ implies $v = 0$. Such a $v$ satisfies
+$v = \gamma P v$. Choose $s_0$ maximizing $|v(s)|$. Since the row $P(s_0, \cdot)$ is
+stochastic,
+\[
+  |v(s_0)| = \gamma \Big| \sum_{s'} P(s_0,s')\, v(s') \Big|
+  \le \gamma \sum_{s'} P(s_0,s')\, |v(s_0)| = \gamma\, |v(s_0)| .
+\]
+As $\gamma < 1$, this forces $|v(s_0)| = 0$, hence $v = 0$.
+\end{proof}
+\leanref{TabularMDP.isUnit_one_sub_smul_stateMat}
+
+Consequently $(I - \gamma P)R_\pi = R_\pi(I - \gamma P) = I$, and in particular
+\begin{equation}\label{eq:resolvent}
+  R_\pi = I + \gamma P_\pi R_\pi .
+\end{equation}
+\leanref{TabularMDP.one_sub_mul_resolvent, TabularMDP.resolvent_mul_one_sub, TabularMDP.resolvent_apply}
+
+\begin{lemma}[Minimum principle]\label{lem:minprinciple}
+If $u, b \in \R^{\X}$ satisfy $u = b + \gamma P_\pi u$ and $b \ge 0$, then $u \ge 0$.
+\end{lemma}
+\begin{proof}
+Choose $s_0$ minimizing $u$. Since $P(s_0,\cdot)$ is stochastic,
+$u(s_0) \le \sum_{s'} P(s_0,s')\,u(s')$. Using $b(s_0) \ge 0$ and $\gamma \ge 0$,
+\[
+  u(s_0) = b(s_0) + \gamma \sum_{s'} P(s_0,s')\, u(s') \ge \gamma\, u(s_0),
+\]
+so $(1-\gamma)\,u(s_0) \ge 0$ and $u(s_0) \ge 0$. Hence $u \ge u(s_0) \ge 0$.
+\end{proof}
+\leanref{TabularMDP.nonneg_of_eq_add}
+
+\begin{corollary}\label{cor:resolvent}
+The resolvent has nonnegative entries and each of its rows sums to
+$(1-\gamma)^{-1}$:
+\[
+  R_\pi(s,j) \ge 0, \qquad \sum_j R_\pi(s,j) = \frac{1}{1-\gamma} .
+\]
+\end{corollary}
+\begin{proof}
+For fixed $j$, the column $u = R_\pi(\cdot, j)$ satisfies $u = e_j + \gamma P u$ by
+\eqref{eq:resolvent}, so $u \ge 0$ by Lemma~\ref{lem:minprinciple}. For the row
+sums, let $c = (1-\gamma)^{-1}$, so that $c = 1 + \gamma c$. Summing
+\eqref{eq:resolvent} over $j$ shows that $w(s) = \sum_j R_\pi(s,j) - c$ satisfies
+$w = \gamma P w$, using that $P$ is row stochastic. Applying
+Lemma~\ref{lem:minprinciple} with $b = 0$ to both $w$ and $-w$ gives $w = 0$.
+\end{proof}
+\leanref{TabularMDP.resolvent_nonneg, TabularMDP.sum_resolvent}
+
+\begin{proposition}[Bellman equation]\label{prop:bellman}
+$V_\pi = r_\pi + \gamma P_\pi V_\pi$, and
+$V_\pi(s) = \sum_a \pi(a\mid s)\, Q_\pi(s,a)$ for every $s$.
+\end{proposition}
+\begin{proof}
+$(I - \gamma P)V_\pi = (I-\gamma P)R_\pi r_\pi = r_\pi$, which rearranges to the
+first identity. For the second,
+$\sum_a \pi(a\mid s) Q_\pi(s,a) = r_\pi(s) + \gamma \sum_{s'} P_\pi(s,s') V_\pi(s')$
+by the definitions of $Q_\pi$ and $P_\pi$, which equals $V_\pi(s)$ by the first
+identity.
+\end{proof}
+\leanref{TabularMDP.bellman, TabularMDP.bellman_apply, TabularMDP.V_eq_sum_Q}
+
+\begin{proposition}\label{prop:visitation}
+$d_\pi$ is a probability distribution on $\X$ and $\eta_\pi$ is a probability
+distribution on $\X \times \U$.
+\end{proposition}
+\begin{proof}
+Nonnegativity follows from Corollary~\ref{cor:resolvent}. For the total mass,
+\[
+  \sum_{s'} d_\pi(s') = (1-\gamma) \sum_s p_0(s) \sum_{s'} R_\pi(s,s')
+  = (1-\gamma)\cdot\frac{1}{1-\gamma}\sum_s p_0(s) = 1,
+\]
+and $\sum_{s,a}\eta_\pi(s,a) = \sum_s d_\pi(s)\sum_a \pi(a\mid s) = 1$.
+\end{proof}
+\leanref{TabularMDP.stochastic_visitation, TabularMDP.stochastic_occupancy}
+
+%======================================================================
+\section{Differentiability}\label{sec:differentiability}
+%======================================================================
+
+From now on $\{\pi_\theta\}$ is a policy family, and we write
+$P_\theta, r_\theta, R_\theta, V_\theta, Q_\theta, J(\theta), d_\theta, \eta_\theta$ for
+the objects of Section~\ref{sec:values} associated with $\pi_\theta$.
+
+\begin{lemma}\label{lem:dPdr}
+For all $s, s'$,
+\[
+  \nabla_\theta P_\theta(s,s') = \sum_a P(s'\mid s,a)\, \pi_\theta(a\mid s)\,\psi_\theta(s,a),
+  \qquad
+  \nabla_\theta r_\theta(s) = \sum_a r(s,a)\, \pi_\theta(a\mid s)\,\psi_\theta(s,a).
+\]
+\end{lemma}
+\begin{proof}
+Both are finite sums of $\pi_\theta(a\mid s)$ times constants; apply
+Lemma~\ref{lem:lr}.
+\end{proof}
+\leanref{PolicyFamily.hasGradientAt_stateMat, PolicyFamily.hasGradientAt_stateReward}
+
+\begin{lemma}[Cramer's rule]\label{lem:cramer}
+Let $\theta \mapsto B_\theta$ be a matrix-valued map whose entries are
+differentiable and with $\det B_\theta \ne 0$ for all $\theta$. Then every entry of
+$\theta \mapsto B_\theta^{-1}$ is differentiable.
+\end{lemma}
+\begin{proof}
+By the Leibniz formula
+$\det B = \sum_\sigma \sgn(\sigma) \prod_i B_{\sigma(i), i}$, the determinant is a
+polynomial in the entries, hence $\theta \mapsto \det B_\theta$ is differentiable.
+The entry $(\adj B)_{ij}$ of the adjugate is the determinant of the matrix
+obtained from $B$ by replacing its $j$-th row with the $i$-th unit vector; its
+entries are entries of $B$ or constants, so it is differentiable as well.
+Finally $(B^{-1})_{ij} = (\det B)^{-1} (\adj B)_{ij}$, and $(\det B_\theta)^{-1}$ is
+differentiable because $\det B_\theta \ne 0$.
+\end{proof}
+\leanref{differentiable_det_of_entries, differentiable_inv_of_entries}
+
+\begin{corollary}\label{cor:diffV}
+The maps $\theta \mapsto R_\theta(s,j)$, $\theta \mapsto V_\theta(s)$ and
+$\theta \mapsto J(\theta)$ are differentiable.
+\end{corollary}
+\begin{proof}
+Apply Lemma~\ref{lem:cramer} to $B_\theta = I - \gamma P_\theta$, whose entries are
+differentiable by Lemma~\ref{lem:dPdr} and whose determinant never vanishes by
+Lemma~\ref{lem:invertible}. Then $V_\theta(s) = \sum_{s'} R_\theta(s,s')\, r_\theta(s')$ and
+$J(\theta) = \sum_s p_0(s) V_\theta(s)$ are finite sums of products of
+differentiable functions.
+\end{proof}
+\leanref{PolicyFamily.differentiable_resolvent, PolicyFamily.differentiable_V, PolicyFamily.differentiable_J}
+
+%======================================================================
+\section{The policy gradient theorem}\label{sec:gradient}
+%======================================================================
+
+The key observation is that the gradients of the value function satisfy a
+Bellman equation whose ``reward'' is $\sum_a \pi_\theta Q_\theta \psi_\theta$, and whose
+solution is therefore again given by the resolvent. We first record the
+uniqueness statement for vector-valued unknowns.
+
+\begin{lemma}\label{lem:vecbellman}
+Let $\pi$ be a policy and let $G, b : \X \to \R^n$ satisfy
+$G(s) = b(s) + \gamma \sum_{s'} P_\pi(s,s')\, G(s')$ for all $s$. Then
+\[
+  G(s) = \sum_{s'} R_\pi(s,s')\, b(s') \qquad \text{for all } s.
+\]
+\end{lemma}
+\begin{proof}
+Substituting $b(s') = G(s') - \gamma\sum_k P_\pi(s',k)\,G(k)$ and exchanging the
+order of summation,
+\begin{align*}
+  \sum_{s'} R_\pi(s,s')\, b(s')
+  &= \sum_k \Big[ R_\pi(s,k) - \gamma \sum_{s'} R_\pi(s,s') P_\pi(s',k) \Big] G(k) \\
+  &= \sum_k \big[R_\pi (I - \gamma P_\pi)\big]_{sk}\, G(k) = G(s). \qedhere
+\end{align*}
+\end{proof}
+\leanref{TabularMDP.eq_resolvent_smul}
+
+\begin{theorem}[Gradient of the value function]\label{thm:gradV}
+For every $\theta$ and $s$,
+\[
+  \nabla_\theta V_\theta(s) = \sum_{s'} R_\theta(s,s') \sum_{a}
+    \pi_\theta(a\mid s')\, Q_\theta(s',a)\, \psi_\theta(s',a).
+\]
+\end{theorem}
+\begin{proof}
+Write $G(s) = \nabla_\theta V_\theta(s)$, which exists by Corollary~\ref{cor:diffV}.
+The Bellman equation (Proposition~\ref{prop:bellman}) holds for every value of
+the parameter:
+\[
+  V_\theta(s) = r_\theta(s) + \gamma \sum_{s'} P_\theta(s,s')\, V_\theta(s').
+\]
+Differentiating both sides with Lemma~\ref{lem:dPdr} and the product rule,
+\begin{align*}
+  G(s) &= \sum_a r(s,a)\,\pi_\theta(a\mid s)\,\psi_\theta(s,a)
+    + \gamma \sum_{s'} V_\theta(s') \sum_a P(s'\mid s,a)\,\pi_\theta(a\mid s)\,\psi_\theta(s,a) \\
+  &\qquad + \gamma \sum_{s'} P_\theta(s,s')\, G(s') \\
+  &= \sum_a \pi_\theta(a\mid s)\Big[ r(s,a) + \gamma \sum_{s'} P(s'\mid s,a)\, V_\theta(s')\Big]
+    \psi_\theta(s,a) \\
+  &\qquad + \gamma \sum_{s'} P_\theta(s,s')\, G(s') \\
+  &= b(s) + \gamma \sum_{s'} P_\theta(s,s')\, G(s'),
+\end{align*}
+where $b(s) = \sum_a \pi_\theta(a\mid s)\, Q_\theta(s,a)\, \psi_\theta(s,a)$. The claim now
+follows from Lemma~\ref{lem:vecbellman}.
+\end{proof}
+\leanref{PolicyFamily.hasGradientAt_V}
+
+\begin{theorem}[Policy gradient theorem, discounted reward]\label{thm:pg}
+For every $\theta \in \R^n$,
+\[
+  \nabla J(\theta) = \frac{1}{1-\gamma} \sum_{s \in \X} \sum_{a \in \U}
+    \eta_\theta(s,a)\, Q_\theta(s,a)\, \psi_\theta(s,a).
+\]
+Equivalently, writing $\inner{f}{g}_\theta = \sum_{s,a}\eta_\theta(s,a) f(s,a) g(s,a)$,
+the $i$-th partial derivative is
+$\partial_i J(\theta) = (1-\gamma)^{-1}\inner{Q_\theta}{\psi^i_\theta}_\theta$.
+\end{theorem}
+\begin{proof}
+By Theorem~\ref{thm:gradV}, with $b$ as in its proof,
+\[
+  \nabla J(\theta) = \sum_s p_0(s)\, \nabla_\theta V_\theta(s)
+  = \sum_{s'} \Big[\sum_s p_0(s)\, R_\theta(s,s')\Big] b(s')
+  = \frac{1}{1-\gamma} \sum_{s'} d_\theta(s')\, b(s'),
+\]
+and $d_\theta(s')\, b(s') = \sum_a \eta_\theta(s',a)\, Q_\theta(s',a)\, \psi_\theta(s',a)$.
+\end{proof}
+\leanref{PolicyFamily.hasGradientAt_J}
+
+\begin{corollary}[Baselines]\label{cor:baseline}
+For every function $\beta : \X \to \R$,
+\[
+  \nabla J(\theta) = \frac{1}{1-\gamma} \sum_{s,a}
+    \eta_\theta(s,a)\, \big(Q_\theta(s,a) - \beta(s)\big)\, \psi_\theta(s,a).
+\]
+\end{corollary}
+\begin{proof}
+The additional term is
+$\sum_s d_\theta(s)\,\beta(s) \sum_a \pi_\theta(a\mid s)\,\psi_\theta(s,a)$, which
+vanishes by Lemma~\ref{lem:mean-zero}.
+\end{proof}
+\leanref{PolicyFamily.hasGradientAt_J_baseline}
+
+\begin{remark}
+Taking $\beta = V_\theta$ and using Proposition~\ref{prop:bellman} expresses the
+gradient through the \emph{advantage} $Q_\theta - V_\theta$. This is the finite-MDP
+form of the observation in Chapter~5 of the thesis that the critic need only
+learn the projection of $Q_\theta$ onto the span of the score functions, which is
+the subject of the next step of the formalization.
+\end{remark}
+
+%======================================================================
+\section{Correspondence with the Lean code and the thesis}\label{sec:lean}
+%======================================================================
+
+\subsection{Lean declarations}
+
+The results above are contained in three files of the
+\lean{rl-theory-in-lean} project:
+\begin{itemize}
+\item \lean{RLTheory/MarkovDecisionProcess/PolicyFamily.lean}: Sections~\ref{sec:setting}--\ref{sec:policies};
+\item \lean{RLTheory/MarkovDecisionProcess/PolicyGradient.lean}: Sections~\ref{sec:values}--\ref{sec:gradient};
+\item \lean{RLTheory/Analysis/Calculus/Gradient.lean}: sum, product, logarithm
+  and exponential rules for gradients, which Mathlib states only for Fr\'echet
+  derivatives.
+\end{itemize}
+All declarations are in the namespace \lean{ReinforcementLearning}. Gradients are
+expressed with Mathlib's \lean{HasGradientAt}, on the parameter space
+$\R^n$ realized as Mathlib's Euclidean space (abbreviated \lean{E n} in the
+project). No declaration depends on any axiom beyond the three standard ones
+(\lean{propext}, \lean{Classical.choice}, \lean{Quot.sound}).
+
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Result & Lean declaration \\
+\midrule
+Definition~\ref{def:mdp} & \lean{TabularMDP} \\
+Definition~\ref{def:family} & \lean{PolicyFamily}, \lean{PolicyFamily.score} \\
+Lemma~\ref{lem:lr} & \lean{PolicyFamily.hasGradientAt_pi} \\
+Lemma~\ref{lem:mean-zero} & \lean{PolicyFamily.sum_smul_score_eq_zero} \\
+Proposition~\ref{prop:softmax} & \lean{softmaxFamily}, \lean{softmaxFamily_score} \\
+Proposition~\ref{prop:support} & \lean{PolicyFamily.irreducible_saMat}, \lean{PolicyFamily.aperiodic_saMat} \\
+Lemma~\ref{lem:invertible} & \lean{TabularMDP.isUnit_one_sub_smul_stateMat} \\
+Lemma~\ref{lem:minprinciple} & \lean{TabularMDP.nonneg_of_eq_add} \\
+Corollary~\ref{cor:resolvent} & \lean{TabularMDP.resolvent_nonneg}, \lean{TabularMDP.sum_resolvent} \\
+Proposition~\ref{prop:bellman} & \lean{TabularMDP.bellman}, \lean{TabularMDP.V_eq_sum_Q} \\
+Proposition~\ref{prop:visitation} & \lean{TabularMDP.stochastic_visitation}, \lean{TabularMDP.stochastic_occupancy} \\
+Lemma~\ref{lem:cramer} & \lean{differentiable_inv_of_entries} \\
+Lemma~\ref{lem:vecbellman} & \lean{TabularMDP.eq_resolvent_smul} \\
+Theorem~\ref{thm:gradV} & \lean{PolicyFamily.hasGradientAt_V} \\
+Theorem~\ref{thm:pg} & \lean{PolicyFamily.hasGradientAt_J} \\
+Corollary~\ref{cor:baseline} & \lean{PolicyFamily.hasGradientAt_J_baseline} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Relation to the thesis}
+
+Theorem~\ref{thm:pg} is the finite-MDP counterpart of the discounted-reward
+gradient formula of Section~2.4 of the thesis (Theorem~2.13). The differences
+are the following.
+\begin{itemize}
+\item \emph{State and decision spaces.} The thesis allows general (finite,
+  countable or continuous) spaces, which requires the bounding functions and
+  uniform integrability conditions of Assumptions~2.7--2.9 to justify
+  exchanging differentiation and integration. For finite spaces these
+  conditions are automatic.
+\item \emph{Positivity and smoothness.} Assumption~2.8 of the thesis requires
+  $\pi_\theta(a\mid s) > 0$ and continuous differentiability of
+  $\theta\mapsto\pi_\theta(a\mid s)$, together with bounds on the score. We make the
+  same positivity assumption but require only differentiability; the bounds are
+  automatic for finite spaces. The thesis notes that positivity can be weakened
+  to ``$\pi_\theta(a\mid s)$ is either positive for all $\theta$ or zero for all
+  $\theta$''; that extension is not formalized here. Positivity is also what
+  yields Proposition~\ref{prop:support}.
+\item \emph{Method of proof.} The thesis differentiates the Poisson (Bellman)
+  equation after establishing differentiability of a family of solutions via
+  regenerative representations. Here differentiability comes from Cramer's rule
+  (Lemma~\ref{lem:cramer}), after which the argument of
+  Theorem~\ref{thm:gradV} is the same differentiation of the Bellman equation.
+\end{itemize}
+
+\subsection{Next steps}
+
+The remaining steps towards the convergence of actor-critic algorithms are,
+in order:
+the average-reward counterpart of Theorem~\ref{thm:pg} (Theorem~2.10 of the
+thesis), via the fundamental matrix of the chain;
+the projection characterization of the gradient and the bias bound of
+Lemma~5.3;
+an abstract result that $\liminf_k \|\nabla J(\theta_k)\| \le \varepsilon$ for gradient
+ascent with vanishing noise and bias at most $\varepsilon$;
+and linear stochastic approximation driven by slowly varying Markov chains
+(Chapter~3), which together yield the convergence theorem for actor-critic
+algorithms (Theorem~5.5).
+
+\begin{thebibliography}{9}
+\bibitem{konda2002}
+V.~R. Konda.
+\newblock \emph{Actor-Critic Algorithms}.
+\newblock PhD thesis, Massachusetts Institute of Technology, 2002.
+\newblock \url{https://dspace.mit.edu/entities/publication/de41d9e3-f2ba-4327-bdaa-32014dd235ae}.
+
+\bibitem{zhang2026}
+S.~Zhang.
+\newblock Towards formalizing reinforcement learning theory: a
+  Robbins--Siegmund approach.
+\newblock \emph{Reinforcement Learning Journal}, 2026.
+\newblock \url{https://arxiv.org/abs/2511.03618}.
+\end{thebibliography}
+
+\end{document}
