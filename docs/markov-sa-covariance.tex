@@ -11,6 +11,7 @@
 \usepackage[margin=1.1in]{geometry}
 \usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
 \emergencystretch=3em
+\sloppy
 
 \newtheorem{theorem}{Theorem}[section]
 \newtheorem{lemma}[theorem]{Lemma}
@@ -44,9 +45,11 @@ proof reduces Markov noise to martingale-difference noise with the Poisson equat
 and then analyses a deterministic recursion for the second moments, as in the
 i.i.d.\ case. Only two lemmas involve probability; the rest is matrix analysis. We
 verify the hypotheses for noise driven by a finite chain and for noise driven by
-eligibility traces. This is the first of four steps towards the asymptotic covariance
-of actor-critic algorithms: single time scale with additive noise (this note), two
-time scales, multiplicative noise, and the transfer to the nonlinear algorithm.
+eligibility traces. Finally, we show that multiplicative Markov noise, a random matrix
+$A_k$ in place of $A$ as in TD($\lambda$), does not change the limit. These are the first and
+third of four steps towards the asymptotic covariance of actor-critic algorithms: single time
+scale with additive noise, two time scales, multiplicative noise, and the transfer to the
+nonlinear algorithm.
 \end{abstract}
 
 \tableofcontents
@@ -235,7 +238,9 @@ $y_{k+1} \le (1 - a\beta_k/2)Y + C\beta_k \le Y$. By induction $y_k \le Y$ for $
 \noindent\emph{Lean:} \texttt{norm\_le\_of\_second\_moment\_recursion}, with the scalar
 induction in \texttt{bdd\_of\_le\_contraction}. The Lean proof works with the Frobenius norm
 $\|P_k\|$ instead of $\tr(BP_k)$, with the remainder bound stated as
-$\|R_k\| \le C\beta_k^2(\sqrt{\|P_k\|} + \beta_k)$; it then needs the sharper one-step bound
+$\|R_k\| \le C\beta_k^2(\sqrt{\|P_k\|} + \|P_k\| + \beta_k)$ (the middle term, which is needed
+for multiplicative noise in Section~\ref{sec:mult}, is absorbed into the $\beta_k^2AP_kA^\top$
+term); it then needs the sharper one-step bound
 $\|S - \beta\mathcal AS\| \le (1 - a\beta + \tfrac12\beta^2\|\mathcal A\|^2)\|S\|$
 (\texttt{norm\_sub\_smul\_le'}) where $a = 2\eta + \bar\beta$ is the coercivity constant of
 $\mathcal A$, but no positive semidefiniteness of $P_k$.
@@ -307,6 +312,131 @@ recursion of Lemma~\ref{lem:rec} is \texttt{tendsto\_normalized\_second\_moment}
 exact formula for $\delta_k$ in terms of $P_k$ and \texttt{tendsto\_zero\_of\_coercive\_recursion};
 the solution $\Sigma$ of \eqref{eq:lyap} exists by \texttt{exists\_solution\_of\_coercive}.
 The remaining, probabilistic, steps are Lemmas~\ref{lem:cov} and~\ref{lem:rec}.
+
+%======================================================================
+\section{Multiplicative noise}\label{sec:mult}
+%======================================================================
+
+In TD($\lambda$) and actor-critic methods the matrix is itself random. Consider
+\begin{equation}\label{eq:mult}
+  \theta_{k+1} = \theta_k - \beta_k(A + \tilde A_k)\theta_k + \beta_kV_k,
+\end{equation}
+with $V_k$ as in Assumption~\ref{ass:noise} and a random matrix $\tilde A_k$ of mean zero
+in the following sense.
+
+\begin{assumption}[Multiplicative noise]\label{ass:mult}
+The matrix noise decomposes as
+\[
+  \tilde A_k = N_{k+1} + G_k - G_{k+1},
+\]
+where $G_k$ is $\F_k$-measurable, $N_{k+1}$ is $\F_{k+1}$-measurable with
+$\E[N_{k+1}\mid\F_k] = 0$ entrywise, and $\|N_{k+1}\|, \|G_k\| \le C$ almost surely.
+\end{assumption}
+
+For a finite chain, $\tilde A_k = \tilde a(Y_k, Y_{k+1})$ with $\E_\nu\tilde a = 0$ has this
+decomposition by Lemma~\ref{lem:poisson} applied to each entry, and $N$ and $G$ are bounded
+because the state space is finite. With traces, $A_k = z_k(\phi(Y_k) - \gamma\phi(Y_{k+1}))^\top$
+is affine in $z_k$, and Lemma~\ref{lem:trace-poisson} gives the decomposition; boundedness holds
+when the traces are bounded, for instance when $\sup_yc(y) < 1$.
+
+\begin{theorem}\label{thm:mult}
+Under Assumptions~\ref{ass:step}, \ref{ass:stable} (for $A$), \ref{ass:noise}
+and~\ref{ass:mult}, the iterates of \eqref{eq:mult} satisfy
+$\beta_k^{-1}\E[\theta_k\theta_k^\top] \to \Sigma$, where $\Sigma$ solves \eqref{eq:lyap} with
+the same $\Gamma = \lim\E[M_{k+1}M_{k+1}^\top]$ as in Theorem~\ref{thm:main}.
+\end{theorem}
+
+\noindent\emph{Lean:} \texttt{tendsto\_secondMoment\_of\_mult\_noise}, fully formalized, with
+the hypotheses in the form described after Theorem~\ref{thm:main}, $N_{k+1}$ and $G_k$ taken as
+random continuous linear maps with $\sup\|N_{k+1}\|, \sup\|G_k\| < \infty$ pointwise, and the
+martingale property of $N_{k+1}$ stated as $\E[(N_{k+1}e_i)_j\mid\F_k] = 0$ for all $i, j$.
+
+\begin{remark}[Interpretation]
+In TD($\lambda$) with $b_k$ the reward part, $\theta$ is measured from the limit $\theta^*$, so
+$V_k = b_k - A_k\theta^*$ is the noise at the fixed point. The theorem says that the
+fluctuation of $A_k$ around its mean acts on $\theta_k - \theta^* = O(\sqrt{\beta_k})$ and is
+therefore of lower order: only the noise at $\theta^*$ enters the covariance.
+\end{remark}
+
+The proof follows Section~2. The new point is that the telescoping part $G_k - G_{k+1}$ of the
+matrix noise is removed by a shift that depends on $\theta_k$, and the martingale part
+$N_{k+1}\theta_k$ is a martingale difference whose variance vanishes with $\theta_k$.
+
+\begin{lemma}\label{lem:mult-shift}
+Let $u_k = \theta_k + \beta_k(h_k - G_k\theta_k)$. Then
+\[
+  u_{k+1} = (I - \beta_kA)u_k + \beta_k\big(M_{k+1} - N_{k+1}\theta_k\big) + c_k,
+\]
+\[
+  c_k = \beta_k^2A(h_k - G_k\theta_k) + (\beta_{k+1} - \beta_k)(h_{k+1} - G_{k+1}\theta_{k+1})
+    - \beta_kG_{k+1}(\theta_{k+1} - \theta_k),
+\]
+and $\|c_k\| \le C\beta_k^2\big(\|\theta_k\| + \|M_{k+1}\| + \|h_k\| + \|h_{k+1}\|\big)$.
+If moreover $\beta_kC \le \tfrac12$, then $\|\theta_k\| \le 2\|u_k\| + 2\beta_k\|h_k\|$.
+\end{lemma}
+\begin{proof}
+Write $\tilde A_k\theta_k = N_{k+1}\theta_k + G_k\theta_k - G_{k+1}\theta_{k+1}
++ G_{k+1}(\theta_{k+1} - \theta_k)$ and proceed as in Lemma~\ref{lem:cov}: the terms
+$G_k\theta_k$ and $G_{k+1}\theta_{k+1}$ telescope into the shift, and
+$-\beta_kA\theta_k = -\beta_kAu_k + \beta_k^2A(h_k - G_k\theta_k)$. For the bound, by
+\eqref{eq:mult}, $\|\theta_{k+1} - \theta_k\| \le C\beta_k(\|\theta_k\| + \|V_k\|)$, so also
+$\|\theta_{k+1}\| \le C(\|\theta_k\| + \|V_k\|)$; together with $|\beta_{k+1} - \beta_k| \le C\beta_k^2$
+this bounds each term of $c_k$. Finally
+$\|\theta_k\| \le \|u_k\| + \beta_k\|h_k\| + \beta_kC\|\theta_k\|$.
+\end{proof}
+\noindent\emph{Lean:} \texttt{mult\_shifted\_iterate} (the identity), \texttt{norm\_mult\_remainder\_le}
+and \texttt{norm\_le\_of\_multShift} (the bounds).
+
+\begin{lemma}\label{lem:mult-rec}
+Assume $\beta_kC \le \tfrac12$ for all $k$, and let $P_k = \E[u_ku_k^\top]$. Then
+\[
+  P_{k+1} = (I - \beta_kA)P_k(I - \beta_kA)^\top + \beta_k^2\Gamma_k + R_k,
+  \qquad
+  \|R_k\| \le C\beta_k^2\big(\sqrt{\|P_k\|} + \|P_k\| + \beta_k\big).
+\]
+\end{lemma}
+\begin{proof}
+$N_{k+1}\theta_k$ is a martingale difference: its $j$-th component is
+$\sum_i(\theta_k)_i(N_{k+1})_{ji}$, and $\E[(\theta_k)_i(N_{k+1})_{ji}\mid\F_k]
+= (\theta_k)_i\E[(N_{k+1})_{ji}\mid\F_k] = 0$. So $m_{k+1} = M_{k+1} - N_{k+1}\theta_k$ is a
+martingale difference, and as in Lemma~\ref{lem:rec},
+\[
+  P_{k+1} = (I - \beta_kA)P_k(I - \beta_kA)^\top + \beta_k^2\E[m_{k+1}m_{k+1}^\top] + R'_k,
+\]
+\[
+  \|R'_k\| \le 2\sqrt{\E\|(I - \beta_kA)u_k\|^2\,\E\|c_k\|^2} + 2\beta_k\sqrt{\E\|m_{k+1}\|^2\,\E\|c_k\|^2}
+    + \E\|c_k\|^2 .
+\]
+By Lemma~\ref{lem:mult-shift}, $T_k := \E\|\theta_k\|^2 \le 8\E\|u_k\|^2 + 8\beta_k^2\E\|h_k\|^2
+\le C(\|P_k\| + \beta_k^2)$, and
+\[
+  \E\|c_k\|^2 \le C\beta_k^4(T_k + 1),\qquad
+  \E\|m_{k+1}\|^2 \le C(1 + T_k),\qquad
+  \big\|\E[m_{k+1}m_{k+1}^\top] - \Gamma_k\big\| \le C\big(\sqrt{T_k} + T_k\big).
+\]
+Since $\sqrt{T_k} \le C(\sqrt{\|P_k\|} + \beta_k)$, every term is $\beta_k^2$ times a polynomial
+in $\sqrt{\|P_k\|}$, $\beta_k$ and $\sqrt{T_k}$ of degree at most two in
+$(\sqrt{\|P_k\|}, \sqrt{T_k})$ and without constant term, hence
+$O\big(\beta_k^2(\sqrt{\|P_k\|} + \|P_k\| + \beta_k)\big)$.
+\end{proof}
+\noindent\emph{Lean:} \texttt{mult\_secondMoment\_recursion}; the martingale property of
+$N_{k+1}\theta_k$ is \texttt{condExp\_clm\_apply\_eq\_zero}, the expansion for a general
+decomposition $u' = (I - \beta A)u + \beta m + c$ is \texttt{secondMoment\_step}, and the final
+polynomial estimate is \texttt{mult\_poly\_le}.
+
+\begin{proof}[Proof of Theorem~\ref{thm:mult}]
+Since $\beta_k \to 0$, the condition $\beta_kC \le \frac12$ holds from some $k_0$ on, and
+the theorem is unchanged by starting the iteration at $k_0$. Lemmas~\ref{lem:apriori}
+and~\ref{lem:pert}, and the proof of Theorem~\ref{thm:main}, use the remainder only through
+$\|R_k\|/\beta_k^2 \to 0$ once $\|P_k\| = O(\beta_k)$, and the extra term
+$C\beta_k^2\|P_k\|$ is absorbed into $\beta_k^2AP_kA^\top$ in Lemma~\ref{lem:apriori}. Hence
+$P_k/\beta_k \to \Sigma$. Finally $\theta_k = u_k - \beta_k(h_k - G_k\theta_k)$ and
+$\E\|h_k - G_k\theta_k\|^2 \le 2\E\|h_k\|^2 + 2C^2T_k$ is bounded, so
+$\beta_k^{-1}\|\E[\theta_k\theta_k^\top] - P_k\| \to 0$ as at the end of Section~2.
+\end{proof}
+\noindent\emph{Lean:} \texttt{tendsto\_secondMoment\_of\_mult\_noise\_of\_small} (when
+$\beta_kC \le \frac12$ for all $k$) and \texttt{tendsto\_secondMoment\_of\_mult\_noise}
+(the time shift, via \texttt{StepSizeRate.shift} and \texttt{Filtration.shift}).
 
 %======================================================================
 \section{Verifying the noise assumption}\label{sec:verify}
@@ -417,10 +547,6 @@ $\Sigma = \begin{psmallmatrix}0.479 & -0.070\\ -0.070 & 0.523\end{psmallmatrix}$
   the cross covariance $\Gamma_{12}$ of the two martingale parts. The goal is the
   analogue of Thm.~7.8 for Markov noise: the slow component has the covariance of the
   single-time-scale iteration with noise $V - A_{12}A_{22}^{-1}W$.
-\item \emph{Multiplicative noise.} In TD and actor-critic the matrix $A$ is itself
-  random, $A(Y_k,z_k)$. Its fluctuation $A(Y_k,z_k) - \bar A$ has a Poisson decomposition
-  too, and contributes terms of order $\beta_k\,\E\|\theta_k\|^2 = O(\beta_k^2)$ to the
-  recursion, once an a priori bound like Lemma~\ref{lem:apriori} is established.
 \item \emph{Nonlinear algorithms.} The transfer from the linearized iteration to the
   actual actor-critic algorithm is left as an explicit hypothesis.
 \end{itemize}

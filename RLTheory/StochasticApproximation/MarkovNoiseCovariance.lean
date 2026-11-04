@@ -555,8 +555,12 @@ theorem tendsto_secondMoment_of_markov_noise [IsProbabilityMeasure μ] {β : ℕ
     intro k
     simp only [hR_def]
     abel
-  have hRb : ∃ C, 0 ≤ C ∧ ∀ k, ‖R k‖ ≤ C * β k ^ 2 * (√‖P k‖ + β k) :=
-    ⟨C, hC0, fun k => by rw [hR_def, hP_def]; exact hCR k⟩
+  have hRb : ∃ C, 0 ≤ C ∧ ∀ k, ‖R k‖ ≤ C * β k ^ 2 * (√‖P k‖ + ‖P k‖ + β k) :=
+    ⟨C, hC0, fun k => by
+      have h1 : ‖R k‖ ≤ C * β k ^ 2 * (√‖P k‖ + β k) := by rw [hR_def, hP_def]; exact hCR k
+      have h2 : 0 ≤ C * β k ^ 2 * ‖P k‖ := by positivity
+      linarith [show C * β k ^ 2 * (√‖P k‖ + ‖P k‖ + β k) =
+        C * β k ^ 2 * (√‖P k‖ + β k) + C * β k ^ 2 * ‖P k‖ by ring]⟩
   have hPlim := tendsto_normalized_second_moment hβ A hη hA hSig hΓ hRb hrec
   -- the shifted second moments tend to zero
   have hP0 : Tendsto (fun k => ‖P k‖) atTop (𝓝 0) := by

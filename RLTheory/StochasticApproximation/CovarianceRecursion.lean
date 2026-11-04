@@ -472,7 +472,7 @@ theorem norm_le_of_second_moment_recursion (hβ : StepSizeRate β βbar)
   (hA : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A - (βbar / 2) • 1) *ᵥ x))
   {P Γs R : ℕ → Mat d} {Γ : Mat d}
   (hΓ : Tendsto Γs atTop (𝓝 Γ))
-  (hR : ∃ C, 0 ≤ C ∧ ∀ k, ‖R k‖ ≤ C * β k ^ 2 * (√‖P k‖ + β k))
+  (hR : ∃ C, 0 ≤ C ∧ ∀ k, ‖R k‖ ≤ C * β k ^ 2 * (√‖P k‖ + ‖P k‖ + β k))
   (hrec : ∀ k, P (k + 1) = P k - β k • lyapOp A (P k) + β k ^ 2 • sandwich A (P k)
     + β k ^ 2 • Γs k + R k) :
   ∃ M, 0 ≤ M ∧ ∀ k, ‖P k‖ ≤ M * β k := by
@@ -486,7 +486,8 @@ theorem norm_le_of_second_moment_recursion (hβ : StepSizeRate β βbar)
     calc a * ‖v‖ ^ 2 = 2 * (η + βbar / 2) * ‖v‖ ^ 2 := by rw [ha_def]; ring
       _ ≤ _ := this
   obtain ⟨K, hK⟩ : ∃ K, K = ‖lyapOp A‖ ^ 2 := ⟨_, rfl⟩
-  obtain ⟨Ks, hKs⟩ : ∃ Ks, Ks = ‖sandwich A‖ := ⟨_, rfl⟩
+  -- the `‖P‖` part of the remainder is absorbed into the sandwich term
+  obtain ⟨Ks, hKs⟩ : ∃ Ks, Ks = ‖sandwich A‖ + C := ⟨_, rfl⟩
   have hK0 : 0 ≤ K := by rw [hK]; positivity
   have hKs0 : 0 ≤ Ks := by rw [hKs]; positivity
   obtain ⟨G0, hG0⟩ := hΓ.norm.bddAbove_range
@@ -552,9 +553,13 @@ theorem norm_le_of_second_moment_recursion (hβ : StepSizeRate β βbar)
       rw [hrec k]
       have n1 := norm_sub_smul_le' (lyapOp A) hcoer hb.le (P k)
       rw [← hK, abs_of_nonneg hc] at n1
-      have n2 : ‖β k ^ 2 • sandwich A (P k)‖ ≤ β k ^ 2 * Ks * ‖P k‖ := by
-        rw [norm_smul, Real.norm_eq_abs, abs_of_nonneg (sq_nonneg _), mul_assoc, hKs]
+      have n2 : ‖β k ^ 2 • sandwich A (P k)‖ ≤ β k ^ 2 * ‖sandwich A‖ * ‖P k‖ := by
+        rw [norm_smul, Real.norm_eq_abs, abs_of_nonneg (sq_nonneg _), mul_assoc]
         exact mul_le_mul_of_nonneg_left ((sandwich A).le_opNorm _) (sq_nonneg _)
+      have e2 : β k ^ 2 * Ks * ‖P k‖ = β k ^ 2 * ‖sandwich A‖ * ‖P k‖ + C * β k ^ 2 * ‖P k‖ := by
+        rw [hKs]; ring
+      have e4 : C * β k ^ 2 * (√‖P k‖ + ‖P k‖ + β k) =
+          C * β k ^ 2 * (√‖P k‖ + β k) + C * β k ^ 2 * ‖P k‖ := by ring
       have n3 : ‖β k ^ 2 • Γs k‖ ≤ β k ^ 2 * G := by
         rw [norm_smul, Real.norm_eq_abs, abs_of_nonneg (sq_nonneg _)]
         exact mul_le_mul_of_nonneg_left (hG k) (sq_nonneg _)
@@ -587,7 +592,7 @@ theorem norm_le_of_second_moment_recursion (hβ : StepSizeRate β βbar)
 
 /-- Theorem 2.1 of the write-up, deterministic part: if the second moments follow the
 recursion `P (k+1) = (I - β A) P (I - β A)ᵀ + β² Γ k + R k` (written out), with `Γ k → Γ`
-and `‖R k‖ ≤ C β² (√‖P‖ + β)`, then `P k / β k → Σ`, the solution of the Lyapunov equation
+and `‖R k‖ ≤ C β² (√‖P‖ + ‖P‖ + β)`, then `P k / β k → Σ`, the solution of the Lyapunov equation
 `(A - β̄/2) Σ + Σ (A - β̄/2)ᵀ = Γ`. -/
 theorem tendsto_normalized_second_moment (hβ : StepSizeRate β βbar)
   (A : Matrix (Fin d) (Fin d) ℝ) {η : ℝ} (hη : 0 < η)
@@ -595,7 +600,7 @@ theorem tendsto_normalized_second_moment (hβ : StepSizeRate β βbar)
   {P Γs R : ℕ → Mat d} {Γ Sig : Mat d}
   (hSig : lyapOp (A - (βbar / 2) • 1) Sig = Γ)
   (hΓ : Tendsto Γs atTop (𝓝 Γ))
-  (hR : ∃ C, 0 ≤ C ∧ ∀ k, ‖R k‖ ≤ C * β k ^ 2 * (√‖P k‖ + β k))
+  (hR : ∃ C, 0 ≤ C ∧ ∀ k, ‖R k‖ ≤ C * β k ^ 2 * (√‖P k‖ + ‖P k‖ + β k))
   (hrec : ∀ k, P (k + 1) = P k - β k • lyapOp A (P k) + β k ^ 2 • sandwich A (P k)
     + β k ^ 2 • Γs k + R k) :
   Tendsto (fun k => (β k)⁻¹ • P k) atTop (𝓝 Sig) := by
@@ -646,7 +651,7 @@ theorem tendsto_normalized_second_moment (hβ : StepSizeRate β βbar)
   set Ks := ‖sandwich A‖
   have hbound : ∀ k, ‖δ k‖ ≤ |ε k| * M + |βbar + ε k| * KL * M * β k
       + β k / β (k + 1) * Ks * M * β k + ‖(β k / β (k + 1)) • Γs k - Γ‖
-      + β k / β (k + 1) * C * (√(M * β k) + β k) := by
+      + β k / β (k + 1) * C * (√(M * β k) + M * β k + β k) := by
     intro k
     have hb := hβ.pos k
     have hb' := hβ.pos (k + 1)
@@ -668,13 +673,13 @@ theorem tendsto_normalized_second_moment (hβ : StepSizeRate β βbar)
       apply mul_le_mul_of_nonneg_left _ hr0
       calc ‖sandwich A (P k)‖ ≤ Ks * ‖P k‖ := (sandwich A).le_opNorm _
         _ ≤ Ks * (M * β k) := mul_le_mul_of_nonneg_left hPk (norm_nonneg _)
-    have n5 : ‖(β k * β (k + 1))⁻¹ • R k‖ ≤ β k / β (k + 1) * C * (√(M * β k) + β k) := by
+    have n5 : ‖(β k * β (k + 1))⁻¹ • R k‖ ≤ β k / β (k + 1) * C * (√(M * β k) + M * β k + β k) := by
       rw [norm_smul, Real.norm_eq_abs, abs_of_pos (by positivity)]
       have hsq : √‖P k‖ ≤ √(M * β k) := Real.sqrt_le_sqrt hPk
-      calc (β k * β (k + 1))⁻¹ * ‖R k‖ ≤ (β k * β (k + 1))⁻¹ * (C * β k ^ 2 * (√‖P k‖ + β k)) :=
+      calc (β k * β (k + 1))⁻¹ * ‖R k‖ ≤ (β k * β (k + 1))⁻¹ * (C * β k ^ 2 * (√‖P k‖ + ‖P k‖ + β k)) :=
             mul_le_mul_of_nonneg_left (hRb k) (by positivity)
-        _ = β k / β (k + 1) * C * (√‖P k‖ + β k) := by field_simp; ring
-        _ ≤ β k / β (k + 1) * C * (√(M * β k) + β k) := by gcongr
+        _ = β k / β (k + 1) * C * (√‖P k‖ + ‖P k‖ + β k) := by field_simp; ring
+        _ ≤ β k / β (k + 1) * C * (√(M * β k) + M * β k + β k) := by gcongr
     have t1 := norm_add_le ((ε k * (β k)⁻¹) • P k - (βbar + ε k) • lyapOp A (P k)
       + (β k / β (k + 1)) • sandwich A (P k) + ((β k / β (k + 1)) • Γs k - Γ))
       ((β k * β (k + 1))⁻¹ • R k)
@@ -687,7 +692,7 @@ theorem tendsto_normalized_second_moment (hβ : StepSizeRate β βbar)
   have hb0 := hβ.tendsto_zero
   have hlim : Tendsto (fun k => |ε k| * M + |βbar + ε k| * KL * M * β k
       + β k / β (k + 1) * Ks * M * β k + ‖(β k / β (k + 1)) • Γs k - Γ‖
-      + β k / β (k + 1) * C * (√(M * β k) + β k)) atTop (𝓝 0) := by
+      + β k / β (k + 1) * C * (√(M * β k) + M * β k + β k)) atTop (𝓝 0) := by
     have l1 : Tendsto (fun k => |ε k| * M) atTop (𝓝 0) := by
       simpa using hε.abs.mul_const M
     have l2 : Tendsto (fun k => |βbar + ε k| * KL * M * β k) atTop (𝓝 0) := by
@@ -697,13 +702,13 @@ theorem tendsto_normalized_second_moment (hβ : StepSizeRate β βbar)
     have l4 : Tendsto (fun k => ‖(β k / β (k + 1)) • Γs k - Γ‖) atTop (𝓝 0) := by
       have := ((hratio.smul hΓ).sub_const Γ).norm
       simpa using this
-    have l5 : Tendsto (fun k => β k / β (k + 1) * C * (√(M * β k) + β k)) atTop (𝓝 0) := by
+    have l5 : Tendsto (fun k => β k / β (k + 1) * C * (√(M * β k) + M * β k + β k)) atTop (𝓝 0) := by
       have hs : Tendsto (fun k => √(M * β k)) atTop (𝓝 0) := by
         have h := hb0.const_mul M
         rw [mul_zero] at h
         have := (Real.continuous_sqrt.tendsto 0).comp h
         simpa using this
-      simpa using (hratio.mul_const C).mul (hs.add hb0)
+      simpa using (hratio.mul_const C).mul ((hs.add (hb0.const_mul M)).add hb0)
     simpa using (((l1.add l2).add l3).add l4).add l5
   have hδ : Tendsto δ atTop (𝓝 0) := squeeze_zero_norm hbound hlim
   have he := tendsto_zero_of_coercive_recursion (lyapOp (A - (βbar / 2) • 1))
