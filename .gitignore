@@ -1,3 +1,4 @@
 /.lake
 references/*.pdf
 .DS_Store
+docs/*.pdf
