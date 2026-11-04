@@ -31,14 +31,14 @@ open scoped InnerProductSpace RealInnerProductSpace ENNReal
 
 namespace StochasticApproximation
 
-variable {d : ℕ} {Ω : Type*} {m0 : MeasurableSpace Ω} {μ : Measure Ω}
+variable {d d₁ d₂ : ℕ} {Ω : Type*} {m0 : MeasurableSpace Ω} {μ : Measure Ω}
 
 /-! ### Outer products -/
 
 /-- The outer product `x yᵀ`. -/
-def outer (x y : E d) : Mat d := fun ij => x ij.1 * y ij.2
+def outer (x : E d₁) (y : E d₂) : EuclideanSpace ℝ (Fin d₁ × Fin d₂) := fun ij => x ij.1 * y ij.2
 
-lemma norm_outer (x y : E d) : ‖outer x y‖ = ‖x‖ * ‖y‖ := by
+lemma norm_outer (x : E d₁) (y : E d₂) : ‖outer x y‖ = ‖x‖ * ‖y‖ := by
   have h : ‖outer x y‖ ^ 2 = (‖x‖ * ‖y‖) ^ 2 := by
     rw [mul_pow, EuclideanSpace.norm_sq_eq, EuclideanSpace.norm_sq_eq, EuclideanSpace.norm_sq_eq,
       Fintype.sum_prod_type, sum_mul_sum]
@@ -47,19 +47,19 @@ lemma norm_outer (x y : E d) : ‖outer x y‖ = ‖x‖ * ‖y‖ := by
     ring
   exact (pow_left_inj₀ (norm_nonneg _) (by positivity) two_ne_zero).mp h
 
-lemma continuous_outer : Continuous fun p : E d × E d => outer p.1 p.2 := by
+lemma continuous_outer : Continuous fun p : E d₁ × E d₂ => outer p.1 p.2 := by
   apply continuous_pi
   intro ij
   exact ((continuous_apply ij.1).comp continuous_fst).mul ((continuous_apply ij.2).comp continuous_snd)
 
 /-- `x ↦ A x` as a continuous linear map on `E d`. -/
-noncomputable def matCLM (A : Matrix (Fin d) (Fin d) ℝ) : E d →L[ℝ] E d :=
+noncomputable def matCLM (A : Matrix (Fin d₁) (Fin d₂) ℝ) : E d₂ →L[ℝ] E d₁ :=
   LinearMap.toContinuousLinearMap
-  { toFun := fun x => ((A *ᵥ x : Fin d → ℝ) : E d)
+  { toFun := fun x => ((A *ᵥ x : Fin d₁ → ℝ) : E d₁)
     map_add' := fun x y => mulVec_add A x y
     map_smul' := fun c x => mulVec_smul A c x }
 
-lemma matCLM_apply (A : Matrix (Fin d) (Fin d) ℝ) (x : E d) (i : Fin d) :
+lemma matCLM_apply (A : Matrix (Fin d₁) (Fin d₂) ℝ) (x : E d₂) (i : Fin d₁) :
   matCLM A x i = ∑ k, A i k * x k := rfl
 
 /-- `(x - β A x)(x - β A x)ᵀ = X - β (A X + X Aᵀ) + β² A X Aᵀ` with `X = x xᵀ`. -/
@@ -84,24 +84,25 @@ lemma outer_sub_smul_mulVec (A : Matrix (Fin d) (Fin d) ℝ) (b : ℝ) (x : E d)
 instance : ENNReal.HolderTriple 2 2 1 := ⟨by rw [inv_one]; exact ENNReal.inv_two_add_inv_two⟩
 
 /-- `E[a cᵀ]`. -/
-noncomputable def crossMoment (μ : Measure Ω) (a c : Ω → E d) : Mat d :=
+noncomputable def crossMoment (μ : Measure Ω) (a : Ω → E d₁) (c : Ω → E d₂) :
+    EuclideanSpace ℝ (Fin d₁ × Fin d₂) :=
   ∫ ω, outer (a ω) (c ω) ∂μ
 
 /-- `E[a aᵀ]`. -/
 noncomputable def secondMoment (μ : Measure Ω) (a : Ω → E d) : Mat d := crossMoment μ a a
 
-lemma aestronglyMeasurable_outer {a c : Ω → E d} (ha : AEStronglyMeasurable a μ)
+lemma aestronglyMeasurable_outer {a : Ω → E d₁} {c : Ω → E d₂} (ha : AEStronglyMeasurable a μ)
   (hc : AEStronglyMeasurable c μ) : AEStronglyMeasurable (fun ω => outer (a ω) (c ω)) μ :=
   continuous_outer.comp_aestronglyMeasurable (ha.prodMk hc)
 
-lemma integrable_outer {a c : Ω → E d} (ha : MemLp a 2 μ) (hc : MemLp c 2 μ) :
+lemma integrable_outer {a : Ω → E d₁} {c : Ω → E d₂} (ha : MemLp a 2 μ) (hc : MemLp c 2 μ) :
   Integrable (fun ω => outer (a ω) (c ω)) μ := by
   refine Integrable.mono' (g := fun ω => ‖a ω‖ * ‖c ω‖) (ha.norm.integrable_mul hc.norm)
     (aestronglyMeasurable_outer ha.1 hc.1) (Eventually.of_forall fun ω => ?_)
   rw [norm_outer]
 
 /-- Cauchy–Schwarz for `E[‖a‖ ‖c‖]`. -/
-lemma integral_norm_mul_le {a c : Ω → E d} (ha : MemLp a 2 μ) (hc : MemLp c 2 μ) :
+lemma integral_norm_mul_le {a : Ω → E d₁} {c : Ω → E d₂} (ha : MemLp a 2 μ) (hc : MemLp c 2 μ) :
   ∫ ω, ‖a ω‖ * ‖c ω‖ ∂μ ≤ √(∫ ω, ‖a ω‖ ^ 2 ∂μ) * √(∫ ω, ‖c ω‖ ^ 2 ∂μ) := by
   have := integral_mul_le_Lp_mul_Lq_of_nonneg (μ := μ) Real.HolderConjugate.two_two
     (f := fun ω => ‖a ω‖) (g := fun ω => ‖c ω‖)
@@ -111,14 +112,14 @@ lemma integral_norm_mul_le {a c : Ω → E d} (ha : MemLp a 2 μ) (hc : MemLp c 
   rwa [Real.sqrt_eq_rpow, Real.sqrt_eq_rpow]
 
 /-- `‖E[a cᵀ]‖ ≤ √E‖a‖² √E‖c‖²`. -/
-lemma norm_crossMoment_le {a c : Ω → E d} (ha : MemLp a 2 μ) (hc : MemLp c 2 μ) :
+lemma norm_crossMoment_le {a : Ω → E d₁} {c : Ω → E d₂} (ha : MemLp a 2 μ) (hc : MemLp c 2 μ) :
   ‖crossMoment μ a c‖ ≤ √(∫ ω, ‖a ω‖ ^ 2 ∂μ) * √(∫ ω, ‖c ω‖ ^ 2 ∂μ) := by
   refine (norm_integral_le_integral_norm _).trans ?_
   simp_rw [norm_outer]
   exact integral_norm_mul_le ha hc
 
-lemma crossMoment_apply {a c : Ω → E d} (ha : MemLp a 2 μ) (hc : MemLp c 2 μ)
-  (ij : Fin d × Fin d) :
+lemma crossMoment_apply {a : Ω → E d₁} {c : Ω → E d₂} (ha : MemLp a 2 μ) (hc : MemLp c 2 μ)
+  (ij : Fin d₁ × Fin d₂) :
   crossMoment μ a c ij = ∫ ω, a ω ij.1 * c ω ij.2 ∂μ := by
   have := (EuclideanSpace.proj (𝕜 := ℝ) ij).integral_comp_comm (integrable_outer ha hc)
   show EuclideanSpace.proj (𝕜 := ℝ) ij (∫ ω, outer (a ω) (c ω) ∂μ) = _
@@ -132,8 +133,8 @@ lemma memLp_apply {a : Ω → E d} (ha : MemLp a 2 μ) (i : Fin d) :
 /-- The cross moment of an `ℱ`-measurable vector with a martingale difference vanishes
 (tower property). -/
 lemma crossMoment_eq_zero {ℱ : MeasurableSpace Ω} (hℱ : ℱ ≤ m0) [IsFiniteMeasure μ]
-  {a c : Ω → E d} (ha : StronglyMeasurable[ℱ] a) (haL : MemLp a 2 μ) (hcL : MemLp c 2 μ)
-  (hc : ∀ j, μ[fun ω => c ω j | ℱ] =ᵐ[μ] 0) :
+  {a : Ω → E d₁} {c : Ω → E d₂} (ha : StronglyMeasurable[ℱ] a) (haL : MemLp a 2 μ)
+  (hcL : MemLp c 2 μ) (hc : ∀ j, μ[fun ω => c ω j | ℱ] =ᵐ[μ] 0) :
   crossMoment μ a c = 0 := by
   funext ij
   rw [crossMoment_apply haL hcL]
@@ -157,8 +158,8 @@ lemma crossMoment_eq_zero {ℱ : MeasurableSpace Ω} (hℱ : ℱ ≤ m0) [IsFini
 
 /-- The same with the factors in the other order. -/
 lemma crossMoment_eq_zero' {ℱ : MeasurableSpace Ω} (hℱ : ℱ ≤ m0) [IsFiniteMeasure μ]
-  {a c : Ω → E d} (ha : StronglyMeasurable[ℱ] a) (haL : MemLp a 2 μ) (hcL : MemLp c 2 μ)
-  (hc : ∀ j, μ[fun ω => c ω j | ℱ] =ᵐ[μ] 0) :
+  {a : Ω → E d₁} {c : Ω → E d₂} (ha : StronglyMeasurable[ℱ] a) (haL : MemLp a 2 μ)
+  (hcL : MemLp c 2 μ) (hc : ∀ j, μ[fun ω => c ω j | ℱ] =ᵐ[μ] 0) :
   crossMoment μ c a = 0 := by
   have h := crossMoment_eq_zero hℱ ha haL hcL hc
   funext ij
@@ -169,36 +170,36 @@ lemma crossMoment_eq_zero' {ℱ : MeasurableSpace Ω} (hℱ : ℱ ≤ m0) [IsFin
 
 /-! ### Algebra of moments -/
 
-lemma outer_add_left (x y z : E d) : outer (x + y) z = outer x z + outer y z := by
+lemma outer_add_left (x y : E d₁) (z : E d₂) : outer (x + y) z = outer x z + outer y z := by
   funext ij; simp [outer, add_mul]
 
-lemma outer_add_right (x y z : E d) : outer x (y + z) = outer x y + outer x z := by
+lemma outer_add_right (x : E d₁) (y z : E d₂) : outer x (y + z) = outer x y + outer x z := by
   funext ij; simp [outer, mul_add]
 
-lemma outer_smul_left (r : ℝ) (x y : E d) : outer (r • x) y = r • outer x y := by
+lemma outer_smul_left (r : ℝ) (x : E d₁) (y : E d₂) : outer (r • x) y = r • outer x y := by
   funext ij; simp [outer, mul_assoc]
 
-lemma outer_smul_right (r : ℝ) (x y : E d) : outer x (r • y) = r • outer x y := by
+lemma outer_smul_right (r : ℝ) (x : E d₁) (y : E d₂) : outer x (r • y) = r • outer x y := by
   funext ij; simp [outer]; ring
 
-lemma crossMoment_add_left {a b c : Ω → E d} (ha : MemLp a 2 μ) (hb : MemLp b 2 μ)
+lemma crossMoment_add_left {a b : Ω → E d₁} {c : Ω → E d₂} (ha : MemLp a 2 μ) (hb : MemLp b 2 μ)
   (hc : MemLp c 2 μ) :
   crossMoment μ (fun ω => a ω + b ω) c = crossMoment μ a c + crossMoment μ b c := by
   simp only [crossMoment, outer_add_left]
   exact integral_add (integrable_outer ha hc) (integrable_outer hb hc)
 
-lemma crossMoment_add_right {a b c : Ω → E d} (ha : MemLp a 2 μ) (hb : MemLp b 2 μ)
+lemma crossMoment_add_right {a : Ω → E d₁} {b c : Ω → E d₂} (ha : MemLp a 2 μ) (hb : MemLp b 2 μ)
   (hc : MemLp c 2 μ) :
   crossMoment μ a (fun ω => b ω + c ω) = crossMoment μ a b + crossMoment μ a c := by
   simp only [crossMoment, outer_add_right]
   exact integral_add (integrable_outer ha hb) (integrable_outer ha hc)
 
-lemma crossMoment_smul_left (r : ℝ) (a c : Ω → E d) :
+lemma crossMoment_smul_left (r : ℝ) (a : Ω → E d₁) (c : Ω → E d₂) :
   crossMoment μ (fun ω => r • a ω) c = r • crossMoment μ a c := by
   simp only [crossMoment, outer_smul_left]
   exact integral_smul r _
 
-lemma crossMoment_smul_right (r : ℝ) (a c : Ω → E d) :
+lemma crossMoment_smul_right (r : ℝ) (a : Ω → E d₁) (c : Ω → E d₂) :
   crossMoment μ a (fun ω => r • c ω) = r • crossMoment μ a c := by
   simp only [crossMoment, outer_smul_right]
   exact integral_smul r _
