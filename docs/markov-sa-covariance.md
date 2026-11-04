@@ -176,7 +176,7 @@ Choose $`k_1`$ such that for $`k \ge k_1`$ the coefficient is at most $`1 - a\be
 
 </div>
 
-*Lean:* the scalar induction is `bdd_of_le_contraction`.
+*Lean:* `norm_le_of_second_moment_recursion`, with the scalar induction in `bdd_of_le_contraction`. The Lean proof works with the Frobenius norm $`\|P_k\|`$ instead of $`\mathop{\mathrm{tr}}(BP_k)`$, with the remainder bound stated as $`\|R_k\| \le C\beta_k^2(\sqrt{\|P_k\|} + \beta_k)`$; it then needs the sharper one-step bound $`\|S - \beta\mathcal AS\| \le (1 - a\beta + \tfrac12\beta^2\|\mathcal A\|^2)\|S\|`$ (`norm_sub_smul_le'`) where $`a = 2\eta + \bar\beta`$ is the coercivity constant of $`\mathcal A`$, but no positive semidefiniteness of $`P_k`$.
 
 ### 2.5 A deterministic lemma
 
@@ -229,6 +229,8 @@ Finally, $`\theta_k = \theta'_k - \beta_kh_k`$, so
   = O(\beta_k^{3/2}),
 ```
 and therefore $`\beta_k^{-1}\mathbb{E}[\theta_k\theta_k^\top] - S_k \to 0`$.  ◻
+
+*Lean:* the part of this proof that starts from the second-moment recursion of Lemma [2.4](#lem:rec) is `tendsto_normalized_second_moment`, using the exact formula for $`\delta_k`$ in terms of $`P_k`$ and `tendsto_zero_of_coercive_recursion`; the solution $`\Sigma`$ of [(2)](#eq:lyap) exists by `exists_solution_of_coercive`. The remaining, probabilistic, steps are Lemmas [2.3](#lem:cov) and [2.4](#lem:rec).
 
 <a id="sec:verify"></a>
 
