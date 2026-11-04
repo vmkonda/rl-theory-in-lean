@@ -7,3 +7,4 @@ import RLTheory.Algorithm.QLearning
 import RLTheory.MarkovDecisionProcess.PolicyGradient
 import RLTheory.StochasticApproximation.GradientAscent
 import RLTheory.MarkovDecisionProcess.PolicyGradientLipschitz
+import RLTheory.StochasticApproximation.CovarianceRecursion

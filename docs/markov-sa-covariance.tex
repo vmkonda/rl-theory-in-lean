@@ -77,6 +77,16 @@ $\beta_k^{-1} \le \beta_0^{-1} + k(\bar\beta + 1)$ for large $k$.
 Every eigenvalue of $A_{\bar\beta} := A - \tfrac{\bar\beta}{2}I$ has positive real part.
 \end{assumption}
 
+\begin{remark}[Form used in Lean]\label{rem:posdef}
+The Lean formalization assumes instead that $A_{\bar\beta}$ is positive definite in the
+asymmetric sense, $x^\top A_{\bar\beta}x \ge \eta\|x\|^2$ for some $\eta > 0$
+(\texttt{Matrix.PosDefAsymm}). This is stronger in a fixed basis but loses no generality:
+with $B$ as in Lemma~\ref{lem:B}, the coordinates $\tilde\theta = B^{1/2}\theta$ turn
+Assumption~\ref{ass:stable} into this form, and the covariance transforms as
+$\tilde\Sigma = B^{1/2}\Sigma B^{1/2}$. In exchange, the Lyapunov operator is coercive in the
+ordinary Frobenius inner product (\texttt{lyapOp\_coercive}), which avoids spectral theory.
+\end{remark}
+
 \begin{assumption}[Noise]\label{ass:noise}
 The noise decomposes as
 \[
@@ -125,6 +135,9 @@ $\beta_k/\beta_{k+1}\to1$ because $\beta_k \to 0$. Finally
 $|\beta_k - \beta_{k+1}| = \beta_k\beta_{k+1}|\beta_{k+1}^{-1} - \beta_k^{-1}|$, where the
 last factor is bounded and $\beta_{k+1} \le C\beta_k$.
 \end{proof}
+\noindent\emph{Lean:} \texttt{StepSizeRate}, \texttt{StepSizeRate.tendsto\_ratio},
+\texttt{StepSizeRate.abs\_sub\_le}, and \texttt{StepSizeRate.tendsto\_sum} for
+$\sum_k\beta_k = \infty$.
 
 \subsection{Removing the telescoping part of the noise}
 
@@ -207,6 +220,7 @@ Choose $k_1$ such that for $k \ge k_1$ the coefficient is at most $1 - a\beta_k/
 $a\beta_k/2 \le 1$. Then $Y = \max(y_{k_1}, 2C/a)$ satisfies: $y_k \le Y$ implies
 $y_{k+1} \le (1 - a\beta_k/2)Y + C\beta_k \le Y$. By induction $y_k \le Y$ for $k \ge k_1$.
 \end{proof}
+\noindent\emph{Lean:} the scalar induction is \texttt{bdd\_of\_le\_contraction}.
 
 \subsection{A deterministic lemma}
 
@@ -229,6 +243,10 @@ $u_k \le 0$ for some $k \ge k_2$ it stays so; otherwise
 $u_k \le u_{k_2}\prod_{j=k_2}^{k-1}(1 - a\beta_j) \to 0$ because $\sum\beta_j = \infty$.
 Hence $\limsup\|e_k\|_* \le \eta$ for every $\eta > 0$.
 \end{proof}
+\noindent\emph{Lean:} \texttt{tendsto\_zero\_of\_coercive\_recursion} (for a coercive
+continuous linear map on a real inner product space), built on
+\texttt{norm\_sub\_smul\_le} and the scalar lemma \texttt{tendsto\_zero\_of\_le\_contraction};
+coercivity of $S \mapsto AS + SA^\top$ is \texttt{lyapOp\_coercive}.
 
 \subsection{Proof of Theorem~\ref{thm:main}}
 
