@@ -6,3 +6,4 @@ import RLTheory.Algorithm.LinearTD
 import RLTheory.Algorithm.QLearning
 import RLTheory.MarkovDecisionProcess.PolicyGradient
 import RLTheory.StochasticApproximation.GradientAscent
+import RLTheory.MarkovDecisionProcess.PolicyGradientLipschitz
