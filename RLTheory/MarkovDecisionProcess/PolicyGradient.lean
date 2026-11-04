@@ -344,6 +344,31 @@ lemma PolicyFamily.differentiable_J :
   exact DifferentiableAt.fun_sum fun s _ =>
     (differentiableAt_const _).mul (pf.differentiable_V M s θ)
 
+/-- The discounted objective is bounded above, uniformly over all policies. -/
+lemma PolicyFamily.bddAbove_J : BddAbove (Set.range fun θ => M.J (pf.pi θ)) := by
+  obtain ⟨C, hC⟩ := (Set.finite_range M.r).bddAbove
+  have hr : ∀ sa, M.r sa ≤ C := fun sa => hC ⟨sa, rfl⟩
+  have hγ : 0 < 1 - M.γ := by linarith [M.hγ.2]
+  refine ⟨(1 - M.γ)⁻¹ * C, ?_⟩
+  rintro _ ⟨θ, rfl⟩
+  have hpi := pf.stochastic θ
+  have hrpi : ∀ s, M.stateReward (pf.pi θ) s ≤ C := by
+    intro s
+    calc M.stateReward (pf.pi θ) s ≤ ∑ a, pf.pi θ s a * C :=
+          sum_le_sum fun a _ => mul_le_mul_of_nonneg_left (hr _) ((hpi s).nonneg a)
+      _ = C := by rw [← sum_mul, (hpi s).rowsum, one_mul]
+  have hV : ∀ s, M.V (pf.pi θ) s ≤ (1 - M.γ)⁻¹ * C := by
+    intro s
+    calc M.V (pf.pi θ) s = ∑ s', M.resolvent (pf.pi θ) s s' * M.stateReward (pf.pi θ) s' := rfl
+      _ ≤ ∑ s', M.resolvent (pf.pi θ) s s' * C :=
+          sum_le_sum fun s' _ => mul_le_mul_of_nonneg_left (hrpi s')
+            (M.resolvent_nonneg hpi s s')
+      _ = (1 - M.γ)⁻¹ * C := by rw [← sum_mul, M.sum_resolvent hpi]
+  calc M.J (pf.pi θ) = ∑ s, M.p₀ s * M.V (pf.pi θ) s := rfl
+    _ ≤ ∑ s, M.p₀ s * ((1 - M.γ)⁻¹ * C) :=
+        sum_le_sum fun s _ => mul_le_mul_of_nonneg_left (hV s) (M.hp₀.nonneg s)
+    _ = (1 - M.γ)⁻¹ * C := by rw [← sum_mul, M.hp₀.rowsum, one_mul]
+
 /-- **Policy gradient theorem** (discounted reward, finite MDP). -/
 theorem PolicyFamily.hasGradientAt_J (θ : E n) :
   HasGradientAt (fun θ => M.J (pf.pi θ))
