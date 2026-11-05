@@ -460,6 +460,33 @@ theorem td0_gain [DecidableEq S] {n : ℕ} {ν : Bool × S × Ac → ℝ} (hν :
   rw [← sum_sub_distrib, sum_congr rfl fun y _ => e y, sum_sub_distrib, hB, sub_zero,
     sum_neg_distrib]
 
+/-! ### The restart chain contracts -/
+
+omit [Fintype S] [Fintype Ac] in
+lemma Q_nonneg (hkap : ∀ y f s, 0 ≤ M.kap y f s) (hpol0 : ∀ s a, 0 ≤ M.pol s a)
+    (y y' : Bool × S × Ac) : 0 ≤ M.Q y y' :=
+  mul_nonneg (hkap _ _ _) (hpol0 _ _)
+
+/-- **The restart chain contracts.** If a restart resets the trace (`c true = 0`), `|c| ≤ 1`, the
+probability of continuing is at most `γ` (`Σ_{s'} kap y false s' ≤ γ`), and the policy is a
+probability distribution, then `Σ_{y'} Q y y' |λ c y'| ≤ |λ| γ`. For the restart chain of the
+write-up, `kap y false s' = γ P(s' | s, a)` and `c false = 1`, so this is the contraction
+hypothesis of `tendsto_traceMoment` with `ρ = |λ| γ < 1`, for every `λ ∈ [-1, 1]` and `γ < 1`. -/
+theorem restart_contraction (hkap : ∀ y f s, 0 ≤ M.kap y f s) (hpol : ∀ s, ∑ a, M.pol s a = 1) (hc0 : ∀ s, M.c true s = 0) (hc1 : ∀ s, |M.c false s| ≤ 1)
+    {γ : ℝ} (hγ : ∀ y, ∑ s', M.kap y false s' ≤ γ) (lam : ℝ) (y : Bool × S × Ac) :
+    ∑ y', M.Q y y' * |lam * M.cY y'| ≤ |lam| * γ := by
+  rw [sum_prod3, Fintype.sum_bool]
+  simp only [Q, cY, hc0, mul_zero, abs_zero, sum_const_zero, zero_add]
+  have e : ∀ s', ∑ a, M.kap y false s' * M.pol s' a * |lam * M.c false s'| =
+      M.kap y false s' * |lam * M.c false s'| := fun s' => by
+    rw [← sum_mul, ← mul_sum, hpol, mul_one]
+  simp only [e]
+  calc ∑ s', M.kap y false s' * |lam * M.c false s'| ≤ ∑ s', M.kap y false s' * |lam| :=
+        sum_le_sum fun s' _ => mul_le_mul_of_nonneg_left (by
+          rw [abs_mul]; exact mul_le_of_le_one_right (abs_nonneg _) (hc1 s')) (hkap _ _ _)
+    _ = |lam| * ∑ s', M.kap y false s' := by rw [mul_sum]; exact sum_congr rfl fun _ _ => mul_comm _ _
+    _ ≤ |lam| * γ := mul_le_mul_of_nonneg_left (hγ y) (abs_nonneg _)
+
 /-! ### The trace moments of the process -/
 
 /-- **The trace moments come from the process.** Along a chain `Y` with transitions `Q` whose
@@ -494,6 +521,27 @@ theorem tendsto_traceMoment [MeasurableSpace (Bool × S × Ac)]
   simp only [transfer, PiLp.add_apply, PiLp.smul_apply, smul_eq_mul, euclid_sum_apply']
   rw [mul_sum]
   ring_nf
+
+/-- **Trace moments of the restart chain.** For a restart-type chain (a restart resets the trace,
+`|c| ≤ 1`, continuation probability at most `γ < 1`), the trace moments converge to a solution of
+the `TraceMoment` recursion for every `|λ| ≤ 1`, including the REINFORCE trace `λ = 1`. -/
+theorem tendsto_traceMoment_restart [MeasurableSpace (Bool × S × Ac)]
+    [DiscreteMeasurableSpace (Bool × S × Ac)] [DecidableEq S] [DecidableEq Ac] {Ω : Type*}
+    {m0 : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {ℱ : MeasureTheory.Filtration ℕ m0} {Y : ℕ → Ω → Bool × S × Ac} (hY : FiniteMarkov μ ℱ Y M.Q)
+    (hkap : ∀ y f s, 0 ≤ M.kap y f s) (hpol0 : ∀ s a, 0 ≤ M.pol s a)
+    (hpol : ∀ s, ∑ a, M.pol s a = 1) (hc0 : ∀ s, M.c true s = 0) (hc1 : ∀ s, |M.c false s| ≤ 1)
+    {γ : ℝ} (hγ0 : 0 ≤ γ) (hγ1 : γ < 1) (hγ : ∀ y, ∑ s', M.kap y false s' ≤ γ) {lam : ℝ}
+    (hlam : |lam| ≤ 1) {p : ℕ} {φ : Bool × S × Ac → E p} {z : ℕ → Ω → E p}
+    (hz : ∀ k, StronglyMeasurable[ℱ k] (z k)) (hzB : ∀ k, ∃ C, ∀ ω, ‖z k ω‖ ≤ C)
+    (hzrec : ∀ k ω, z (k + 1) ω = (lam * M.cY (Y (k + 1) ω)) • z k ω + φ (Y (k + 1) ω))
+    {ν : Bool × S × Ac → ℝ}
+    (hlaw : ∀ y, Tendsto (fun k => momAt μ Y (fun _ _ => 1) k y) atTop (𝓝 (ν y))) :
+    ∃ m : Bool × S × Ac → E p, M.TraceMoment ν lam φ m ∧
+      ∀ y a, Tendsto (fun k => momAt μ Y (fun k ω => z k ω a) k y) atTop (𝓝 (m y a)) :=
+  M.tendsto_traceMoment hY (M.Q_nonneg hkap hpol0) (M.restart_contraction hkap hpol hc0 hc1 hγ lam)
+    (mul_nonneg (abs_nonneg _) hγ0)
+    (lt_of_le_of_lt (mul_le_of_le_one_left hγ0 hlam) hγ1) hz hzB hzrec hlaw
 
 end ScoreChain
 

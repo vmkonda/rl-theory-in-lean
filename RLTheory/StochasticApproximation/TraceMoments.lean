@@ -172,6 +172,13 @@ lemma FiniteMarkov.measurableSet_eq (hY : FiniteMarkov μ ℱ Y Q) (k : ℕ) (y 
     MeasurableSet[ℱ k] {ω | Y k ω = y} :=
   hY.adapted k (measurableSet_singleton y)
 
+omit [Fintype S] [DecidableEq S] [MeasurableSpace S] [DiscreteMeasurableSpace S] in
+lemma integrable_of_bdd {k : ℕ} {W : Ω → ℝ} (hW : StronglyMeasurable[ℱ k] W)
+    (hWB : ∃ C, ∀ ω, |W ω| ≤ C) : Integrable W μ := by
+  obtain ⟨C, hC⟩ := hWB
+  exact (memLp_top_of_bound (hW.mono (ℱ.le k)).aestronglyMeasurable C
+    (Eventually.of_forall fun ω => by rw [Real.norm_eq_abs]; exact hC ω)).integrable le_top
+
 omit [DecidableEq S] in
 /-- A bounded `ℱ k`-measurable variable is integrable, and so is its restriction. -/
 lemma integrable_indicator_of_bdd (hY : FiniteMarkov μ ℱ Y Q) {k j : ℕ} {W : Ω → ℝ}
@@ -595,17 +602,134 @@ lemma traceMart_eq_affine {d : ℕ} (hzrec : ∀ k ω, z (k + 1) ω = c (Y (k + 
     ContinuousLinearMap.sub_apply, ContinuousLinearMap.add_apply, ContinuousLinearMap.smul_apply]
   abel
 
+omit [Fintype S] [DecidableEq S] [MeasurableSpace S] [DiscreteMeasurableSpace S] in
+/-- `E‖g‖² ≤ 2a² E‖x‖² + 2b²` when `‖g‖ ≤ a‖x‖ + b`. -/
+lemma integral_sq_le_of_affine {d q : ℕ} {g : Ω → E d} {x : Ω → E q} {a b : ℝ}
+    (hg : MemLp g 2 μ) (hx : MemLp x 2 μ) (hgx : ∀ ω, ‖g ω‖ ≤ a * ‖x ω‖ + b) (ha : 0 ≤ a)
+    (hb : 0 ≤ b) :
+    ∫ ω, ‖g ω‖ ^ 2 ∂μ ≤ 2 * a ^ 2 * ∫ ω, ‖x ω‖ ^ 2 ∂μ + 2 * b ^ 2 := by
+  have hpt : ∀ ω, ‖g ω‖ ^ 2 ≤ 2 * a ^ 2 * ‖x ω‖ ^ 2 + 2 * b ^ 2 := fun ω => by
+    have h0 : 0 ≤ ‖g ω‖ := norm_nonneg _
+    have h1 : 0 ≤ a * ‖x ω‖ := mul_nonneg ha (norm_nonneg _)
+    nlinarith [hgx ω, sq_nonneg (a * ‖x ω‖ - b)]
+  have i1 : Integrable (fun ω => 2 * a ^ 2 * ‖x ω‖ ^ 2 + 2 * b ^ 2) μ :=
+    ((memLp_sq_integrable hx).const_mul _).add (integrable_const _)
+  refine (integral_mono (memLp_sq_integrable hg) i1 hpt).trans (le_of_eq ?_)
+  rw [integral_add ((memLp_sq_integrable hx).const_mul _) (integrable_const _),
+    integral_const_mul]
+  simp
+
+omit [DecidableEq S] in
+/-- **Corollary 4.5 for traces with bounded second moments.** The trace-noise theorem holds when
+each `z k` is bounded (with a bound that may grow with `k`) and `sup_k E‖z_k‖² < ∞`. This covers
+the REINFORCE trace (`λ = 1`, reset at restarts), which is not uniformly bounded. -/
+theorem tendsto_secondMoment_of_trace_noise_L2 {d : ℕ} {β : ℕ → ℝ} {βbar : ℝ}
+    (hβ : StepSizeRate β βbar) (A : Matrix (Fin d) (Fin d) ℝ) {η : ℝ} (hη : 0 < η)
+    (hA : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A - (βbar / 2) • 1) *ᵥ x))
+    (hY : FiniteMarkov μ ℱ Y Q) (hz : ∀ k, StronglyMeasurable[ℱ k] (z k))
+    (hzk : ∀ k, ∃ C, ∀ ω, ‖z k ω‖ ≤ C) (hz2 : ∃ C₂, ∀ k, ∫ ω, ‖z k ω‖ ^ 2 ∂μ ≤ C₂)
+    (hzrec : ∀ k ω, z (k + 1) ω = c (Y (k + 1) ω) • z k ω + φ (Y (k + 1) ω))
+    (Fm : S → S → E p →L[ℝ] E d) (e : S → S → E d) (U : S → E p →L[ℝ] E d) (hh : S → E d)
+    (hU : ∀ y, U y = ∑ y', Q y y' • (Fm y y' + c y' • U y'))
+    (hhh : ∀ y, hh y = ∑ y', Q y y' • (e y y' + U y' (φ y') + hh y')) {Γ : Mat d}
+    (hΓ : Tendsto (fun k => secondMoment μ (fun ω => traceNoise Fm e Y z k ω
+      + tracePoisson U hh Y z (k + 1) ω - tracePoisson U hh Y z k ω)) atTop (𝓝 Γ))
+    {θ : ℕ → Ω → E d}
+    (hθ : ∀ k ω, θ (k + 1) ω = θ k ω - β k • matCLM A (θ k ω) + β k • traceNoise Fm e Y z k ω)
+    (hθ0 : StronglyMeasurable[ℱ 0] (θ 0)) (hθ0L : MemLp (θ 0) 2 μ) :
+    ∃ Sig, lyapOp (A - (βbar / 2) • 1) Sig = Γ ∧
+      Tendsto (fun k => (β k)⁻¹ • secondMoment μ (θ k)) atTop (𝓝 Sig) := by
+  obtain ⟨C₂, hC₂⟩ := hz2
+  obtain ⟨CU, hCU, hUle⟩ : ∃ C, 0 ≤ C ∧ ∀ s, ‖U s‖ ≤ C :=
+    ⟨_, sum_nonneg fun _ _ => norm_nonneg _, norm_le_sum_gen U⟩
+  obtain ⟨Ch, hCh, hhle⟩ : ∃ C, 0 ≤ C ∧ ∀ s, ‖hh s‖ ≤ C :=
+    ⟨_, sum_nonneg fun _ _ => norm_nonneg _, norm_le_sum_gen hh⟩
+  obtain ⟨CG, hCG, hGle⟩ : ∃ C, 0 ≤ C ∧ ∀ s s', ‖Fm s s' + c s' • U s' - U s‖ ≤ C :=
+    ⟨_, sum_nonneg fun _ _ => sum_nonneg fun _ _ => norm_nonneg _,
+      norm_le_sum_sum_gen (fun s s' => Fm s s' + c s' • U s' - U s)⟩
+  obtain ⟨Cg, hCg, hgle⟩ : ∃ C, 0 ≤ C ∧ ∀ s s', ‖e s s' + U s' (φ s') + hh s' - hh s‖ ≤ C :=
+    ⟨_, sum_nonneg fun _ _ => sum_nonneg fun _ _ => norm_nonneg _,
+      norm_le_sum_sum_gen (fun s s' => e s s' + U s' (φ s') + hh s' - hh s)⟩
+  have bH : ∀ k ω, ‖tracePoisson U hh Y z k ω‖ ≤ CU * ‖z k ω‖ + Ch := fun k ω =>
+    (norm_add_le _ _).trans (add_le_add (((U (Y k ω)).le_opNorm _).trans
+      (mul_le_mul_of_nonneg_right (hUle _) (norm_nonneg _))) (hhle _))
+  have bM : ∀ k ω, ‖traceNoise Fm e Y z k ω + tracePoisson U hh Y z (k + 1) ω
+      - tracePoisson U hh Y z k ω‖ ≤ CG * ‖z k ω‖ + Cg := fun k ω => by
+    rw [traceMart_eq_affine hzrec Fm e U hh k ω]
+    exact (norm_add_le _ _).trans (add_le_add (((Fm (Y k ω) (Y (k + 1) ω)
+      + c (Y (k + 1) ω) • U (Y (k + 1) ω) - U (Y k ω)).le_opNorm _).trans
+      (mul_le_mul_of_nonneg_right (hGle _ _) (norm_nonneg _))) (hgle _ _))
+  -- measurability
+  have mY : ∀ k, Measurable[ℱ k] (Y k) := hY.adapted
+  have smH : ∀ k, StronglyMeasurable[ℱ k] (tracePoisson U hh Y z k) := fun k => by
+    unfold tracePoisson
+    exact (stronglyMeasurable_clm_apply (m := ℱ k)
+      ((StronglyMeasurable.of_discrete (f := U)).comp_measurable (mY k)) (hz k)).add
+      (hY.stronglyMeasurable hh k)
+  have smf : ∀ k, StronglyMeasurable[ℱ (k + 1)] (traceNoise Fm e Y z k) := by
+    intro k
+    have h1 : Measurable[ℱ (k + 1)] (Y k) := (mY k).mono (ℱ.mono (Nat.le_succ k)) le_rfl
+    have hL : StronglyMeasurable[ℱ (k + 1)] fun ω => Fm (Y k ω) (Y (k + 1) ω) :=
+      (StronglyMeasurable.of_discrete (f := Function.uncurry Fm)).comp_measurable
+        (h1.prodMk (mY (k + 1)))
+    unfold traceNoise
+    exact (stronglyMeasurable_clm_apply (m := ℱ (k + 1)) hL
+      ((hz k).mono (ℱ.mono (Nat.le_succ k)))).add (hY.stronglyMeasurable₂ e k)
+  have smM : ∀ k, StronglyMeasurable[ℱ (k + 1)] fun ω => traceNoise Fm e Y z k ω
+      + tracePoisson U hh Y z (k + 1) ω - tracePoisson U hh Y z k ω := fun k =>
+    ((smf k).add (smH (k + 1))).sub ((smH k).mono (ℱ.mono (Nat.le_succ k)))
+  -- integrability at each step
+  have hzL : ∀ k, MemLp (z k) 2 μ := fun k => by
+    obtain ⟨C, hC⟩ := hzk k
+    exact memLp_of_finite ((hz k).mono (ℱ.le k)).aestronglyMeasurable hC
+  have hHL : ∀ k, MemLp (tracePoisson U hh Y z k) 2 μ := fun k => by
+    obtain ⟨C, hC⟩ := hzk k
+    exact memLp_of_finite ((smH k).mono (ℱ.le k)).aestronglyMeasurable (C := CU * C + Ch)
+      fun ω => (bH k ω).trans (add_le_add_right (mul_le_mul_of_nonneg_left (hC ω) hCU) _)
+  have hML : ∀ k, MemLp (fun ω => traceNoise Fm e Y z k ω + tracePoisson U hh Y z (k + 1) ω
+      - tracePoisson U hh Y z k ω) 2 μ := fun k => by
+    obtain ⟨C, hC⟩ := hzk k
+    exact memLp_of_finite ((smM k).mono (ℱ.le (k + 1))).aestronglyMeasurable (C := CG * C + Cg)
+      fun ω => (bM k ω).trans (add_le_add_right (mul_le_mul_of_nonneg_left (hC ω) hCG) _)
+  -- uniform second-moment bounds
+  have hHB : ∀ k, ∫ ω, ‖tracePoisson U hh Y z k ω‖ ^ 2 ∂μ ≤ 2 * CU ^ 2 * C₂ + 2 * Ch ^ 2 :=
+    fun k => (integral_sq_le_of_affine (hHL k) (hzL k) (bH k) hCU hCh).trans
+      (add_le_add_right (mul_le_mul_of_nonneg_left (hC₂ k) (by positivity)) _)
+  have hMB : ∀ k, ∫ ω, ‖traceNoise Fm e Y z k ω + tracePoisson U hh Y z (k + 1) ω
+      - tracePoisson U hh Y z k ω‖ ^ 2 ∂μ ≤ 2 * CG ^ 2 * C₂ + 2 * Cg ^ 2 :=
+    fun k => (integral_sq_le_of_affine (hML k) (hzL k) (bM k) hCG hCg).trans
+      (add_le_add_right (mul_le_mul_of_nonneg_left (hC₂ k) (by positivity)) _)
+  refine tendsto_secondMoment_of_markov_noise hβ A hη hA ℱ
+    (M := fun n ω => traceNoise Fm e Y z n.pred ω + tracePoisson U hh Y z n ω
+      - tracePoisson U hh Y z n.pred ω) (h := tracePoisson U hh Y z) ?_ hθ0 hθ0L smH hHL
+    ⟨_, hHB⟩ smM hML ⟨_, hMB⟩
+    (fun k j => condExp_traceMart_eq_zero hY hz hzk hzrec Fm e U hh hU hhh k j) hΓ
+  intro k ω
+  rw [hθ k ω]
+  congr 2
+  simp only [Nat.pred_succ]
+  abel
+
+omit [DecidableEq S] in
+/-- `E[W] = Σ_y E[W 1{Y_k = y}]`. -/
+lemma integral_eq_sum_momAt (hY : FiniteMarkov μ ℱ Y Q) {k : ℕ} {W : Ω → ℝ}
+    (hW : StronglyMeasurable[ℱ k] W) (hWB : ∃ C, ∀ ω, |W ω| ≤ C) :
+    ∫ ω, W ω ∂μ = ∑ y, ∫ ω, {ω | Y k ω = y}.indicator W ω ∂μ := by
+  have := integral_mul_comp_eq_sum hY hW hWB (fun _ => 1)
+  simpa using this
+
 /-- **Corollary 4.5 with `Γ` identified.** Linear stochastic approximation driven by trace noise
-along a finite chain whose law converges to `ν`, with `Σ_{y'} Q y y' |c y'| ≤ ρ < 1` and
-`|c| ≤ 1`, satisfies Theorem 2.1 with `Γ = traceGamma`, computed from the stationary moments of
-the trace. The covariance hypothesis of `tendsto_secondMoment_of_trace_noise` is discharged. -/
+along a finite chain whose law converges to `ν`, with `Σ_{y'} Q y y' |c y'| ≤ ρ < 1`,
+`|c| ≤ 1` and a bounded initial trace, satisfies Theorem 2.1 with `Γ = traceGamma`, computed
+from the stationary moments of the trace. No uniform bound on the traces is assumed, so the
+REINFORCE trace (`λ = 1`, reset at restarts) is covered. -/
 theorem tendsto_secondMoment_of_trace_noise_stationary {d : ℕ} {β : ℕ → ℝ} {βbar : ℝ}
     (hβ : StepSizeRate β βbar) (A : Matrix (Fin d) (Fin d) ℝ) {η : ℝ} (hη : 0 < η)
     (hA : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A - (βbar / 2) • 1) *ᵥ x))
     (hY : FiniteMarkov μ ℱ Y Q) (hQ : ∀ y y', 0 ≤ Q y y') {ρ : ℝ}
     (hρ : ∀ y, ∑ y', Q y y' * |c y'| ≤ ρ) (hρ0 : 0 ≤ ρ) (hρ1 : ρ < 1) (hc1 : ∀ y, |c y| ≤ 1)
     {ν : S → ℝ} (hlaw : ∀ y, Tendsto (fun k => momAt μ Y (fun _ _ => 1) k y) atTop (𝓝 (ν y)))
-    {Cz : ℝ} (hz : ∀ k, StronglyMeasurable[ℱ k] (z k)) (hzB : ∀ k ω, ‖z k ω‖ ≤ Cz)
+    (hz : ∀ k, StronglyMeasurable[ℱ k] (z k)) (hz0 : ∃ C, ∀ ω, ‖z 0 ω‖ ≤ C)
     (hzrec : ∀ k ω, z (k + 1) ω = c (Y (k + 1) ω) • z k ω + φ (Y (k + 1) ω))
     (Fm : S → S → E p →L[ℝ] E d) (e : S → S → E d) (U : S → E p →L[ℝ] E d) (hh : S → E d)
     (hU : ∀ y, U y = ∑ y', Q y y' • (Fm y y' + c y' • U y'))
@@ -622,12 +746,41 @@ theorem tendsto_secondMoment_of_trace_noise_stationary {d : ℕ} {β : ℕ → �
           traceGamma Q (fun y y' => Fm y y' + c y' • U y' - U y)
             (fun y y' => e y y' + U y' (φ y') + hh y' - hh y) ν m₁ m₂ ∧
         Tendsto (fun k => (β k)⁻¹ • secondMoment μ (θ k)) atTop (𝓝 Sig) := by
+  -- each trace is bounded: `‖z (k+1)‖ ≤ ‖z k‖ + Σ‖φ‖`
+  have hzk : ∀ k, ∃ C, ∀ ω, ‖z k ω‖ ≤ C := by
+    intro k
+    induction k with
+    | zero => exact hz0
+    | succ k ih =>
+      obtain ⟨C, hC⟩ := ih
+      refine ⟨C + ∑ s, ‖φ s‖, fun ω => ?_⟩
+      rw [hzrec k ω]
+      refine (norm_add_le _ _).trans (add_le_add ?_ (norm_le_sum_gen φ _))
+      rw [norm_smul, Real.norm_eq_abs]
+      exact (mul_le_of_le_one_left (norm_nonneg _) (hc1 _)).trans (hC ω)
   obtain ⟨m₁, m₂, hm₁, hm₂, hΓ⟩ := tendsto_secondMoment_trace_affine hY hQ hρ hρ0 hρ1 hc1 hz
-    (fun k => ⟨Cz, hzB k⟩) hzrec hlaw (fun y y' => Fm y y' + c y' • U y' - U y)
+    hzk hzrec hlaw (fun y y' => Fm y y' + c y' • U y' - U y)
     (fun y y' => e y y' + U y' (φ y') + hh y' - hh y)
+  -- the second moments of the trace converge, hence are bounded
+  obtain ⟨n₁, n₂, -, -, -, ht₂⟩ := tendsto_trace_moments hY hQ hρ hρ0 hρ1 hc1 hz hzk hzrec hlaw
+  have hsq : ∀ k, ∫ ω, ‖z k ω‖ ^ 2 ∂μ =
+      ∑ a, ∑ y, momAt μ Y (fun k ω => z k ω a * z k ω a) k y := fun k => by
+    have e1 : ∀ ω, ‖z k ω‖ ^ 2 = ∑ a, z k ω a * z k ω a := fun ω => by
+      rw [EuclideanSpace.norm_sq_eq]
+      exact sum_congr rfl fun a _ => by rw [Real.norm_eq_abs, sq_abs, sq]
+    have sm : ∀ a, StronglyMeasurable[ℱ k] fun ω => z k ω a * z k ω a := fun a =>
+      (coord_stronglyMeasurable hz k a).mul (coord_stronglyMeasurable hz k a)
+    rw [show (fun ω => ‖z k ω‖ ^ 2) = fun ω => ∑ a, z k ω a * z k ω a from funext e1,
+      integral_finset_sum _ fun a _ => integrable_of_bdd (sm a) (coord_mul_bdd hzk k a a)]
+    exact sum_congr rfl fun a _ => integral_eq_sum_momAt hY (sm a) (coord_mul_bdd hzk k a a)
+  have hconv : Tendsto (fun k => ∫ ω, ‖z k ω‖ ^ 2 ∂μ) atTop
+      (𝓝 (∑ a, ∑ y, n₂ a a y)) := by
+    simp only [hsq]
+    exact tendsto_finset_sum _ fun a _ => tendsto_finset_sum _ fun y _ => ht₂ a a y
+  obtain ⟨C₂, hC₂⟩ := hconv.bddAbove_range
   refine ⟨m₁, m₂, hm₁, hm₂, ?_⟩
-  refine tendsto_secondMoment_of_trace_noise hβ A hη hA hY hz hzB hzrec Fm e U hh hU hhh ?_ hθ hθ0
-    hθ0L
+  refine tendsto_secondMoment_of_trace_noise_L2 hβ A hη hA hY hz hzk
+    ⟨C₂, fun k => hC₂ ⟨k, rfl⟩⟩ hzrec Fm e U hh hU hhh ?_ hθ hθ0 hθ0L
   simpa only [traceMart_eq_affine hzrec] using hΓ
 
 end Process

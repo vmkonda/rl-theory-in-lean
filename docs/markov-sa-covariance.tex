@@ -545,8 +545,13 @@ geometrically.
 trace-driven noise with bounded traces, with $\Gamma = \lim\E[M_{k+1}M_{k+1}^\top]$ as a hypothesis.
 \texttt{tendsto\_secondMoment\_of\_trace\_noise\_stationary} (in \texttt{TraceMoments.lean}) discharges
 that hypothesis and identifies $\Gamma$, assuming the law of $Y_k$ converges to $\nu$,
-$\sum_{y'}Q(y,y')|c(y')| \le \rho < 1$ and $|c| \le 1$. These hold for the restart chain with
-$c = \lambda\,1\{\text{not a restart}\}$, where $\rho = \lambda\gamma$.
+$\sum_{y'}Q(y,y')|c(y')| \le \rho < 1$, $|c| \le 1$ and a bounded initial trace. These hold for the
+restart chain with $c = \lambda\,1\{\text{not a restart}\}$, where $\rho = |\lambda|\gamma$
+(\texttt{ScoreChain.restart\_contraction}). No uniform bound on the traces is needed, so the
+REINFORCE trace ($\lambda = 1$), which is unbounded over long episodes, is covered.
+\texttt{tendsto\_secondMoment\_of\_trace\_noise\_L2} replaces the uniform bound by a bound on each
+$z_k$ and $\sup_k\E\|z_k\|^2 < \infty$; in the stationary corollary both follow from $|c| \le 1$ and
+the convergence of the second moments.
 \begin{itemize}
 \item \texttt{mom1\_succ} and \texttt{mom2\_succ}: the trace moments
   $m_1(k, y) = \E[z_k1\{Y_k = y\}]$ and $m_2(k, y) = \E[z_kz_k^\top1\{Y_k = y\}]$ satisfy exact

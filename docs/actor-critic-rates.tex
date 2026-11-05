@@ -487,10 +487,13 @@ the predicted covariances to about 5\%, supporting Assumption~\ref{ass:lin} in t
   $m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)$. \texttt{ScoreChain.tendsto\_traceMoment}
   derives this recursion from the process. Along the chain, the moments of the trace converge
   to a solution whenever the law of $Y_k$ converges and $\sum_{y'}Q(y,y')|\lambda c(y')| < 1$.
+  For the restart chain this condition holds with bound $|\lambda|\gamma$
+  (\texttt{ScoreChain.restart\_contraction}), so \texttt{ScoreChain.tendsto\_traceMoment\_restart}
+  needs only the convergence of the law, for every $|\lambda| \le 1$.
 \item The noise covariance $\tilde\Gamma$ of Theorem~\ref{thm:cov}, for trace-driven noise, is the limit
   computed from the stationary first and second trace moments
   (\texttt{tendsto\_secondMoment\_of\_trace\_noise\_stationary}, in the companion note). It is no
-  longer a hypothesis.
+  longer a hypothesis. This includes the unbounded REINFORCE trace.
 \item Assumption~\ref{ass:lin} is a hypothesis, and Lemma~\ref{lem:delta} (an implicit-function
   computation) is not formalized.
 \end{itemize}

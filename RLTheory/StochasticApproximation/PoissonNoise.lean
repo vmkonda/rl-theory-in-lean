@@ -231,8 +231,8 @@ noncomputable def tracePoisson (U : S → E m →L[ℝ] E d) (hh : S → E d) (Y
 `ĥ = Σ_{y'} Q(·, y') (e(·, y') + U(y') φ(y') + ĥ(y'))`, then
 `M (k+1) = f k + H (k+1) - H k` is a martingale difference. -/
 theorem condExp_traceMart_eq_zero [IsFiniteMeasure μ] (hY : FiniteMarkov μ ℱ Y Q)
-    {z : ℕ → Ω → E m} {c : S → ℝ} {φ : S → E m} {Cz : ℝ}
-    (hz : ∀ k, StronglyMeasurable[ℱ k] (z k)) (hzB : ∀ k ω, ‖z k ω‖ ≤ Cz)
+    {z : ℕ → Ω → E m} {c : S → ℝ} {φ : S → E m}
+    (hz : ∀ k, StronglyMeasurable[ℱ k] (z k)) (hzB : ∀ k, ∃ C, ∀ ω, ‖z k ω‖ ≤ C)
     (hzrec : ∀ k ω, z (k + 1) ω = c (Y (k + 1) ω) • z k ω + φ (Y (k + 1) ω))
     (Fm : S → S → E m →L[ℝ] E d) (e : S → S → E d) (U : S → E m →L[ℝ] E d) (hh : S → E d)
     (hU : ∀ y, U y = ∑ y', Q y y' • (Fm y y' + c y' • U y'))
@@ -259,7 +259,8 @@ theorem condExp_traceMart_eq_zero [IsFiniteMeasure μ] (hY : FiniteMarkov μ ℱ
   -- integrability
   have hzi : ∀ i, StronglyMeasurable[ℱ k] fun ω => z k ω i := fun i =>
     (EuclideanSpace.proj (𝕜 := ℝ) i).continuous.comp_stronglyMeasurable (hz k)
-  have hzib : ∀ i ω, ‖z k ω i‖ ≤ Cz := fun i ω => (PiLp.norm_apply_le _ i).trans (hzB k ω)
+  obtain ⟨Cz, hCz⟩ := hzB k
+  have hzib : ∀ i ω, ‖z k ω i‖ ≤ Cz := fun i ω => (PiLp.norm_apply_le _ i).trans (hCz ω)
   have hGm : ∀ (H : S → S → ℝ), StronglyMeasurable fun ω => H (Y k ω) (Y (k + 1) ω) := by
     intro H
     have h1 : Measurable (Y k) := (hY.adapted k).mono (ℱ.le k) le_rfl
@@ -401,7 +402,8 @@ theorem tendsto_secondMoment_of_trace_noise [IsProbabilityMeasure μ] {β : ℕ 
     (M := fun n ω => traceNoise Fm e Y z n.pred ω + tracePoisson U hh Y z n ω
       - tracePoisson U hh Y z n.pred ω) (h := tracePoisson U hh Y z) ?_ hθ0 hθ0L smH hHL
     ⟨_, fun k => sqB (bH k)⟩ smM hML ⟨_, fun k => sqB (bM k)⟩
-    (fun k j => condExp_traceMart_eq_zero hY hz hzB hzrec Fm e U hh hU hhh k j) hΓ
+    (fun k j => condExp_traceMart_eq_zero hY hz (fun k => ⟨Cz, hzB k⟩) hzrec Fm e U hh hU hhh k j)
+    hΓ
   intro k ω
   rw [hθ k ω]
   congr 2
