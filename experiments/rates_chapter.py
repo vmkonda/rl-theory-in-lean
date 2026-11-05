@@ -79,6 +79,22 @@ for seed, mdp, th, HJ in instances:
 print(f"   (a) worst relative difference over instances and critic features: {worst_a:.1e}")
 print(f"   (b) worst relative difference over instances and lambda:          {worst_b:.1e}")
 
+print("\n(d) critic with tabular state features: fixed point (w, V^pi) and unbiased direction")
+from ac_rates import critic_solution
+worst_d = 0.0
+for seed, mdp, th, HJ in instances:
+    for t in [th, th + np.array([0.3, -0.2])]:
+        V, Qsa, eta = mdp.values(t)
+        psi = mdp.psi(t)
+        Psi = np.einsum('sa,san,sam->nm', eta, psi, psi)
+        w = np.linalg.solve(Psi, np.einsum('sa,san,sa->n', eta, psi, Qsa - V[:, None]))
+        for lam in [0.0, 0.4, 0.8, 1.0]:
+            r = critic_solution(mdp, t, Critic(lam, np.eye(6)))[-1]
+            d = actor_critic_direction(mdp, t, Critic(lam, np.eye(6)))
+            worst_d = max(worst_d, np.abs(r - np.concatenate([w, V])).max(),
+                          np.abs(d - (1 - mdp.gamma) * mdp.grad_J(t)).max())
+print(f"   worst deviation: {worst_d:.1e}")
+
 print("\n(c) loss metric l (unbiased designs, relative to actor-only lambda = 1) and bias gap")
 print("    seed |  AO l=0.9  AO l=0.5 | AC tab l=1  l=0.7  l=0.3  l=0  | AC rand2 l=0.7: gap, l")
 for seed, mdp, th, HJ in instances:

@@ -6,7 +6,7 @@
 
 > **Abstract.**
 >
-> We compare the asymptotic rates of convergence of actor-only and actor-critic methods on finite discounted Markov decision processes, as a function of the critic’s features and of $`\lambda`$ in TD($`\lambda`$). The iterations are linearized around their limit by a first-order Taylor expansion. This gives linear two-time-scale iterations with Markov noise, whose asymptotic covariance is given by the two-time-scale note (including the multiplicative noise that the linearization produces). The figure of merit is the loss in expected total reward, $`\mathbb{E}[J(\theta^*) - J(\theta_k)]`$, which to second order is the variance of the parameter weighted by the Hessian of $`J`$. We prove that a TD(1) critic, whatever its features, gives exactly the rate of actor-only with Monte Carlo returns, and that a critic with only the compatible features gives exactly the rate of actor-only with the same trace parameter. With a tabular critic and $`\lambda < 1`$, the method stays unbiased in every instance we computed and the loss drops to 0.2–0.6 of the actor-only loss, decreasing with $`\lambda`$.
+> We compare the asymptotic rates of convergence of actor-only and actor-critic methods on finite discounted Markov decision processes, as a function of the critic’s features and of $`\lambda`$ in TD($`\lambda`$). The iterations are linearized around their limit by a first-order Taylor expansion. This gives linear two-time-scale iterations with Markov noise, whose asymptotic covariance is given by the two-time-scale note (including the multiplicative noise that the linearization produces). The figure of merit is the loss in expected total reward, $`\mathbb{E}[J(\theta^*) - J(\theta_k)]`$, which to second order is the variance of the parameter weighted by the Hessian of $`J`$. We prove that a TD(1) critic, whatever its features, gives exactly the rate of actor-only with Monte Carlo returns, and that a critic with only the compatible features gives exactly the rate of actor-only with the same trace parameter. When the critic’s state features can represent the value function (for instance tabular), the method is unbiased for every $`\lambda`$; in our instances its loss is then 0.2–0.6 of the actor-only loss, decreasing with $`\lambda`$.
 
 ## 1 Setting
 
@@ -216,13 +216,26 @@ which is the partial sum of the actor-only noise $`g(Y_k)Z_k - f`$. The incomple
 
 <div class="remark">
 
-**Remark 4.3**. For $`\lambda < 1`$ both methods in Theorem [4.2](#thm:compat) are biased: their common limit is the root of $`\mathbb{E}[gz]`$, not $`\theta^*`$. A critic helps only through features beyond the compatible ones, and only when TD($`\lambda`$) with $`\lambda < 1`$ is used; with $`\lambda = 1`$ it reproduces Monte Carlo (Theorem [4.1](#thm:td1)).
+**Remark 4.3**. For $`\lambda < 1`$ both methods in Theorem [4.2](#thm:compat) are biased: their common limit is the root of $`\mathbb{E}[gz]`$, not $`\theta^*`$. A critic helps only through features beyond the compatible ones, and only when TD($`\lambda`$) with $`\lambda < 1`$ is used; with $`\lambda = 1`$ it reproduces Monte Carlo (Theorem [4.1](#thm:td1)). The state features act as a learned baseline: when they can represent $`V^\pi`$, any $`\lambda`$ is unbiased (Theorem [4.4](#thm:value)).
+
+</div>
+
+<div id="thm:value" class="theorem">
+
+**Theorem 4.4** (Critics that represent the value function). *Let the critic features be $`\phi = (\psi, \bar\phi)`$ where the span of the state features $`\bar\phi(s)`$ contains $`V^{\pi_\theta}`$ (for instance tabular features $`\bar\phi(s) = e_s`$), and let the critic use TD($`\lambda`$) for any $`\lambda \in [0,1]`$. Then the critic’s fixed point is $`r^* = (w, u)`$ with $`\bar\phi^\top u = V^{\pi_\theta}`$ and $`w = \mathbb{E}[\psi\psi^\top]^{-1}\mathbb{E}[\psi A^{\pi_\theta}]`$, the least-squares fit of the advantage $`A^\pi = Q^\pi - V^\pi`$ on the score. Hence the actor’s mean direction is $`f(\theta) = (1-\gamma)\nabla J(\theta)`$ for every $`\theta`$: the method is unbiased for every $`\lambda`$, and at $`\theta^*`$ the critic converges to $`\hat r = (0, u)`$.*
+
+</div>
+
+<div class="proof">
+
+*Proof.* Let $`\delta_k = g(Y_k) + c_{k+1}V(s_{k+1}) - V(s_k)`$ be the TD error of $`V = V^\pi`$, so that $`\mathbb{E}[\delta_k\mid s_k, a_k] = Q(s_k,a_k) - V(s_k) = A(s_k,a_k)`$, and $`\mathbb{E}_{a\sim\pi}[A(s,a)] = 0`$. For $`r = (w, u)`$ the TD error is $`d_k = \delta_k - \psi_k^\top w + c_{k+1}\psi_{k+1}^\top w`$. We check $`\mathbb{E}[z_kd_k] = 0`$, which characterizes the fixed point when $`A_c`$ is invertible. (i) $`\mathbb{E}[z_kc_{k+1}\psi_{k+1}^\top] = 0`$ because the score has mean zero over the action $`a_{k+1}`$, drawn given $`s_{k+1}`$ and the past. (ii) Write $`z_k = \phi_k + \lambda c_kz_{k-1}`$. The factor $`\lambda c_kz_{k-1}`$ depends only on the past and on $`s_k`$, and $`\mathbb{E}[\delta_k - \psi_k^\top w\mid s_k, \text{past}] = \mathbb{E}_a[A(s_k, a)] - \mathbb{E}_a[\psi(s_k,a)]^\top w = 0`$. (iii) So $`\mathbb{E}[z_kd_k] = \mathbb{E}[\phi_k(A(s_k,a_k) - \psi_k^\top w)]`$. Its state block $`\mathbb{E}[\bar\phi(s)\,\mathbb{E}_a[A - \psi^\top w]]`$ vanishes, and its score block vanishes by the choice of $`w`$. The actor direction is then $`Cr^* = \mathbb{E}[\psi\psi^\top]w + \mathbb{E}[\psi\bar\phi^\top]u = \mathbb{E}[\psi A] + 0 =
+\mathbb{E}[\psi Q] = (1-\gamma)\nabla J(\theta)`$, using $`\mathbb{E}[\psi\,h(s)] = 0`$ for functions of the state. At $`\theta^*`$, $`\mathbb{E}[\psi A] = 0`$ gives $`w = 0`$. ◻
 
 </div>
 
 <div id="obs:tab" class="observation">
 
-**Observation 4.4** (Tabular critic). With tabular extra features ($`\bar\phi(s) = e_s`$) the method is unbiased for every $`\lambda`$ in every instance computed (the gap $`J^* - J(\hat\theta)`$ is below $`10^{-10}`$), so Proposition [3.6](#prop:compare) applies; we have no proof of this unbiasedness. In every instance, the loss decreases as $`\lambda`$ decreases, and at $`\lambda = 0`$ it is a fraction of the actor-only loss: 0.29–0.54 in the seven two-parameter instances of the table below and 0.18–0.57 (median 0.29) in seventeen one-parameter instances. With random extra features and $`\lambda < 1`$ the critic is biased, with a gap $`J^* - J(\hat\theta)`$ of about $`2\times10^{-2}`$; whether it pays depends on the horizon through gap$`{}+\ell^*/k`$.
+**Observation 4.5** (Variance of the value-function critic). By Theorem [4.4](#thm:value) and Proposition [3.6](#prop:compare), with tabular state features the comparison with actor-only is between noise covariances alone. In every instance computed, the loss decreases as $`\lambda`$ decreases, and at $`\lambda = 0`$ it is a fraction of the actor-only loss: 0.29–0.54 in the seven two-parameter instances of the table below and 0.18–0.57 (median 0.29) in seventeen one-parameter instances. We have no proof that $`\tilde\Gamma \preceq \tilde\Gamma_{\text{AO}}`$ in general. With random extra features (which do not represent $`V^\pi`$) and $`\lambda < 1`$ the critic is biased, with a gap $`J^* - J(\hat\theta)`$ of about $`2\times10^{-2}`$; whether it pays depends on the horizon through gap$`{}+\ell^*/k`$.
 
 </div>
 
@@ -303,7 +316,7 @@ which is the partial sum of the actor-only noise $`g(Y_k)Z_k - f`$. The incomple
 
 <div class="remark">
 
-**Remark 4.5** (Numerical checks). `experiments/rates_chapter.py` checks Theorems [4.1](#thm:td1) and [4.2](#thm:compat) on the same instances: the directions, Jacobians $`H`$, noise covariances $`\tilde\Gamma`$ and losses agree to relative error $`7\times10^{-9}`$ and $`2\times10^{-9}`$ (the accuracy of the finite-difference Jacobian). Earlier simulations of the actual two-time-scale algorithm (`experiments/sim_ac_tuned.py`) matched the predicted covariances to about 5%, supporting Assumption [2.2](#ass:lin) in these instances.
+**Remark 4.6** (Numerical checks). `experiments/rates_chapter.py` checks Theorems [4.1](#thm:td1) and [4.2](#thm:compat) on the same instances: the directions, Jacobians $`H`$, noise covariances $`\tilde\Gamma`$ and losses agree to relative error $`7\times10^{-9}`$ and $`2\times10^{-9}`$ (the accuracy of the finite-difference Jacobian). It checks Theorem [4.4](#thm:value) to $`10^{-14}`$: the critic’s fixed point is $`(w, V^\pi)`$ and the direction is $`(1-\gamma)\nabla J`$, at $`\theta^*`$ and away from it, for $`\lambda \in \{0, 0.4, 0.8, 1\}`$. Earlier simulations of the actual two-time-scale algorithm (`experiments/sim_ac_tuned.py`) matched the predicted covariances to about 5%, supporting Assumption [2.2](#ass:lin) in these instances.
 
 </div>
 
@@ -313,7 +326,7 @@ which is the partial sum of the actor-only noise $`g(Y_k)Z_k - f`$. The incomple
 
 - Propositions [3.3](#prop:loss), [3.5](#prop:dual) and [3.6](#prop:compare): formalized.
 
-- Assumption [2.2](#ass:lin) is a hypothesis. Lemma [2.1](#lem:delta), Theorems [4.1](#thm:td1) and [4.2](#thm:compat) are proved here and checked numerically, but not yet in Lean: they need the restart chain and the traces of a policy family formalized as stochastic processes.
+- Assumption [2.2](#ass:lin) is a hypothesis. Lemma [2.1](#lem:delta), Theorems [4.1](#thm:td1), [4.2](#thm:compat) and [4.4](#thm:value) are proved here and checked numerically, but not yet in Lean: they need the restart chain and the traces of a policy family formalized as stochastic processes.
 
 # References
 
