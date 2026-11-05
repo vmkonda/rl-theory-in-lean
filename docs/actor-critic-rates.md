@@ -308,9 +308,35 @@ Using the lagged parameter in $`h`$ is what makes the remainder known at step $`
 
 *Lean:* `param_noise_decomp` and `condExp_finite_mix`. End to end, `tendsto_secondMoment_of_param_chain`: Assumption [2.2](#ass:lin) for one time scale with $`\theta`$-dependent finite-chain sampling, through Theorem [2.4](#thm:linmarkov). The covariance of $`M_{k+1}`$ is assumed to converge.
 
-Not formalized:
+<div id="prop:doeblin" class="proposition">
 
-- the existence of a bounded Poisson pair $`(U, V)`$ with $`V`$ Lipschitz in $`\theta`$, which holds for a uniformly ergodic chain whose kernel is Lipschitz in $`\theta`$;
+**Proposition 2.9** (Lipschitz Poisson pairs for a Doeblin chain). *Let $`P_t(s, s') = \alpha\nu_t(s') + (1 - \alpha)Q_t(s, s')`$ with $`0 < \alpha \le 1`$ and $`\nu_t`$, $`Q_t`$ stochastic. Let $`\|H_t\| \le C_H`$, and let $`H`$, $`Q`$ and $`\nu`$ be Lipschitz in $`t`$, with constants $`L_H`$, $`L_Q`$ and $`L_\nu`$, the last two in total variation. Let $`U_t`$ solve $`U = H_t + (1 - \alpha)Q_tU`$, and set $`f(t) = \alpha\nu_tU_t`$ and $`V_t = U_t - H_t + f(t)`$. Then:*
+
+- *$`(U, V)`$ is a Poisson pair: $`U_t - V_t = H_t - f(t)`$ and $`V_t = P_tU_t`$;*
+
+- *$`f(t)`$ is the mean of $`H_t`$ under every stationary law of $`P_t`$;*
+
+- *$`\|U_t\| \le C_H/\alpha`$ and $`\|V_t\| \le C_H/\alpha + 2C_H`$;*
+
+- *$`U`$ is Lipschitz with constant $`L_U = (L_H + L_QC_H/\alpha)/\alpha`$, and so is $`V`$, with constant $`(1 + \alpha)L_U + L_H + L_\nu C_H`$.*
+
+</div>
+
+The restart chain has this form with $`\alpha = 1 - \gamma`$.
+
+<div class="proof">
+
+*Proof.* In the sup norm, $`\|Q_tU\| \le \|U\|`$, so $`U \mapsto U - (1 - \alpha)Q_tU`$ is injective, hence invertible in finite dimension. The bound follows from $`\|U\| \le C_H + (1 - \alpha)\|U\|`$. For the Lipschitz bound,
+``` math
+U_t - U_{t'} = (H_t - H_{t'}) + (1 - \alpha)Q_t(U_t - U_{t'}) + (1 - \alpha)(Q_t - Q_{t'})U_{t'},
+```
+so $`\alpha\|U_t - U_{t'}\| \le (L_H + L_QC_H/\alpha)\|t - t'\|`$. The identity $`V_t = P_tU_t`$ is the fixed-point equation plus the definition of $`f`$. Averaging $`U - V = H - f`$ against a stationary $`\pi`$, for which $`\pi V = \pi P U = \pi U`$, gives $`f(t) = \pi H_t`$. ◻
+
+</div>
+
+*Lean:* `doeblinU`, `doeblinV`, `doeblinF`, with `doeblinV_eq`, `doeblinF_eq_mean`, `norm_doeblinU_sub_le` and `norm_doeblinV_sub_le`. End to end, `tendsto_secondMoment_of_doeblin_chain`: Assumption [2.2](#ass:lin) for one time scale with $`\theta`$-dependent Doeblin sampling. The hypotheses are on the kernel, $`H`$ and $`f`$, plus the convergence of the covariance of $`M_{k+1}`$.
+
+Not formalized:
 
 - the convergence of the covariance of $`M_{k+1}`$, which needs the law of $`\xi_k`$ to track $`\pi_{\theta_k}`$ while $`\theta_k \to \theta^*`$;
 

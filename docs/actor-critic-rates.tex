@@ -391,10 +391,39 @@ which is known only at step $k + 1$.
 $\theta$-dependent finite-chain sampling, through Theorem~\ref{thm:linmarkov}. The covariance of
 $M_{k+1}$ is assumed to converge.
 
+\begin{proposition}[Lipschitz Poisson pairs for a Doeblin chain]\label{prop:doeblin}
+Let $P_t(s, s') = \alpha\nu_t(s') + (1 - \alpha)Q_t(s, s')$ with $0 < \alpha \le 1$ and $\nu_t$, $Q_t$
+stochastic. Let $\|H_t\| \le C_H$, and let $H$, $Q$ and $\nu$ be Lipschitz in $t$, with constants $L_H$,
+$L_Q$ and $L_\nu$, the last two in total variation. Let $U_t$ solve $U = H_t + (1 - \alpha)Q_tU$,
+and set $f(t) = \alpha\nu_tU_t$ and $V_t = U_t - H_t + f(t)$. Then:
+\begin{itemize}
+\item $(U, V)$ is a Poisson pair: $U_t - V_t = H_t - f(t)$ and $V_t = P_tU_t$;
+\item $f(t)$ is the mean of $H_t$ under every stationary law of $P_t$;
+\item $\|U_t\| \le C_H/\alpha$ and $\|V_t\| \le C_H/\alpha + 2C_H$;
+\item $U$ is Lipschitz with constant $L_U = (L_H + L_QC_H/\alpha)/\alpha$, and so is $V$, with constant
+  $(1 + \alpha)L_U + L_H + L_\nu C_H$.
+\end{itemize}
+\end{proposition}
+The restart chain has this form with $\alpha = 1 - \gamma$.
+\begin{proof}
+In the sup norm, $\|Q_tU\| \le \|U\|$, so $U \mapsto U - (1 - \alpha)Q_tU$ is injective, hence
+invertible in finite dimension. The bound follows from $\|U\| \le C_H + (1 - \alpha)\|U\|$. For the
+Lipschitz bound,
+\[
+  U_t - U_{t'} = (H_t - H_{t'}) + (1 - \alpha)Q_t(U_t - U_{t'}) + (1 - \alpha)(Q_t - Q_{t'})U_{t'},
+\]
+so $\alpha\|U_t - U_{t'}\| \le (L_H + L_QC_H/\alpha)\|t - t'\|$. The identity $V_t = P_tU_t$ is the
+fixed-point equation plus the definition of $f$. Averaging $U - V = H - f$ against a stationary $\pi$,
+for which $\pi V = \pi P U = \pi U$, gives $f(t) = \pi H_t$.
+\end{proof}
+\noindent\emph{Lean:} \texttt{doeblinU}, \texttt{doeblinV}, \texttt{doeblinF}, with \texttt{doeblinV\_eq},
+\texttt{doeblinF\_eq\_mean}, \texttt{norm\_doeblinU\_sub\_le} and \texttt{norm\_doeblinV\_sub\_le}. End to
+end, \texttt{tendsto\_secondMoment\_of\_doeblin\_chain}: Assumption~\ref{ass:lin} for one time scale with
+$\theta$-dependent Doeblin sampling. The hypotheses are on the kernel, $H$ and $f$, plus the convergence
+of the covariance of $M_{k+1}$.
+
 Not formalized:
 \begin{itemize}
-\item the existence of a bounded Poisson pair $(U, V)$ with $V$ Lipschitz in $\theta$, which holds for a
-  uniformly ergodic chain whose kernel is Lipschitz in $\theta$;
 \item the convergence of the covariance of $M_{k+1}$, which needs the law of $\xi_k$ to track
   $\pi_{\theta_k}$ while $\theta_k \to \theta^*$;
 \item Proposition~\ref{prop:paramchain} for two time scales. The algebra is the same, and
