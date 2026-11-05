@@ -115,39 +115,45 @@ lemma continuous_of_lipschitz_bound {n : ℕ} {F : E d → E n} {L : ℝ}
     nlinarith [abs_nonneg L]
   linarith
 
-set_option maxHeartbeats 4000000 in
-/-- **Assumption 2.2 for θ-dependent sampling.** Let `θ_{k+1} = θ_k + β_k H(θ_k, ξ_{k+1})`, where the
-finite chain `ξ` has conditional law `P_{θ_k}(ξ_k, ·)` given `ℱ_k`. Suppose:
-* the mean drift `f` is dissipative around `θ*`, of linear size, and linear to first order,
-  `f(θ) = -A(θ - θ*) + O(‖θ - θ*‖²)`;
-* `(U, V)` is a Poisson pair, `U_t - V_t = H_t - f(t)` and `V_t = P_t U_t`, with `U` bounded and
-  continuous in `t`, and `V` bounded and Lipschitz in `t`;
-* `H` is bounded and the start is bounded;
-* the covariance of `M_{k+1} = U_{θ_k}(ξ_{k+1}) - V_{θ_k}(ξ_k)` converges to `Γ`.
+/-- The martingale part `M_{k+1} = U_{θ_k}(ξ_{k+1}) - V_{θ_k}(ξ_k)` (indexed by `n = k + 1`). -/
+noncomputable def paramM {Ω : Type*} (U V : E d → S → E d) (θ : ℕ → Ω → E d) (ξ : ℕ → Ω → S)
+    (n : ℕ) (ω : Ω) : E d :=
+  U (θ (n - 1) ω) (ξ n ω) - V (θ (n - 1) ω) (ξ (n - 1) ω)
 
-Then `(θ_k - θ*)/√β_k` has the asymptotic covariance `Σ` with
-`(A - (β̄/2) I) Σ + Σ (A - (β̄/2) I)ᵀ = Γ`. -/
-theorem tendsto_secondMoment_of_param_chain {β : ℕ → ℝ} {βbar : ℝ} (hβ : StepSizeRate β βbar)
-    (A : Matrix (Fin d) (Fin d) ℝ) {η₀ : ℝ} (hη₀ : 0 < η₀)
-    (hA : ∀ x, η₀ * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A - (βbar / 2) • 1) *ᵥ x))
-    (ℱ : MeasureTheory.Filtration ℕ m0) {θ : ℕ → Ω → E d} {ξ : ℕ → Ω → S} {θh : E d}
-    {f : E d → E d} {H U V : E d → S → E d} {P : E d → S → S → ℝ}
-    {η K L CU CV LV CH : ℝ} (h2η : βbar < 2 * η) (hK0 : 0 ≤ K) (hL : 0 ≤ L)
-    (hdis : ∀ x, ⟪x - θh, f x⟫_ℝ ≤ -η * ‖x - θh‖ ^ 2) (hlin : ∀ x, ‖f x‖ ≤ K * ‖x - θh‖)
-    (hf : ∀ x, ‖f x + matCLM A (x - θh)‖ ≤ L * ‖x - θh‖ ^ 2) (hfc : Continuous f) {Γ : Mat d}
+/-- The Poisson shift `h_k = V_{θ_{k-1}}(ξ_k)`. -/
+def paramH {Ω : Type*} (V : E d → S → E d) (θ : ℕ → Ω → E d) (ξ : ℕ → Ω → S) (k : ℕ)
+    (ω : Ω) : E d :=
+  V (θ (k - 1) ω) (ξ k ω)
+
+/-- The remainder `r_k = V_{θ_k}(ξ_k) - V_{θ_{k-1}}(ξ_k)`. -/
+noncomputable def paramR {Ω : Type*} (V : E d → S → E d) (θ : ℕ → Ω → E d) (ξ : ℕ → Ω → S)
+    (k : ℕ) (ω : Ω) : E d :=
+  V (θ k ω) (ξ k ω) - V (θ (k - 1) ω) (ξ k ω)
+
+set_option maxHeartbeats 4000000 in
+/-- **The decomposition along the process.** Under the hypotheses of
+`tendsto_secondMoment_of_param_chain`, the iteration is
+`θ_{k+1} = θ_k + β_k (f(θ_k) + M_{k+1} + h_k - h_{k+1} + r_k)` with `M` a bounded martingale
+difference, and `h`, `r` known at time `k`, `h` bounded and `r = O(β_k)`. -/
+lemma param_chain_decomp {β : ℕ → ℝ} {βbar : ℝ} (hβ : StepSizeRate β βbar)
+    (ℱ : MeasureTheory.Filtration ℕ m0) {θ : ℕ → Ω → E d} {ξ : ℕ → Ω → S}
+    {f : E d → E d} {H U V : E d → S → E d} {P : E d → S → S → ℝ} {CU CV LV CH : ℝ}
     (hθ : ∀ k ω, θ (k + 1) ω = θ k ω + β k • H (θ k ω) (ξ (k + 1) ω))
     (hθm : ∀ k, StronglyMeasurable[ℱ k] (θ k)) (hξm : ∀ k, Measurable[ℱ k] (ξ k))
-    (hθ0 : ∃ C, ∀ ω, ‖θ 0 ω - θh‖ ≤ C)
     (hlaw : ∀ k s, μ[{ω | ξ (k + 1) ω = s}.indicator (fun _ => (1 : ℝ)) | ℱ k] =ᵐ[μ]
       fun ω => P (θ k ω) (ξ k ω) s)
     (hpois : ∀ t s, U t s - V t s = H t s - f t) (hV : ∀ t s, V t s = ∑ s', P t s s' • U t s')
     (hUc : ∀ s, Continuous fun t => U t s) (hUb : ∀ t s, ‖U t s‖ ≤ CU)
     (hVb : ∀ t s, ‖V t s‖ ≤ CV) (hVL : ∀ t t' s, ‖V t s - V t' s‖ ≤ LV * ‖t - t'‖)
-    (hHb : ∀ t s, ‖H t s‖ ≤ CH)
-    (hΓ : Tendsto (fun k => secondMoment μ
-      (fun ω => U (θ k ω) (ξ (k + 1) ω) - V (θ k ω) (ξ k ω))) atTop (𝓝 Γ)) :
-    ∃ Sig, lyapOp (A - (βbar / 2) • 1) Sig = Γ ∧
-      Tendsto (fun k => (β k)⁻¹ • secondMoment μ (fun ω => θ k ω - θh)) atTop (𝓝 Sig) := by
+    (hHb : ∀ t s, ‖H t s‖ ≤ CH) :
+    (∀ k ω, θ (k + 1) ω = θ k ω + β k • (f (θ k ω) + paramM U V θ ξ (k + 1) ω
+      + paramH V θ ξ k ω - paramH V θ ξ (k + 1) ω + paramR V θ ξ k ω)) ∧
+    (∀ k, StronglyMeasurable[ℱ k] (paramH V θ ξ k)) ∧
+    (∀ k, StronglyMeasurable[ℱ k] (paramR V θ ξ k)) ∧
+    (∃ Cr, ∀ k ω, ‖paramR V θ ξ k ω‖ ≤ Cr * β k) ∧
+    (∀ k, StronglyMeasurable[ℱ (k + 1)] (paramM U V θ ξ (k + 1))) ∧
+    (∀ k ω, ‖paramM U V θ ξ (k + 1) ω‖ ≤ CU + CV) ∧
+    (∀ k j, μ[fun ω => paramM U V θ ξ (k + 1) ω j | ℱ k] =ᵐ[μ] 0) := by
   obtain ⟨R, C₀, hR1, -, hR⟩ := hβ.prev_le
   have hVc : ∀ s, Continuous fun t => V t s := fun s =>
     continuous_of_lipschitz_bound (fun t t' => hVL t t' s)
@@ -227,9 +233,44 @@ theorem tendsto_secondMoment_of_param_chain {β : ℕ → ℝ} {βbar : ℝ} (h�
     simp only [Pi.zero_apply]
     rw [hV, hcompsum]
     simp
-  have hθ0' := hθ0
-  exact tendsto_secondMoment_of_dissipative_markov hβ A hη₀ hA ℱ (M := M) (h := h) (r := r)
-    h2η hK0 hL hdis hlin hf hfc hθ' hθm hθ0' hhm (fun k ω => hVb _ _) hrm hrb hMm hMb hmart
-    (by simpa [hMdef] using hΓ)
+  exact ⟨hθ', hhm, hrm, ⟨_, hrb⟩, hMm, hMb, hmart⟩
+
+set_option maxHeartbeats 4000000 in
+/-- **Assumption 2.2 for θ-dependent sampling.** Let `θ_{k+1} = θ_k + β_k H(θ_k, ξ_{k+1})`, where the
+finite chain `ξ` has conditional law `P_{θ_k}(ξ_k, ·)` given `ℱ_k`. Suppose:
+* the mean drift `f` is dissipative around `θ*`, of linear size, and linear to first order,
+  `f(θ) = -A(θ - θ*) + O(‖θ - θ*‖²)`;
+* `(U, V)` is a Poisson pair, `U_t - V_t = H_t - f(t)` and `V_t = P_t U_t`, with `U` bounded and
+  continuous in `t`, and `V` bounded and Lipschitz in `t`;
+* `H` is bounded and the start is bounded;
+* the covariance of `M_{k+1} = U_{θ_k}(ξ_{k+1}) - V_{θ_k}(ξ_k)` converges to `Γ`.
+
+Then `(θ_k - θ*)/√β_k` has the asymptotic covariance `Σ` with
+`(A - (β̄/2) I) Σ + Σ (A - (β̄/2) I)ᵀ = Γ`. -/
+theorem tendsto_secondMoment_of_param_chain {β : ℕ → ℝ} {βbar : ℝ} (hβ : StepSizeRate β βbar)
+    (A : Matrix (Fin d) (Fin d) ℝ) {η₀ : ℝ} (hη₀ : 0 < η₀)
+    (hA : ∀ x, η₀ * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A - (βbar / 2) • 1) *ᵥ x))
+    (ℱ : MeasureTheory.Filtration ℕ m0) {θ : ℕ → Ω → E d} {ξ : ℕ → Ω → S} {θh : E d}
+    {f : E d → E d} {H U V : E d → S → E d} {P : E d → S → S → ℝ}
+    {η K L CU CV LV CH : ℝ} (h2η : βbar < 2 * η) (hK0 : 0 ≤ K) (hL : 0 ≤ L)
+    (hdis : ∀ x, ⟪x - θh, f x⟫_ℝ ≤ -η * ‖x - θh‖ ^ 2) (hlin : ∀ x, ‖f x‖ ≤ K * ‖x - θh‖)
+    (hf : ∀ x, ‖f x + matCLM A (x - θh)‖ ≤ L * ‖x - θh‖ ^ 2) (hfc : Continuous f) {Γ : Mat d}
+    (hθ : ∀ k ω, θ (k + 1) ω = θ k ω + β k • H (θ k ω) (ξ (k + 1) ω))
+    (hθm : ∀ k, StronglyMeasurable[ℱ k] (θ k)) (hξm : ∀ k, Measurable[ℱ k] (ξ k))
+    (hθ0 : ∃ C, ∀ ω, ‖θ 0 ω - θh‖ ≤ C)
+    (hlaw : ∀ k s, μ[{ω | ξ (k + 1) ω = s}.indicator (fun _ => (1 : ℝ)) | ℱ k] =ᵐ[μ]
+      fun ω => P (θ k ω) (ξ k ω) s)
+    (hpois : ∀ t s, U t s - V t s = H t s - f t) (hV : ∀ t s, V t s = ∑ s', P t s s' • U t s')
+    (hUc : ∀ s, Continuous fun t => U t s) (hUb : ∀ t s, ‖U t s‖ ≤ CU)
+    (hVb : ∀ t s, ‖V t s‖ ≤ CV) (hVL : ∀ t t' s, ‖V t s - V t' s‖ ≤ LV * ‖t - t'‖)
+    (hHb : ∀ t s, ‖H t s‖ ≤ CH)
+    (hΓ : Tendsto (fun k => secondMoment μ
+      (fun ω => U (θ k ω) (ξ (k + 1) ω) - V (θ k ω) (ξ k ω))) atTop (𝓝 Γ)) :
+    ∃ Sig, lyapOp (A - (βbar / 2) • 1) Sig = Γ ∧
+      Tendsto (fun k => (β k)⁻¹ • secondMoment μ (fun ω => θ k ω - θh)) atTop (𝓝 Sig) := by
+  obtain ⟨hθ', hhm, hrm, ⟨Cr, hrb⟩, hMm, hMb, hmart⟩ := param_chain_decomp (μ := μ) hβ ℱ hθ hθm
+    hξm hlaw hpois hV hUc hUb hVb hVL hHb
+  exact tendsto_secondMoment_of_dissipative_markov hβ A hη₀ hA ℱ h2η hK0 hL hdis hlin hf hfc hθ'
+    hθm hθ0 hhm (fun k ω => hVb _ _) hrm hrb hMm hMb hmart (by simpa [paramM] using hΓ)
 
 end StochasticApproximation

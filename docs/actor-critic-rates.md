@@ -336,9 +336,39 @@ so $`\alpha\|U_t - U_{t'}\| \le (L_H + L_QC_H/\alpha)\|t - t'\|`$. The identity 
 
 *Lean:* `doeblinU`, `doeblinV`, `doeblinF`, with `doeblinV_eq`, `doeblinF_eq_mean`, `norm_doeblinU_sub_le` and `norm_doeblinV_sub_le`. End to end, `tendsto_secondMoment_of_doeblin_chain`: Assumption [2.2](#ass:lin) for one time scale with $`\theta`$-dependent Doeblin sampling. The hypotheses are on the kernel, $`H`$ and $`f`$, plus the convergence of the covariance of $`M_{k+1}`$.
 
-Not formalized:
+<div class="remark">
 
-- the convergence of the covariance of $`M_{k+1}`$, which needs the law of $`\xi_k`$ to track $`\pi_{\theta_k}`$ while $`\theta_k \to \theta^*`$;
+**Remark 2.10** (Why Doeblin chains). A kernel satisfies Doeblin’s condition when $`P(s, \cdot) \ge \alpha\nu(\cdot)`$ for every $`s`$, that is, $`P = \alpha\nu + (1-\alpha)Q`$ with $`Q`$ stochastic. At every step, with probability at least $`\alpha`$, the chain draws its next state from $`\nu`$ whatever its current state, so it forgets its past and its law converges to $`\pi`$ at rate $`(1-\alpha)^k`$ uniformly in the start. Sampling from the discounted occupancy measure uses the restart chain, which is of this form with $`\alpha = 1-\gamma`$ and $`\nu = p_0`$. With a moving parameter, the proofs need Poisson solutions bounded and Lipschitz in $`\theta`$, and a law of $`\xi_k`$ that tracks $`\pi_{\theta_k}`$. For a general ergodic chain these need spectral-gap or mixing-time estimates. Under Doeblin’s condition each is a contraction by $`1-\alpha`$, with explicit constants.
+
+</div>
+
+<div id="prop:doeblincov" class="proposition">
+
+**Proposition 2.11** (The noise covariance under moving Doeblin sampling). In Proposition [2.8](#prop:paramchain), suppose the dissipativity and smoothness hypotheses of Theorem [2.4](#thm:linmarkov), a Doeblin kernel at the limit, $`P_{\theta^*} = \alpha\nu + (1-\alpha)Q`$ with stationary law $`\pi`$, kernels Lipschitz at $`\theta^*`$ in total variation, and $`U`$, $`V`$ bounded and Lipschitz. Then $`\mathbb{E}\|\theta_k - \theta^*\| \to 0`$, the law of $`\xi_k`$ converges to $`\pi`$, and
+``` math
+\mathbb{E}[M_{k+1}M_{k+1}^\top] \to \Gamma^* = \sum_{s_0}\pi(s_0)\sum_sP_{\theta^*}(s_0, s)
+    (U_{\theta^*}(s) - V_{\theta^*}(s_0))(U_{\theta^*}(s) - V_{\theta^*}(s_0))^\top .
+```
+So Theorem [2.4](#thm:linmarkov) applies with no hypothesis on the noise covariance.
+
+</div>
+
+<div class="proof">
+
+*Proof.* The moment bounds give $`\mathbb{E}\|\theta_k - \theta^*\|^4 = O(\beta_k^2)`$, and $`\|x\| \le e + \|x\|^4/e^3`$ gives $`\mathbb{E}\|\theta_k - \theta^*\| \to 0`$. The law obeys $`\mathcal L_{k+1} = \mathcal L_kP_{\theta^*} + e_k`$ with $`\|e_k\|_1 \le L_P\mathbb{E}\|\theta_k - \theta^*\|`$. For two laws, $`(\mathcal L - \pi)P_{\theta^*} =
+(1-\alpha)(\mathcal L - \pi)Q`$ because the $`\nu`$ part cancels, so $`\|\mathcal L_k - \pi\|_1 \to 0`$. Given $`\mathcal F_k`$, $`\mathbb{E}[M_{k+1}M_{k+1}^\top\mid\mathcal F_k] = g(\theta_k, \xi_k)`$ with $`g`$ bounded and Lipschitz in $`\theta`$, so $`\mathbb{E}[g(\theta_k, \xi_k)] - \mathbb{E}[g(\theta^*, \xi_k)] \to 0`$ and $`\mathbb{E}[g(\theta^*, \xi_k)] \to \sum\pi g(\theta^*, \cdot)`$. ◻
+
+</div>
+
+*Lean* (`DoeblinCovariance.lean`):
+
+- `tendsto_integral_norm_of_four`, `tendsto_law_moving`, `abs_condCov_sub_le` and `tendsto_secondMoment_paramM`;
+
+- `tendsto_secondMoment_of_param_chain_doeblin`, the general $`\theta`$-dependent version;
+
+- `tendsto_secondMoment_of_doeblin_chain_auto`: Assumption [2.2](#ass:lin) for one time scale with $`\theta`$-dependent Doeblin sampling, from the model alone.
+
+Not formalized:
 
 - Proposition [2.8](#prop:paramchain) for two time scales. The algebra is the same, and Theorem [2.7](#thm:ttsmarkov) takes the resulting $`h`$, $`g`$ and $`r`$;
 
