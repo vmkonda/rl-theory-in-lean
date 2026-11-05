@@ -426,7 +426,19 @@ H(y,z) - \mathbb{E}\big[H(Y_1, z_1)\mid Y_0 = y, z_0 = z\big] = \bar F(y)z + \ba
 
 </div>
 
-*Lean:* `tendsto_secondMoment_of_trace_noise`: Theorem [2.1](#thm:main) for trace-driven noise with bounded traces, with $`\Gamma = \lim\mathbb{E}[M_{k+1}M_{k+1}^\top]`$ as a hypothesis (its identification with the closed form is not formalized).
+*Lean:* `tendsto_secondMoment_of_trace_noise`: Theorem [2.1](#thm:main) for trace-driven noise with bounded traces, with $`\Gamma = \lim\mathbb{E}[M_{k+1}M_{k+1}^\top]`$ as a hypothesis. `tendsto_secondMoment_of_trace_noise_stationary` (in `TraceMoments.lean`) discharges that hypothesis and identifies $`\Gamma`$, assuming the law of $`Y_k`$ converges to $`\nu`$, $`\sum_{y'}Q(y,y')|c(y')| \le \rho < 1`$ and $`|c| \le 1`$. These hold for the restart chain with $`c = \lambda\,1\{\text{not a restart}\}`$, where $`\rho = \lambda\gamma`$.
+
+- `mom1_succ` and `mom2_succ`: the trace moments $`m_1(k, y) = \mathbb{E}[z_k1\{Y_k = y\}]`$ and $`m_2(k, y) = \mathbb{E}[z_kz_k^\top1\{Y_k = y\}]`$ satisfy exact affine recursions, derived from the Markov property.
+
+- `tendsto_affine_transfer`: these recursions are driven by the operator $`(Lx)(y') = c(y')\sum_yQ(y,y')x(y)`$, which contracts the $`\ell^1`$ norm, so the moments converge to the solutions of the stationary equations (`tendsto_trace_moments`).
+
+- `traceMart_eq_affine`: $`M_{k+1} = G(Y_k,Y_{k+1})z_k + g(Y_k,Y_{k+1})`$, with $`G(y,y') = F(y,y') + c(y')U(y') - U(y)`$.
+
+- `traceGamma`: hence $`\mathbb{E}[M_{k+1}M_{k+1}^\top]`$ converges to
+  ``` math
+  \Gamma = \sum_{y,y'}\nu(y)Q(y,y')\Big[G\,\bar m_2(y)G^\top + G\,\bar m_1(y)g^\top + g\,\bar m_1(y)^\top G^\top + gg^\top\Big](y,y'),
+  ```
+  where $`\nu(y)\bar m_i(y)`$ are the limits of the moments.
 
 <div class="remark">
 

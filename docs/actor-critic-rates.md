@@ -275,6 +275,26 @@ N^{\text{AO}}_k \simeq N^{\text{AC}}_k + D_k,\qquad D_k = \delta_k(B_k - b(s_k))
 
 </div>
 
+<div id="rem:finite" class="remark">
+
+**Remark 4.7** (Finite time). Theorem [4.5](#thm:td0) is asymptotic. The tabular critic has $`|S| + d`$ parameters, and each table entry is updated only when its state is visited, so before the asymptotics take hold it can lose to REINFORCE. `experiments/crossover.py` isolates this effect. It splits each state of a fixed 5-state instance into $`m`$ copies with Zipf visiting weights. This leaves $`J`$, $`H`$ and both asymptotic losses unchanged ($`\ell^*`$: 25.1 for REINFORCE, 6.48 for the critic) and grows the table to $`5m`$ entries. The quantity reported is $`(K/2)\,\mathbb{E}[J^* - J(\bar\theta_K)]`$, with Polyak averaging over $`[K/2, K]`$, the critic step $`\alpha_k = \alpha_0(k + 10^3)^{-1/2}`$, and 400 runs:
+
+<div class="center">
+
+| $`K`$ | REINFORCE | $`m = 1`$ | $`m = 16`$, $`\alpha_0 = 1`$ | $`m = 64`$, $`\alpha_0 = 1`$ | $`m = 64`$, $`\alpha_0 = 16`$ |
+|---:|:--:|:--:|:--:|:--:|:--:|
+| 512 | 11.7 | 13.5 | 15.7 | 16.0 | 11.6 |
+| 2 048 | 14.1 | 9.3 | 15.3 | 19.7 | 9.8 |
+| 32 768 | 18.1 | 4.7 | 7.5 | 16.5 | 4.8 |
+| 131 072 | 19.4 | 4.8 | 5.7 | 17.2 | 4.9 |
+| 2 097 152 | 22.8 | 5.4 | 5.8 | 6.7 | 5.5 |
+
+</div>
+
+A large critic with rarely visited states and a small critic step lengthens the transient, during which the critic can be worse than REINFORCE ($`m = 64`$, $`\alpha_0 = 1`$, $`K = 2\,048`$). A larger critic step removes most of the effect, and the asymptotic covariance does not depend on the critic step. We have no bound on the transient.
+
+</div>
+
 <table id="tab:loss">
 <caption>Optimal-gain loss <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>ℓ</mi><mo>*</mo></msup><annotation encoding="application/x-tex">\ell^*</annotation></semantics></math> relative to actor-only with <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lambda = 1</annotation></semantics></math>, on aliased MDPs with 6 states, 2 actions and 2 policy parameters (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>γ</mi><mo>=</mo><mn>0.9</mn></mrow><annotation encoding="application/x-tex">\gamma = 0.9</annotation></semantics></math>). The column <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lambda = 1</annotation></semantics></math> equals 1 by Theorem <a href="#thm:td1">4.1</a>. A dash: the biased limit is not an interior stable point.</caption>
 <tbody>
@@ -352,7 +372,7 @@ N^{\text{AO}}_k \simeq N^{\text{AC}}_k + D_k,\qquad D_k = \delta_k(B_k - b(s_k))
 
 <div class="remark">
 
-**Remark 4.7** (Numerical checks). `experiments/rates_chapter.py` checks Theorems [4.1](#thm:td1) and [4.2](#thm:compat) on the same instances: the directions, Jacobians $`H`$, noise covariances $`\tilde\Gamma`$ and losses agree to relative error $`7\times10^{-9}`$ and $`2\times10^{-9}`$ (the accuracy of the finite-difference Jacobian). It checks Theorem [4.4](#thm:value) to $`10^{-14}`$: the critic’s fixed point is $`(w, V^\pi)`$ and the direction is $`(1-\gamma)\nabla J`$, at $`\theta^*`$ and away from it, for $`\lambda \in \{0, 0.4, 0.8, 1\}`$. `experiments/check_projection_exact.py` and `experiments/check_td0_gap.py` check Theorem [4.5](#thm:td0) exactly (from the stationary moments of the chain) on 30 instances, to relative error $`2\times10^{-14}`$ and $`6\times10^{-15}`$. Earlier simulations of the actual two-time-scale algorithm (`experiments/sim_ac_tuned.py`) matched the predicted covariances to about 5%, supporting Assumption [2.2](#ass:lin) in these instances.
+**Remark 4.8** (Numerical checks). `experiments/rates_chapter.py` checks Theorems [4.1](#thm:td1) and [4.2](#thm:compat) on the same instances: the directions, Jacobians $`H`$, noise covariances $`\tilde\Gamma`$ and losses agree to relative error $`7\times10^{-9}`$ and $`2\times10^{-9}`$ (the accuracy of the finite-difference Jacobian). It checks Theorem [4.4](#thm:value) to $`10^{-14}`$: the critic’s fixed point is $`(w, V^\pi)`$ and the direction is $`(1-\gamma)\nabla J`$, at $`\theta^*`$ and away from it, for $`\lambda \in \{0, 0.4, 0.8, 1\}`$. `experiments/check_projection_exact.py` and `experiments/check_td0_gap.py` check Theorem [4.5](#thm:td0) exactly (from the stationary moments of the chain) on 30 instances, to relative error $`2\times10^{-14}`$ and $`6\times10^{-15}`$. Earlier simulations of the actual two-time-scale algorithm (`experiments/sim_ac_tuned.py`) matched the predicted covariances to about 5%, supporting Assumption [2.2](#ass:lin) in these instances.
 
 </div>
 
@@ -362,7 +382,9 @@ N^{\text{AO}}_k \simeq N^{\text{AC}}_k + D_k,\qquad D_k = \delta_k(B_k - b(s_k))
 
 - Propositions [3.3](#prop:loss), [3.5](#prop:dual) and [3.6](#prop:compare): formalized.
 
-- Theorems [4.1](#thm:td1), [4.2](#thm:compat), [4.4](#thm:value) and the stationary identities of Theorem [4.5](#thm:td0): formalized in `CriticTheorems.lean` for a finite model of the sampling chain, `ScoreChain`: a chain on (restart flag, state, action) whose next action is drawn from the policy given the next state. This covers the restart chain and any other such chain. Two facts carry all the proofs: a function with mean zero over actions has $`\mathbb{E}[c(Y_{k+1})F(Y_{k+1})\mid Y_k] = 0`$ (`sum_Q_c_eq_zero`), and its correlation with the trace is its correlation with the current features (`sum_mul_trace_eq`). The stationary trace moments $`m(y) = \mathbb{E}[z_k1\{Y_k = y\}]`$ enter through the recursion that characterizes them, $`m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)`$.
+- Theorems [4.1](#thm:td1), [4.2](#thm:compat), [4.4](#thm:value) and the stationary identities of Theorem [4.5](#thm:td0): formalized in `CriticTheorems.lean` for a finite model of the sampling chain, `ScoreChain`: a chain on (restart flag, state, action) whose next action is drawn from the policy given the next state. This covers the restart chain and any other such chain. Two facts carry all the proofs: a function with mean zero over actions has $`\mathbb{E}[c(Y_{k+1})F(Y_{k+1})\mid Y_k] = 0`$ (`sum_Q_c_eq_zero`), and its correlation with the trace is its correlation with the current features (`sum_mul_trace_eq`). The stationary trace moments $`m(y) = \mathbb{E}[z_k1\{Y_k = y\}]`$ enter through the recursion that characterizes them, $`m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)`$. `ScoreChain.tendsto_traceMoment` derives this recursion from the process. Along the chain, the moments of the trace converge to a solution whenever the law of $`Y_k`$ converges and $`\sum_{y'}Q(y,y')|\lambda c(y')| < 1`$.
+
+- The noise covariance $`\tilde\Gamma`$ of Theorem [3.1](#thm:cov), for trace-driven noise, is the limit computed from the stationary first and second trace moments (`tendsto_secondMoment_of_trace_noise_stationary`, in the companion note). It is no longer a hypothesis.
 
 - Assumption [2.2](#ass:lin) is a hypothesis, and Lemma [2.1](#lem:delta) (an implicit-function computation) is not formalized.
 

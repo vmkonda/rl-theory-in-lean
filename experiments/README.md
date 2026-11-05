@@ -25,3 +25,4 @@ uv venv .venv && uv pip install --python .venv/bin/python numpy matplotlib
 | `explore_value_critic.py` | Tabular-critic noise covariance across λ vs REINFORCE (Observation 4.6) |
 | `check_projection.py` | Monte Carlo regression of the REINFORCE noise on the actor-critic noise |
 | `check_projection_exact.py`, `check_td0_gap.py` | Exact checks of Theorem 4.5 (orthogonality and the gap formula) |
+| `crossover.py` | Finite-time loss of REINFORCE vs the tabular TD(0) critic as the table grows (Remark 4.7) |

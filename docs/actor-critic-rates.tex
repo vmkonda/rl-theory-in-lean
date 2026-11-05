@@ -404,6 +404,33 @@ critic is biased, with a gap $J^* - J(\hat\theta)$ of about $2\times10^{-2}$; wh
 horizon through gap${}+\ell^*/k$.
 \end{observation}
 
+\begin{remark}[Finite time]\label{rem:finite}
+Theorem~\ref{thm:td0} is asymptotic. The tabular critic has $|S| + d$ parameters, and each table
+entry is updated only when its state is visited, so before the asymptotics take hold it can lose
+to REINFORCE. \texttt{experiments/crossover.py} isolates this effect. It splits each state of a
+fixed 5-state instance into $m$ copies with Zipf visiting weights. This leaves $J$, $H$ and both
+asymptotic losses unchanged ($\ell^*$: 25.1 for REINFORCE, 6.48 for the critic) and grows the
+table to $5m$ entries. The quantity reported is $(K/2)\,\E[J^* - J(\bar\theta_K)]$, with Polyak
+averaging over $[K/2, K]$, the critic step $\alpha_k = \alpha_0(k + 10^3)^{-1/2}$, and 400 runs:
+\begin{center}
+\begin{tabular}{r ccccc}
+\toprule
+$K$ & REINFORCE & $m = 1$ & $m = 16$, $\alpha_0 = 1$ & $m = 64$, $\alpha_0 = 1$ & $m = 64$, $\alpha_0 = 16$ \\
+\midrule
+512 & 11.7 & 13.5 & 15.7 & 16.0 & 11.6 \\
+2\,048 & 14.1 & 9.3 & 15.3 & 19.7 & 9.8 \\
+32\,768 & 18.1 & 4.7 & 7.5 & 16.5 & 4.8 \\
+131\,072 & 19.4 & 4.8 & 5.7 & 17.2 & 4.9 \\
+2\,097\,152 & 22.8 & 5.4 & 5.8 & 6.7 & 5.5 \\
+\bottomrule
+\end{tabular}
+\end{center}
+A large critic with rarely visited states and a small critic step lengthens the transient, during
+which the critic can be worse than REINFORCE ($m = 64$, $\alpha_0 = 1$, $K = 2\,048$). A larger critic
+step removes most of the effect, and the asymptotic covariance does not depend on the critic step.
+We have no bound on the transient.
+\end{remark}
+
 \begin{table}[h]
 \centering
 \begin{tabular}{r cccc c}
@@ -457,7 +484,13 @@ the predicted covariances to about 5\%, supporting Assumption~\ref{ass:lin} in t
   $\E[c(Y_{k+1})F(Y_{k+1})\mid Y_k] = 0$ (\texttt{sum\_Q\_c\_eq\_zero}), and its correlation with the
   trace is its correlation with the current features (\texttt{sum\_mul\_trace\_eq}). The stationary
   trace moments $m(y) = \E[z_k1\{Y_k = y\}]$ enter through the recursion that characterizes them,
-  $m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)$.
+  $m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)$. \texttt{ScoreChain.tendsto\_traceMoment}
+  derives this recursion from the process. Along the chain, the moments of the trace converge
+  to a solution whenever the law of $Y_k$ converges and $\sum_{y'}Q(y,y')|\lambda c(y')| < 1$.
+\item The noise covariance $\tilde\Gamma$ of Theorem~\ref{thm:cov}, for trace-driven noise, is the limit
+  computed from the stationary first and second trace moments
+  (\texttt{tendsto\_secondMoment\_of\_trace\_noise\_stationary}, in the companion note). It is no
+  longer a hypothesis.
 \item Assumption~\ref{ass:lin} is a hypothesis, and Lemma~\ref{lem:delta} (an implicit-function
   computation) is not formalized.
 \end{itemize}

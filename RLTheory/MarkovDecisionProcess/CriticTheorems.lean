@@ -1,7 +1,7 @@
 /-
 SPDX-License-Identifier: MIT
 -/
-import RLTheory.StochasticApproximation.MarkovNoiseCovariance
+import RLTheory.StochasticApproximation.TraceMoments
 
 /-!
 # The critic theorems of `docs/actor-critic-rates.md`
@@ -15,7 +15,8 @@ formalizes those identities in a finite model.
   The restart chain of the write-up is the case `kap y false s' = γ P(s' | s, a)`,
   `kap y true s' = (1 - γ) p₀(s')`.
 * Trace moments `m y = E[z_k 1{Y_k = y}]` enter through their recursion
-  `m y' = ν y' φ y' + λ c y' Σ_y Q y y' m y`.
+  `m y' = ν y' φ y' + λ c y' Σ_y Q y y' m y`; `ScoreChain.tendsto_traceMoment` derives it from
+  the process: the moments of the trace along the chain converge to a solution.
 * `ScoreChain.sum_Q_c_eq_zero`, `ScoreChain.sum_mul_trace_eq`: the two facts behind all proofs,
   both consequences of the score having mean zero over actions.
 * `compatible_critic_direction`, `compatible_critic_noise`: Theorem 4.2.
@@ -458,6 +459,41 @@ theorem td0_gain [DecidableEq S] {n : ℕ} {ν : Bool × S × Ac → ℝ} (hν :
     abel
   rw [← sum_sub_distrib, sum_congr rfl fun y _ => e y, sum_sub_distrib, hB, sub_zero,
     sum_neg_distrib]
+
+/-! ### The trace moments of the process -/
+
+/-- **The trace moments come from the process.** Along a chain `Y` with transitions `Q` whose
+law converges to `ν`, the moments `E[z_k(a) 1{Y_k = y}]` of the trace
+`z (k+1) = λ c(Y (k+1)) z k + φ(Y (k+1))` converge to a solution of the `TraceMoment` recursion,
+provided `Σ_{y'} Q y y' |λ c y'| ≤ ρ < 1` (for the restart chain, `ρ = λγ`). -/
+theorem tendsto_traceMoment [MeasurableSpace (Bool × S × Ac)]
+    [DiscreteMeasurableSpace (Bool × S × Ac)] [DecidableEq S] [DecidableEq Ac] {Ω : Type*}
+    {m0 : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {ℱ : MeasureTheory.Filtration ℕ m0} {Y : ℕ → Ω → Bool × S × Ac} (hY : FiniteMarkov μ ℱ Y M.Q)
+    (hQ : ∀ y y', 0 ≤ M.Q y y') {lam ρ : ℝ} (hρ : ∀ y, ∑ y', M.Q y y' * |lam * M.cY y'| ≤ ρ)
+    (hρ0 : 0 ≤ ρ) (hρ1 : ρ < 1) {p : ℕ} {φ : Bool × S × Ac → E p} {z : ℕ → Ω → E p}
+    (hz : ∀ k, StronglyMeasurable[ℱ k] (z k)) (hzB : ∀ k, ∃ C, ∀ ω, ‖z k ω‖ ≤ C)
+    (hzrec : ∀ k ω, z (k + 1) ω = (lam * M.cY (Y (k + 1) ω)) • z k ω + φ (Y (k + 1) ω))
+    {ν : Bool × S × Ac → ℝ}
+    (hlaw : ∀ y, Tendsto (fun k => momAt μ Y (fun _ _ => 1) k y) atTop (𝓝 (ν y))) :
+    ∃ m : Bool × S × Ac → E p, M.TraceMoment ν lam φ m ∧
+      ∀ y a, Tendsto (fun k => momAt μ Y (fun k ω => z k ω a) k y) atTop (𝓝 (m y a)) := by
+  have hlaw1 : ∀ y, Tendsto (fun k => momAt μ Y (fun _ _ => 1) (k + 1) y) atTop (𝓝 (ν y)) :=
+    fun y => (hlaw y).comp (tendsto_add_atTop_nat 1)
+  have h1 : ∀ a, ∃ xl : Bool × S × Ac → ℝ,
+      (∀ y', xl y' = transfer M.Q (fun y => lam * M.cY y) xl y' + φ y' a * ν y') ∧
+      ∀ y, Tendsto (fun k => momAt μ Y (fun k ω => z k ω a) k y) atTop (𝓝 (xl y)) := fun a =>
+    tendsto_affine_transfer hQ hρ hρ0 hρ1
+      (mom1_succ (c := fun y => lam * M.cY y) hY hz hzB hzrec · a)
+      fun y => (hlaw1 y).const_mul (φ y a)
+  choose m₁ hm₁ ht₁ using h1
+  refine ⟨fun y => (fun a => m₁ a y : E p), fun y' => ?_, fun y a => ht₁ a y⟩
+  ext a
+  show m₁ a y' = _
+  rw [hm₁ a y']
+  simp only [transfer, PiLp.add_apply, PiLp.smul_apply, smul_eq_mul, euclid_sum_apply']
+  rw [mul_sum]
+  ring_nf
 
 end ScoreChain
 
