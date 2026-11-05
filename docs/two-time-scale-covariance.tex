@@ -381,7 +381,14 @@ additive noise.
 \end{theorem}
 
 \noindent\emph{Lean:} \texttt{tendsto\_mtts} and \texttt{tendsto\_mtts\_slow}, fully formalized;
-the matrix noise is the structure \texttt{TTSMatrixNoise}.
+the matrix noise is the structure \texttt{TTSMatrixNoise}. For additive noise driven by a finite
+chain and an eligibility trace on both time scales, \texttt{tendsto\_mtts\_slow\_trace}
+discharges the three covariance hypotheses. The setting is that of an actor and its critic,
+sharing the chain and the critic's trace. The martingale parts come from the Poisson solutions
+of Lemma~4.4 of the companion note, and $\Gamma_{11}$, $\Gamma_{12}$, $\Gamma_{22}$ are computed from
+the stationary first and second moments of the trace (\texttt{traceGamma}, \texttt{traceCross},
+via \texttt{tendsto\_crossMoment\_of\_moments}). The matrix noise there is still the abstract
+bounded structure.
 
 \begin{proof}[Proof sketch]
 As in Section~3 of the single-time-scale note, write

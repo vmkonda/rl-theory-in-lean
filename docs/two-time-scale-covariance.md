@@ -293,7 +293,7 @@ with $`V_k, W_k`$ as in Assumption [1.3](#ass:noise) and $`\tilde A^{ij}_k = N^
 
 </div>
 
-*Lean:* `tendsto_mtts` and `tendsto_mtts_slow`, fully formalized; the matrix noise is the structure `TTSMatrixNoise`.
+*Lean:* `tendsto_mtts` and `tendsto_mtts_slow`, fully formalized; the matrix noise is the structure `TTSMatrixNoise`. For additive noise driven by a finite chain and an eligibility trace on both time scales, `tendsto_mtts_slow_trace` discharges the three covariance hypotheses. The setting is that of an actor and its critic, sharing the chain and the critic’s trace. The martingale parts come from the Poisson solutions of Lemma 4.4 of the companion note, and $`\Gamma_{11}`$, $`\Gamma_{12}`$, $`\Gamma_{22}`$ are computed from the stationary first and second moments of the trace (`traceGamma`, `traceCross`, via `tendsto_crossMoment_of_moments`). The matrix noise there is still the abstract bounded structure.
 
 <div class="proof">
 
