@@ -360,10 +360,45 @@ $O(\gamma_k)$ and $y = w - De + (y - \hat y)$, the same holds for $x_k$ and $y_k
   linearization.
 \end{itemize}
 
+\begin{proposition}[Noise from a parameter-dependent chain]\label{prop:paramchain}
+Let $\theta_{k+1} = \theta_k + \beta_kH(\theta_k, \xi_{k+1})$, where the finite chain $\xi$ moves by
+$\xi_{k+1} \sim P_{\theta_k}(\xi_k, \cdot)$ given $\mathcal F_k$. Let $(U, V)$ be a Poisson pair,
+$U_t - V_t = H_t - f(t)$ and $V_t = P_tU_t$. Then
+\[
+  H(\theta_k, \xi_{k+1}) = f(\theta_k) + M_{k+1} + h_k - h_{k+1} + r_k,
+\]
+with
+\[
+  M_{k+1} = U_{\theta_k}(\xi_{k+1}) - V_{\theta_k}(\xi_k),\qquad h_k = V_{\theta_{k-1}}(\xi_k),\qquad
+  r_k = V_{\theta_k}(\xi_k) - V_{\theta_{k-1}}(\xi_k).
+\]
+$M$ is a martingale difference, and $h_k$ and $r_k$ are known at step $k$. If $V$ is $L_V$-Lipschitz
+in the parameter and $\|H\| \le C_H$, then $\|r_k\| \le L_VC_H\beta_{k-1} = O(\beta_k)$.
+\end{proposition}
+\begin{proof}
+Add and subtract $V_{\theta_k}(\xi_k)$ and $V_{\theta_{k-1}}(\xi_k)$ in
+$H(\theta_k, \xi_{k+1}) - f(\theta_k) = U_{\theta_k}(\xi_{k+1}) - V_{\theta_k}(\xi_{k+1})$. Given
+$\mathcal F_k$, $\E[U_{\theta_k}(\xi_{k+1})\mid\mathcal F_k] = (P_{\theta_k}U_{\theta_k})(\xi_k) =
+V_{\theta_k}(\xi_k)$, since $\theta_k$ is known and the chain is finite. Finally
+$\|\theta_k - \theta_{k-1}\| = \beta_{k-1}\|H\|$.
+\end{proof}
+Using the lagged parameter in $h$ is what makes the remainder known at step $k$. The usual choice
+$h_k = V_{\theta_k}(\xi_k)$ leaves a remainder $V_{\theta_{k+1}}(\xi_{k+1}) - V_{\theta_k}(\xi_{k+1})$,
+which is known only at step $k + 1$.
+
+\noindent\emph{Lean:} \texttt{param\_noise\_decomp} and \texttt{condExp\_finite\_mix}. End to end,
+\texttt{tendsto\_secondMoment\_of\_param\_chain}: Assumption~\ref{ass:lin} for one time scale with
+$\theta$-dependent finite-chain sampling, through Theorem~\ref{thm:linmarkov}. The covariance of
+$M_{k+1}$ is assumed to converge.
+
 Not formalized:
 \begin{itemize}
-\item the derivation of the decomposition $M + h - h' + r$, with $r = O(\beta)$, from a parameter-dependent
-  finite chain;
+\item the existence of a bounded Poisson pair $(U, V)$ with $V$ Lipschitz in $\theta$, which holds for a
+  uniformly ergodic chain whose kernel is Lipschitz in $\theta$;
+\item the convergence of the covariance of $M_{k+1}$, which needs the law of $\xi_k$ to track
+  $\pi_{\theta_k}$ while $\theta_k \to \theta^*$;
+\item Proposition~\ref{prop:paramchain} for two time scales. The algebra is the same, and
+  Theorem~\ref{thm:ttsmarkov} takes the resulting $h$, $g$ and $r$;
 \item global dissipativity, which is a strong assumption, would be replaced in a local theory by a
   localization argument.
 \end{itemize}

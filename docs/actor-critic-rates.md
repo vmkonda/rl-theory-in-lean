@@ -282,9 +282,39 @@ The slow cross term costs $`\varepsilon^2/\beta = O(\beta\gamma^2)`$, which is $
 
 - end to end, `tendsto_tts_dissipative_markov`: the two-time-scale iteration with dissipative Lipschitz drifts, Poisson shifts and sampling remainders has the asymptotic covariances of its linearization.
 
+<div id="prop:paramchain" class="proposition">
+
+**Proposition 2.8** (Noise from a parameter-dependent chain). Let $`\theta_{k+1} = \theta_k + \beta_kH(\theta_k, \xi_{k+1})`$, where the finite chain $`\xi`$ moves by $`\xi_{k+1} \sim P_{\theta_k}(\xi_k, \cdot)`$ given $`\mathcal F_k`$. Let $`(U, V)`$ be a Poisson pair, $`U_t - V_t = H_t - f(t)`$ and $`V_t = P_tU_t`$. Then
+``` math
+H(\theta_k, \xi_{k+1}) = f(\theta_k) + M_{k+1} + h_k - h_{k+1} + r_k,
+```
+with
+``` math
+M_{k+1} = U_{\theta_k}(\xi_{k+1}) - V_{\theta_k}(\xi_k),\qquad h_k = V_{\theta_{k-1}}(\xi_k),\qquad
+  r_k = V_{\theta_k}(\xi_k) - V_{\theta_{k-1}}(\xi_k).
+```
+$`M`$ is a martingale difference, and $`h_k`$ and $`r_k`$ are known at step $`k`$. If $`V`$ is $`L_V`$-Lipschitz in the parameter and $`\|H\| \le C_H`$, then $`\|r_k\| \le L_VC_H\beta_{k-1} = O(\beta_k)`$.
+
+</div>
+
+<div class="proof">
+
+*Proof.* Add and subtract $`V_{\theta_k}(\xi_k)`$ and $`V_{\theta_{k-1}}(\xi_k)`$ in $`H(\theta_k, \xi_{k+1}) - f(\theta_k) = U_{\theta_k}(\xi_{k+1}) - V_{\theta_k}(\xi_{k+1})`$. Given $`\mathcal F_k`$, $`\mathbb{E}[U_{\theta_k}(\xi_{k+1})\mid\mathcal F_k] = (P_{\theta_k}U_{\theta_k})(\xi_k) =
+V_{\theta_k}(\xi_k)`$, since $`\theta_k`$ is known and the chain is finite. Finally $`\|\theta_k - \theta_{k-1}\| = \beta_{k-1}\|H\|`$. ◻
+
+</div>
+
+Using the lagged parameter in $`h`$ is what makes the remainder known at step $`k`$. The usual choice $`h_k = V_{\theta_k}(\xi_k)`$ leaves a remainder $`V_{\theta_{k+1}}(\xi_{k+1}) - V_{\theta_k}(\xi_{k+1})`$, which is known only at step $`k + 1`$.
+
+*Lean:* `param_noise_decomp` and `condExp_finite_mix`. End to end, `tendsto_secondMoment_of_param_chain`: Assumption [2.2](#ass:lin) for one time scale with $`\theta`$-dependent finite-chain sampling, through Theorem [2.4](#thm:linmarkov). The covariance of $`M_{k+1}`$ is assumed to converge.
+
 Not formalized:
 
-- the derivation of the decomposition $`M + h - h' + r`$, with $`r = O(\beta)`$, from a parameter-dependent finite chain;
+- the existence of a bounded Poisson pair $`(U, V)`$ with $`V`$ Lipschitz in $`\theta`$, which holds for a uniformly ergodic chain whose kernel is Lipschitz in $`\theta`$;
+
+- the convergence of the covariance of $`M_{k+1}`$, which needs the law of $`\xi_k`$ to track $`\pi_{\theta_k}`$ while $`\theta_k \to \theta^*`$;
+
+- Proposition [2.8](#prop:paramchain) for two time scales. The algebra is the same, and Theorem [2.7](#thm:ttsmarkov) takes the resulting $`h`$, $`g`$ and $`r`$;
 
 - global dissipativity, which is a strong assumption, would be replaced in a local theory by a localization argument.
 
