@@ -360,4 +360,454 @@ lemma fast_step_bound {z f₂ w : E d₂} {xn η K K' β γ : ℝ} (hη : 0 < η
 
 end Pointwise
 
+section Scalar
+
+/-- `(1 - 2t)² (1 + t) ≤ 1 - t` for `0 ≤ t ≤ 1/2`. -/
+lemma sq_contract_le {t : ℝ} (h0 : 0 ≤ t) (h1 : t ≤ 1 / 2) : (1 - 2 * t) ^ 2 * (1 + t) ≤ 1 - t := by
+  have e : (1 - 2 * t) ^ 2 * (1 + t) = 1 - 3 * t + 4 * t ^ 3 := by ring
+  rw [e]
+  have : t ^ 2 ≤ 1 / 4 := by nlinarith
+  nlinarith
+
+set_option maxHeartbeats 4000000 in
+/-- **The scalar core of the two-time-scale moment bounds.** Second moments `a, b` and fourth
+moments `A, B` of the slow and fast errors obeying the one-step recursions below are
+`A, B = O(γ²)`. Here `q₁ = 1 - ηβ + κβ²`, `q₂ = 1 - ηγ + c₂τ`, `τ = γ² + β²/γ`, `ε = (η - c₀)/4`,
+and the step sizes satisfy `β/γ → 0`, `γ²/β → 0` and `γ_k / γ_{k+1} ≤ 1 + c₀ β_k` with
+`c₀ < η`. -/
+lemma tts_moments_scalar {β γ a b A B : ℕ → ℝ} {η c₀ κ c₁ c₂ CM CN : ℝ}
+    (hβp : ∀ k, 0 < β k) (hγp : ∀ k, 0 < γ k) (hβ0 : Tendsto β atTop (𝓝 0))
+    (hγ0 : Tendsto γ atTop (𝓝 0)) (hβγ : Tendsto (fun k => β k / γ k) atTop (𝓝 0))
+    (hγβ : Tendsto (fun k => γ k ^ 2 / β k) atTop (𝓝 0)) (hc₀ : 0 ≤ c₀) (hc₀η : c₀ < η)
+    (hratio : ∀ᶠ k in atTop, γ k / γ (k + 1) ≤ 1 + c₀ * β k) (hκ : 0 ≤ κ) (hc₁ : 0 ≤ c₁)
+    (hc₂ : 0 ≤ c₂) (hCM : 0 ≤ CM) (hCN : 0 ≤ CN)
+    (ha0 : ∀ k, 0 ≤ a k) (hb0 : ∀ k, 0 ≤ b k) (hA0 : ∀ k, 0 ≤ A k) (hB0 : ∀ k, 0 ≤ B k)
+    (Ra : ∀ k, a (k + 1) ≤ (1 - η * β k + κ * β k ^ 2) * a k + c₁ * β k * b k + CM * β k ^ 2)
+    (Rb : ∀ᶠ k in atTop, b (k + 1) ≤ (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * b k
+      + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * a k + CN * γ k ^ 2)
+    (RA : ∀ k, A (k + 1) ≤ (1 + (η - c₀) / 4 * β k) * (1 - η * β k + κ * β k ^ 2) ^ 2 * A k
+      + (1 + 1 / ((η - c₀) / 4 * β k)) * (c₁ * β k) ^ 2 * B k
+      + 8 * β k ^ 2 * CM * ((1 - η * β k + κ * β k ^ 2) * a k + c₁ * β k * b k)
+      + 3 * β k ^ 4 * CM ^ 2)
+    (RB : ∀ᶠ k in atTop, B (k + 1) ≤ (1 + (η - c₀) / 4 * γ k)
+        * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * B k
+      + (1 + 1 / ((η - c₀) / 4 * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * A k
+      + 8 * γ k ^ 2 * CN * ((1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * b k
+        + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * a k) + 3 * γ k ^ 4 * CN ^ 2) :
+    ∃ W, ∀ k, A k ≤ W * γ k ^ 2 ∧ B k ≤ W * γ k ^ 2 := by
+  set a₀ := (η - c₀) / 4 with ha₀
+  have ha₀0 : 0 < a₀ := by simp only [ha₀]; linarith
+  have hη : 0 < η := by linarith
+  set τ : ℕ → ℝ := fun k => γ k ^ 2 + β k ^ 2 / γ k with hτ
+  set q₁ : ℕ → ℝ := fun k => 1 - η * β k + κ * β k ^ 2 with hq₁
+  set q₂ : ℕ → ℝ := fun k => 1 - η * γ k + c₂ * τ k with hq₂
+  set ρ : ℕ → ℝ := fun k => γ k / γ (k + 1) with hρ
+  have hρ0 : ∀ k, 0 ≤ ρ k := fun k => div_nonneg (hγp k).le (hγp (k + 1)).le
+  have hτ0 : ∀ k, 0 ≤ τ k := fun k => by
+    have := hβp k; have := hγp k; simp only [hτ]; positivity
+  -- bounds on the steps
+  obtain ⟨Bβ, hBβ⟩ := hβ0.bddAbove_range
+  obtain ⟨Bγ, hBγ⟩ := hγ0.bddAbove_range
+  obtain ⟨Bq, hBq⟩ := hβγ.bddAbove_range
+  have hβB : ∀ k, β k ≤ Bβ := fun k => hBβ ⟨k, rfl⟩
+  have hγB : ∀ k, γ k ≤ Bγ := fun k => hBγ ⟨k, rfl⟩
+  have hqB : ∀ k, β k / γ k ≤ Bq := fun k => hBq ⟨k, rfl⟩
+  have hBβ0 : 0 ≤ Bβ := (hβp 0).le.trans (hβB 0)
+  have hBγ0 : 0 ≤ Bγ := (hγp 0).le.trans (hγB 0)
+  have hBq0 : 0 ≤ Bq := (div_nonneg (hβp 0).le (hγp 0).le).trans (hqB 0)
+  -- `τ / γ → 0`
+  have hτγ : Tendsto (fun k => τ k / γ k) atTop (𝓝 0) := by
+    have h := hγ0.add (hβγ.pow 2)
+    simp only [add_zero, ne_eq, OfNat.ofNat_ne_zero, not_false_eq_true, zero_pow] at h
+    refine h.congr fun k => ?_
+    have := (hγp k).ne'
+    simp only [hτ]; field_simp; ring
+  obtain ⟨T, hT⟩ := (hτγ.mul hγ0).bddAbove_range
+  have hτT : ∀ k, τ k ≤ T := fun k => by
+    have := hT ⟨k, rfl⟩
+    have e : τ k / γ k * γ k = τ k := div_mul_cancel₀ _ (hγp k).ne'
+    have : τ k / γ k * γ k ≤ T := this
+    rwa [e] at this
+  have hT0 : 0 ≤ T := (hτ0 0).trans (hτT 0)
+  -- the eventual facts
+  have ev1 : ∀ᶠ k in atTop, 0 ≤ q₁ k ∧ (1 + c₀ * β k) * q₁ k ≤ 1 - 2 * a₀ * β k := by
+    have hlim : Tendsto (fun k => β k * (κ - c₀ * η) + c₀ * κ * β k ^ 2) atTop (𝓝 0) := by
+      simpa using (hβ0.mul_const (κ - c₀ * η)).add ((hβ0.pow 2).const_mul (c₀ * κ))
+    have hq1 : Tendsto q₁ atTop (𝓝 1) := by
+      simpa [hq₁] using ((hβ0.const_mul η).const_sub 1).add ((hβ0.pow 2).const_mul κ)
+    filter_upwards [hlim.eventually (gt_mem_nhds (by linarith : (0 : ℝ) < (η - c₀) / 2)),
+      hq1.eventually (le_mem_nhds (by norm_num : (0 : ℝ) < 1))] with k h1 h2
+    refine ⟨h2, ?_⟩
+    have hb := hβp k
+    have e : (1 + c₀ * β k) * q₁ k - (1 - 2 * a₀ * β k) =
+        β k * (-((η - c₀) / 2) + (β k * (κ - c₀ * η) + c₀ * κ * β k ^ 2)) := by
+      simp only [hq₁, ha₀]; ring
+    have : β k * (-((η - c₀) / 2) + (β k * (κ - c₀ * η) + c₀ * κ * β k ^ 2)) ≤ 0 :=
+      mul_nonpos_of_nonneg_of_nonpos hb.le (by linarith)
+    linarith
+  have ev2 : ∀ᶠ k in atTop, 0 ≤ q₂ k ∧ (1 + c₀ * β k) * q₂ k ≤ 1 - 2 * a₀ * γ k := by
+    have hq2 : Tendsto q₂ atTop (𝓝 1) := by
+      have h := ((hγ0.const_mul η).const_sub 1).add ((hτγ.mul hγ0).const_mul c₂)
+      simp only [mul_zero, sub_zero, add_zero] at h
+      refine h.congr fun k => ?_
+      have := (hγp k).ne'
+      simp only [hq₂]; field_simp
+    have hlim : Tendsto (fun k => c₂ * (τ k / γ k) + c₀ * (β k / γ k) * q₂ k) atTop (𝓝 0) := by
+      simpa using (hτγ.const_mul c₂).add ((hβγ.const_mul c₀).mul hq2)
+    filter_upwards [hlim.eventually (gt_mem_nhds (by linarith : (0 : ℝ) < η / 2)),
+      hq2.eventually (le_mem_nhds (by norm_num : (0 : ℝ) < 1))] with k h1 h2
+    refine ⟨h2, ?_⟩
+    have hg := hγp k
+    have e : (1 + c₀ * β k) * q₂ k - (1 - 2 * a₀ * γ k) =
+        γ k * (-η + 2 * a₀ + (c₂ * (τ k / γ k) + c₀ * (β k / γ k) * q₂ k)) := by
+      have := hg.ne'
+      simp only [hq₂, ha₀]; field_simp; ring
+    have h3 : -η + 2 * a₀ ≤ -(η / 2) := by simp only [ha₀]; linarith
+    have : γ k * (-η + 2 * a₀ + (c₂ * (τ k / γ k) + c₀ * (β k / γ k) * q₂ k)) ≤ 0 :=
+      mul_nonpos_of_nonneg_of_nonpos hg.le (by linarith)
+    linarith
+  have ev3 : ∀ᶠ k in atTop, a₀ * β k ≤ 1 / 2 ∧ a₀ * γ k ≤ 1 / 2 ∧ 1 + c₀ * β k ≤ 2 := by
+    have h1 := (hβ0.const_mul a₀).eventually (ge_mem_nhds (by simp : a₀ * 0 < 1 / 2))
+    have h2 := (hγ0.const_mul a₀).eventually (ge_mem_nhds (by simp : a₀ * 0 < 1 / 2))
+    have h3 := ((hβ0.const_mul c₀).const_add 1).eventually
+      (ge_mem_nhds (by simp : (1 : ℝ) + c₀ * 0 < 2))
+    filter_upwards [h1, h2, h3] with k h1 h2 h3
+    exact ⟨h1, h2, h3⟩
+  -- stage 1: second moments
+  set u : ℕ → ℝ := fun k => a k / γ k with hu
+  set v : ℕ → ℝ := fun k => b k / γ k with hv
+  have hu0 : ∀ k, 0 ≤ u k := fun k => div_nonneg (ha0 k) (hγp k).le
+  have hv0 : ∀ k, 0 ≤ v k := fun k => div_nonneg (hb0 k) (hγp k).le
+  have hua : ∀ k, a k = u k * γ k := fun k => by simp only [hu]; field_simp [(hγp k).ne']
+  have hvb : ∀ k, b k = v k * γ k := fun k => by simp only [hv]; field_simp [(hγp k).ne']
+  have hnext : ∀ (f : ℕ → ℝ) (k : ℕ), f (k + 1) / γ (k + 1) = ρ k * (f (k + 1) / γ k) :=
+    fun f k => by simp only [hρ]; field_simp [(hγp k).ne', (hγp (k + 1)).ne']; ring
+  have box1 := bdd_of_coupled_box (u := u) (v := v) (β := β) (γ := γ)
+    (δ := fun k => 2 * c₂ * (τ k / γ k)) (a := a₀) (c := 2 * c₁) (E := 2 * Bq * CM)
+    (C := 2 * CN) ha₀0 (by positivity) (by positivity) (by positivity) hu0 hv0
+    (fun k => (hβp k).le) (fun k => (hγp k).le) (by simpa using hτγ.const_mul (2 * c₂))
+    (by
+      filter_upwards [hratio, ev1, ev2, ev3, Rb] with k hr e1 e2 e3 hbk
+      obtain ⟨hq10, hq1⟩ := e1
+      obtain ⟨hq20, hq2⟩ := e2
+      obtain ⟨e3a, e3b, e3c⟩ := e3
+      have hb := hβp k
+      have hg := hγp k
+      have hρ2 : ρ k ≤ 2 := hr.trans e3c
+      refine ⟨?_, ?_, by linarith, by linarith⟩
+      · -- the slow component
+        have h1 : u (k + 1) = ρ k * (a (k + 1) / γ k) := hnext a k
+        have h2 : a (k + 1) / γ k ≤ q₁ k * u k + c₁ * β k * v k + CM * β k * (β k / γ k) := by
+          rw [div_le_iff₀ hg]
+          have := Ra k
+          rw [hua k, hvb k] at this
+          have e : (q₁ k * u k + c₁ * β k * v k + CM * β k * (β k / γ k)) * γ k =
+              q₁ k * (u k * γ k) + c₁ * β k * (v k * γ k) + CM * β k ^ 2 := by
+            field_simp; ring
+          rw [e]; exact this
+        have h3 : ρ k * (q₁ k * u k) ≤ (1 - 2 * a₀ * β k) * u k := by
+          have t1 : ρ k * q₁ k ≤ (1 + c₀ * β k) * q₁ k := mul_le_mul_of_nonneg_right hr hq10
+          have t2 := mul_le_mul_of_nonneg_right (t1.trans hq1) (hu0 k)
+          have e : ρ k * (q₁ k * u k) = ρ k * q₁ k * u k := by ring
+          linarith
+        have h4 : ρ k * (c₁ * β k * v k) ≤ 2 * c₁ * β k * v k := by
+          have := mul_le_mul_of_nonneg_right hρ2 (mul_nonneg (mul_nonneg hc₁ hb.le) (hv0 k))
+          linarith
+        have h5 : ρ k * (CM * β k * (β k / γ k)) ≤ 2 * Bq * CM * β k := by
+          have t1 : CM * β k * (β k / γ k) ≤ CM * β k * Bq :=
+            mul_le_mul_of_nonneg_left (hqB k) (by positivity)
+          have t2 := mul_le_mul hρ2 t1 (by positivity) (by norm_num)
+          linarith
+        have h6 : ρ k * (a (k + 1) / γ k) ≤ ρ k * (q₁ k * u k + c₁ * β k * v k
+            + CM * β k * (β k / γ k)) := mul_le_mul_of_nonneg_left h2 (hρ0 k)
+        have h7 : (1 - 2 * a₀ * β k) * u k ≤ (1 - a₀ * β k) * u k :=
+          mul_le_mul_of_nonneg_right (by linarith [mul_nonneg ha₀0.le hb.le]) (hu0 k)
+        have e : ρ k * (q₁ k * u k + c₁ * β k * v k + CM * β k * (β k / γ k)) =
+            ρ k * (q₁ k * u k) + ρ k * (c₁ * β k * v k) + ρ k * (CM * β k * (β k / γ k)) := by ring
+        rw [h1]
+        linarith
+      · -- the fast component
+        have h1 : v (k + 1) = ρ k * (b (k + 1) / γ k) := hnext b k
+        have h2 : b (k + 1) / γ k ≤ q₂ k * v k + c₂ * τ k / γ k * u k * γ k + CN * γ k := by
+          rw [div_le_iff₀ hg]
+          rw [hua k, hvb k] at hbk
+          have e : (q₂ k * v k + c₂ * τ k / γ k * u k * γ k + CN * γ k) * γ k =
+              q₂ k * (v k * γ k) + c₂ * τ k * (u k * γ k) + CN * γ k ^ 2 := by
+            field_simp; ring
+          rw [e]; exact hbk
+        have h3 : ρ k * (q₂ k * v k) ≤ (1 - 2 * a₀ * γ k) * v k := by
+          have t1 : ρ k * q₂ k ≤ (1 + c₀ * β k) * q₂ k := mul_le_mul_of_nonneg_right hr hq20
+          have t2 := mul_le_mul_of_nonneg_right (t1.trans hq2) (hv0 k)
+          have e : ρ k * (q₂ k * v k) = ρ k * q₂ k * v k := by ring
+          linarith
+        have h4 : ρ k * (c₂ * τ k / γ k * u k * γ k) ≤ 2 * c₂ * (τ k / γ k) * γ k * u k := by
+          have h0 : 0 ≤ c₂ * τ k / γ k * u k * γ k :=
+            mul_nonneg (mul_nonneg (div_nonneg (mul_nonneg hc₂ (hτ0 k)) hg.le) (hu0 k)) hg.le
+          have := mul_le_mul_of_nonneg_right hρ2 h0
+          have e : 2 * (c₂ * τ k / γ k * u k * γ k) = 2 * c₂ * (τ k / γ k) * γ k * u k := by ring
+          linarith
+        have h5 : ρ k * (CN * γ k) ≤ 2 * CN * γ k := by
+          have := mul_le_mul_of_nonneg_right hρ2 (by positivity : 0 ≤ CN * γ k)
+          linarith
+        have h6 : ρ k * (b (k + 1) / γ k) ≤ ρ k * (q₂ k * v k + c₂ * τ k / γ k * u k * γ k
+            + CN * γ k) := mul_le_mul_of_nonneg_left h2 (hρ0 k)
+        have h7 : (1 - 2 * a₀ * γ k) * v k ≤ (1 - a₀ * γ k) * v k :=
+          mul_le_mul_of_nonneg_right (by linarith [mul_nonneg ha₀0.le hg.le]) (hv0 k)
+        have e : ρ k * (q₂ k * v k + c₂ * τ k / γ k * u k * γ k + CN * γ k) =
+            ρ k * (q₂ k * v k) + ρ k * (c₂ * τ k / γ k * u k * γ k) + ρ k * (CN * γ k) := by ring
+        rw [h1]
+        have e2 : 2 * c₂ * (τ k / γ k) * γ k * u k = (fun k => 2 * c₂ * (τ k / γ k)) k * γ k * u k :=
+          rfl
+        linarith)
+  obtain ⟨⟨Mu, hMu⟩, ⟨Mv, hMv⟩⟩ := box1
+  set W₁ := max (max Mu Mv) 0 with hW₁
+  have hW₁0 : 0 ≤ W₁ := le_max_right _ _
+  have haW : ∀ k, a k ≤ W₁ * γ k := fun k => by
+    rw [hua k]
+    exact mul_le_mul_of_nonneg_right ((hMu k).trans ((le_max_left _ _).trans (le_max_left _ _)))
+      (hγp k).le
+  have hbW : ∀ k, b k ≤ W₁ * γ k := fun k => by
+    rw [hvb k]
+    exact mul_le_mul_of_nonneg_right ((hMv k).trans ((le_max_right _ _).trans (le_max_left _ _)))
+      (hγp k).le
+  -- stage 2: fourth moments
+  set U : ℕ → ℝ := fun k => A k / γ k ^ 2 with hU
+  set V : ℕ → ℝ := fun k => B k / γ k ^ 2 with hV
+  have hU0 : ∀ k, 0 ≤ U k := fun k => div_nonneg (hA0 k) (sq_nonneg _)
+  have hV0 : ∀ k, 0 ≤ V k := fun k => div_nonneg (hB0 k) (sq_nonneg _)
+  have hUA : ∀ k, A k = U k * γ k ^ 2 := fun k => by
+    simp only [hU]; field_simp [(hγp k).ne']
+  have hVB : ∀ k, B k = V k * γ k ^ 2 := fun k => by
+    simp only [hV]; field_simp [(hγp k).ne']
+  have hnext2 : ∀ (f : ℕ → ℝ) (k : ℕ), f (k + 1) / γ (k + 1) ^ 2 =
+      ρ k ^ 2 * (f (k + 1) / γ k ^ 2) := fun f k => by
+    simp only [hρ]; field_simp [(hγp k).ne', (hγp (k + 1)).ne']; ring
+  set c' := 4 * c₁ ^ 2 * (Bβ + 1 / a₀) with hc'
+  set E' := 32 * CM * W₁ * (1 + c₁ * Bβ) * Bq + 12 * CM ^ 2 * Bβ * Bq ^ 2 with hE'
+  set C' := 32 * CN * W₁ * (1 + c₂ * T) + 12 * CN ^ 2 * Bγ with hC'
+  have hδ₂ : Tendsto (fun k => 4 * c₂ ^ 2 * (γ k * (τ k / γ k) ^ 2 + (τ k / γ k) ^ 2 / a₀)) atTop
+      (𝓝 0) := by
+    simpa using ((hγ0.mul (hτγ.pow 2)).add ((hτγ.pow 2).div_const a₀)).const_mul (4 * c₂ ^ 2)
+  have box2 := bdd_of_coupled_box (u := U) (v := V) (β := β) (γ := γ)
+    (δ := fun k => 4 * c₂ ^ 2 * (γ k * (τ k / γ k) ^ 2 + (τ k / γ k) ^ 2 / a₀)) (a := a₀) (c := c')
+    (E := E') (C := C') ha₀0 (by positivity) (by positivity) (by positivity) hU0 hV0
+    (fun k => (hβp k).le) (fun k => (hγp k).le) hδ₂
+    (by
+      filter_upwards [hratio, ev1, ev2, ev3, RB] with k hr e1 e2 e3 hBk
+      obtain ⟨hq10, hq1⟩ := e1
+      obtain ⟨hq20, hq2⟩ := e2
+      obtain ⟨e3a, e3b, e3c⟩ := e3
+      have hb := hβp k
+      have hg := hγp k
+      have hρ2 : ρ k ≤ 2 := hr.trans e3c
+      have hρsq : ρ k ^ 2 ≤ 4 := by
+        have := pow_le_pow_left₀ (hρ0 k) hρ2 2; norm_num at this; linarith
+      have hρs0 : 0 ≤ ρ k ^ 2 := sq_nonneg _
+      have hq1le : q₁ k ≤ 1 := by
+        have : q₁ k ≤ (1 + c₀ * β k) * q₁ k := le_mul_of_one_le_left hq10 (by
+          linarith [mul_nonneg hc₀ hb.le])
+        linarith [mul_nonneg ha₀0.le hb.le]
+      have hq2le : q₂ k ≤ 1 := by
+        have : q₂ k ≤ (1 + c₀ * β k) * q₂ k := le_mul_of_one_le_left hq20 (by
+          linarith [mul_nonneg hc₀ hb.le])
+        linarith [mul_nonneg ha₀0.le hg.le]
+      -- the squared contraction factors
+      have hc1 : ρ k ^ 2 * ((1 + a₀ * β k) * q₁ k ^ 2) ≤ 1 - a₀ * β k := by
+        have t0 : 0 ≤ ρ k * q₁ k := mul_nonneg (hρ0 k) hq10
+        have t1 : ρ k * q₁ k ≤ 1 - 2 * a₀ * β k :=
+          (mul_le_mul_of_nonneg_right hr hq10).trans hq1
+        have t2 : (ρ k * q₁ k) ^ 2 ≤ (1 - 2 * (a₀ * β k)) ^ 2 := by
+          have := pow_le_pow_left₀ t0 t1 2; ring_nf; ring_nf at this; linarith
+        have t3 := sq_contract_le (mul_nonneg ha₀0.le hb.le) e3a
+        have t4 := mul_le_mul_of_nonneg_right t2 (by positivity : (0 : ℝ) ≤ 1 + a₀ * β k)
+        have e : ρ k ^ 2 * ((1 + a₀ * β k) * q₁ k ^ 2) = (ρ k * q₁ k) ^ 2 * (1 + a₀ * β k) := by
+          ring
+        linarith
+      have hc2 : ρ k ^ 2 * ((1 + a₀ * γ k) * q₂ k ^ 2) ≤ 1 - a₀ * γ k := by
+        have t0 : 0 ≤ ρ k * q₂ k := mul_nonneg (hρ0 k) hq20
+        have t1 : ρ k * q₂ k ≤ 1 - 2 * a₀ * γ k :=
+          (mul_le_mul_of_nonneg_right hr hq20).trans hq2
+        have t2 : (ρ k * q₂ k) ^ 2 ≤ (1 - 2 * (a₀ * γ k)) ^ 2 := by
+          have := pow_le_pow_left₀ t0 t1 2; ring_nf; ring_nf at this; linarith
+        have t3 := sq_contract_le (mul_nonneg ha₀0.le hg.le) e3b
+        have t4 := mul_le_mul_of_nonneg_right t2 (by positivity : (0 : ℝ) ≤ 1 + a₀ * γ k)
+        have e : ρ k ^ 2 * ((1 + a₀ * γ k) * q₂ k ^ 2) = (ρ k * q₂ k) ^ 2 * (1 + a₀ * γ k) := by
+          ring
+        linarith
+      refine ⟨?_, ?_, by linarith, by linarith⟩
+      · -- the slow component
+        have h1 : U (k + 1) = ρ k ^ 2 * (A (k + 1) / γ k ^ 2) := hnext2 A k
+        have hγ2 : 0 < γ k ^ 2 := by positivity
+        set X1 := (1 + a₀ * β k) * q₁ k ^ 2 * U k
+        set X2 := (1 + 1 / (a₀ * β k)) * (c₁ * β k) ^ 2 * V k
+        set X3 := 8 * β k ^ 2 * CM * (q₁ k * a k + c₁ * β k * b k) / γ k ^ 2
+        set X4 := 3 * β k ^ 4 * CM ^ 2 / γ k ^ 2
+        have h2 : A (k + 1) / γ k ^ 2 ≤ X1 + X2 + X3 + X4 := by
+          rw [div_le_iff₀ hγ2]
+          have := RA k
+          rw [hUA k, hVB k] at this
+          have e : (X1 + X2 + X3 + X4) * γ k ^ 2 =
+              (1 + (η - c₀) / 4 * β k) * (1 - η * β k + κ * β k ^ 2) ^ 2 * (U k * γ k ^ 2)
+              + (1 + 1 / ((η - c₀) / 4 * β k)) * (c₁ * β k) ^ 2 * (V k * γ k ^ 2)
+              + 8 * β k ^ 2 * CM * ((1 - η * β k + κ * β k ^ 2) * a k + c₁ * β k * b k)
+              + 3 * β k ^ 4 * CM ^ 2 := by
+            have hηc : η - c₀ ≠ 0 := (sub_pos.mpr hc₀η).ne'
+            simp only [X1, X2, X3, X4, hq₁, ha₀]; field_simp [hb.ne', hg.ne', hηc]; ring
+          rw [e]; exact this
+        have s1 : ρ k ^ 2 * X1 ≤ (1 - a₀ * β k) * U k := by
+          have := mul_le_mul_of_nonneg_right hc1 (hU0 k)
+          have e : ρ k ^ 2 * X1 = ρ k ^ 2 * ((1 + a₀ * β k) * q₁ k ^ 2) * U k := by
+            simp only [X1]; ring
+          linarith
+        have s2 : ρ k ^ 2 * X2 ≤ c' * β k * V k := by
+          have e1 : (1 + 1 / (a₀ * β k)) * (c₁ * β k) ^ 2 = c₁ ^ 2 * (β k + 1 / a₀) * β k := by
+            field_simp; ring
+          have t1 : c₁ ^ 2 * (β k + 1 / a₀) * β k ≤ c₁ ^ 2 * (Bβ + 1 / a₀) * β k :=
+            mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_left (by linarith [hβB k])
+              (sq_nonneg _)) hb.le
+          have t2 : 0 ≤ c₁ ^ 2 * (β k + 1 / a₀) * β k := by positivity
+          have t3 := mul_le_mul hρsq t1 t2 (by norm_num)
+          have t4 := mul_le_mul_of_nonneg_right t3 (hV0 k)
+          have e : ρ k ^ 2 * X2 = ρ k ^ 2 * (c₁ ^ 2 * (β k + 1 / a₀) * β k) * V k := by
+            simp only [X2]; rw [e1]; ring
+          have e' : 4 * (c₁ ^ 2 * (Bβ + 1 / a₀) * β k) * V k = c' * β k * V k := by
+            simp only [hc']; ring
+          linarith
+        have s3 : ρ k ^ 2 * X3 ≤ (32 * CM * W₁ * (1 + c₁ * Bβ) * Bq) * β k := by
+          have t1 : q₁ k * a k + c₁ * β k * b k ≤ W₁ * (1 + c₁ * Bβ) * γ k := by
+            have u1 : q₁ k * a k ≤ a k := mul_le_of_le_one_left (ha0 k) hq1le
+            have u2 : c₁ * β k * b k ≤ c₁ * Bβ * (W₁ * γ k) :=
+              mul_le_mul (mul_le_mul_of_nonneg_left (hβB k) hc₁) (hbW k) (hb0 k) (by positivity)
+            have := haW k
+            nlinarith
+          have t2 : X3 ≤ 8 * CM * W₁ * (1 + c₁ * Bβ) * Bq * β k := by
+            simp only [X3]
+            rw [div_le_iff₀ hγ2]
+            have t3 : 8 * β k ^ 2 * CM * (q₁ k * a k + c₁ * β k * b k) ≤
+                8 * β k ^ 2 * CM * (W₁ * (1 + c₁ * Bβ) * γ k) :=
+              mul_le_mul_of_nonneg_left t1 (by positivity)
+            have t4 : β k ≤ Bq * γ k := by
+              have := hqB k; rwa [div_le_iff₀ hg] at this
+            have t5 : 8 * β k ^ 2 * CM * (W₁ * (1 + c₁ * Bβ) * γ k) ≤
+                8 * CM * W₁ * (1 + c₁ * Bβ) * Bq * β k * γ k ^ 2 := by
+              have e : 8 * CM * W₁ * (1 + c₁ * Bβ) * Bq * β k * γ k ^ 2 =
+                  8 * β k * CM * (W₁ * (1 + c₁ * Bβ) * γ k) * (Bq * γ k) := by ring
+              rw [e]
+              have e2 : 8 * β k ^ 2 * CM * (W₁ * (1 + c₁ * Bβ) * γ k) =
+                  8 * β k * CM * (W₁ * (1 + c₁ * Bβ) * γ k) * β k := by ring
+              rw [e2]
+              exact mul_le_mul_of_nonneg_left t4 (by positivity)
+            linarith
+          have t6 : 0 ≤ X3 := by
+            simp only [X3]
+            have : 0 ≤ q₁ k * a k + c₁ * β k * b k :=
+              add_nonneg (mul_nonneg hq10 (ha0 k)) (mul_nonneg (mul_nonneg hc₁ hb.le) (hb0 k))
+            positivity
+          have := mul_le_mul hρsq t2 t6 (by norm_num)
+          linarith
+        have s4 : ρ k ^ 2 * X4 ≤ (12 * CM ^ 2 * Bβ * Bq ^ 2) * β k := by
+          have t1 : X4 ≤ 3 * CM ^ 2 * Bβ * Bq ^ 2 * β k := by
+            simp only [X4]
+            rw [div_le_iff₀ hγ2]
+            have t4 : β k ≤ Bq * γ k := by
+              have := hqB k; rwa [div_le_iff₀ hg] at this
+            have t5 : β k ^ 2 ≤ (Bq * γ k) ^ 2 := pow_le_pow_left₀ hb.le t4 2
+            have e : 3 * β k ^ 4 * CM ^ 2 = 3 * CM ^ 2 * β k * β k * β k ^ 2 := by ring
+            have e2 : 3 * CM ^ 2 * Bβ * Bq ^ 2 * β k * γ k ^ 2 =
+                3 * CM ^ 2 * β k * Bβ * (Bq * γ k) ^ 2 := by ring
+            rw [e, e2]
+            exact mul_le_mul (mul_le_mul_of_nonneg_left (hβB k) (by positivity)) t5
+              (sq_nonneg _) (by positivity)
+          have t6 : 0 ≤ X4 := by simp only [X4]; positivity
+          have := mul_le_mul hρsq t1 t6 (by norm_num)
+          linarith
+        have h6 : ρ k ^ 2 * (A (k + 1) / γ k ^ 2) ≤ ρ k ^ 2 * (X1 + X2 + X3 + X4) :=
+          mul_le_mul_of_nonneg_left h2 hρs0
+        have e : ρ k ^ 2 * (X1 + X2 + X3 + X4) =
+            ρ k ^ 2 * X1 + ρ k ^ 2 * X2 + ρ k ^ 2 * X3 + ρ k ^ 2 * X4 := by ring
+        have e2 : E' * β k = (32 * CM * W₁ * (1 + c₁ * Bβ) * Bq) * β k
+            + (12 * CM ^ 2 * Bβ * Bq ^ 2) * β k := by simp only [hE']; ring
+        rw [h1]
+        linarith
+      · -- the fast component
+        have h1 : V (k + 1) = ρ k ^ 2 * (B (k + 1) / γ k ^ 2) := hnext2 B k
+        have hγ2 : 0 < γ k ^ 2 := by positivity
+        set Y1 := (1 + a₀ * γ k) * q₂ k ^ 2 * V k
+        set Y2 := (1 + 1 / (a₀ * γ k)) * (c₂ * τ k) ^ 2 * U k
+        set Y3 := 8 * CN * (q₂ k * b k + c₂ * τ k * a k)
+        set Y4 := 3 * γ k ^ 2 * CN ^ 2
+        have h2 : B (k + 1) / γ k ^ 2 ≤ Y1 + Y2 + Y3 + Y4 := by
+          rw [div_le_iff₀ hγ2]
+          rw [hUA k, hVB k] at hBk
+          have e : (Y1 + Y2 + Y3 + Y4) * γ k ^ 2 =
+              (1 + (η - c₀) / 4 * γ k) * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2
+                * (V k * γ k ^ 2)
+              + (1 + 1 / ((η - c₀) / 4 * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2
+                * (U k * γ k ^ 2)
+              + 8 * γ k ^ 2 * CN * ((1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * b k
+                + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * a k) + 3 * γ k ^ 4 * CN ^ 2 := by
+            have hηc : η - c₀ ≠ 0 := (sub_pos.mpr hc₀η).ne'
+            simp only [Y1, Y2, Y3, Y4, hq₂, hτ, ha₀]; field_simp [hb.ne', hg.ne', hηc]; ring
+          rw [e]; exact hBk
+        have s1 : ρ k ^ 2 * Y1 ≤ (1 - a₀ * γ k) * V k := by
+          have := mul_le_mul_of_nonneg_right hc2 (hV0 k)
+          have e : ρ k ^ 2 * Y1 = ρ k ^ 2 * ((1 + a₀ * γ k) * q₂ k ^ 2) * V k := by
+            simp only [Y1]; ring
+          linarith
+        have s2 : ρ k ^ 2 * Y2 ≤ 4 * c₂ ^ 2 * (γ k * (τ k / γ k) ^ 2 + (τ k / γ k) ^ 2 / a₀)
+            * γ k * U k := by
+          have e1 : (1 + 1 / (a₀ * γ k)) * (c₂ * τ k) ^ 2 =
+              c₂ ^ 2 * (γ k * (τ k / γ k) ^ 2 + (τ k / γ k) ^ 2 / a₀) * γ k := by
+            field_simp; ring
+          have t2 : 0 ≤ c₂ ^ 2 * (γ k * (τ k / γ k) ^ 2 + (τ k / γ k) ^ 2 / a₀) * γ k := by
+            positivity
+          have t3 := mul_le_mul_of_nonneg_right hρsq t2
+          have t4 := mul_le_mul_of_nonneg_right t3 (hU0 k)
+          have e : ρ k ^ 2 * Y2 = ρ k ^ 2 * (c₂ ^ 2 * (γ k * (τ k / γ k) ^ 2
+              + (τ k / γ k) ^ 2 / a₀) * γ k) * U k := by
+            simp only [Y2]; rw [e1]; ring
+          linarith
+        have s3 : ρ k ^ 2 * Y3 ≤ (32 * CN * W₁ * (1 + c₂ * T)) * γ k := by
+          have t1 : q₂ k * b k + c₂ * τ k * a k ≤ W₁ * (1 + c₂ * T) * γ k := by
+            have u1 : q₂ k * b k ≤ b k := mul_le_of_le_one_left (hb0 k) hq2le
+            have u2 : c₂ * τ k * a k ≤ c₂ * T * (W₁ * γ k) :=
+              mul_le_mul (mul_le_mul_of_nonneg_left (hτT k) hc₂) (haW k) (ha0 k) (by positivity)
+            have := hbW k
+            nlinarith
+          have t6 : 0 ≤ Y3 := by
+            simp only [Y3]
+            have : 0 ≤ q₂ k * b k + c₂ * τ k * a k :=
+              add_nonneg (mul_nonneg hq20 (hb0 k)) (mul_nonneg (mul_nonneg hc₂ (hτ0 k)) (ha0 k))
+            positivity
+          have t2 : Y3 ≤ 8 * CN * (W₁ * (1 + c₂ * T) * γ k) := by
+            simp only [Y3]; exact mul_le_mul_of_nonneg_left t1 (by positivity)
+          have := mul_le_mul hρsq t2 t6 (by norm_num)
+          linarith
+        have s4 : ρ k ^ 2 * Y4 ≤ (12 * CN ^ 2 * Bγ) * γ k := by
+          have t1 : Y4 ≤ 3 * CN ^ 2 * Bγ * γ k := by
+            simp only [Y4]
+            have e : 3 * γ k ^ 2 * CN ^ 2 = 3 * CN ^ 2 * γ k * γ k := by ring
+            rw [e]
+            exact mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_left (hγB k) (by positivity))
+              hg.le |>.trans_eq (by ring)
+          have t6 : 0 ≤ Y4 := by simp only [Y4]; positivity
+          have := mul_le_mul hρsq t1 t6 (by norm_num)
+          linarith
+        have h6 : ρ k ^ 2 * (B (k + 1) / γ k ^ 2) ≤ ρ k ^ 2 * (Y1 + Y2 + Y3 + Y4) :=
+          mul_le_mul_of_nonneg_left h2 hρs0
+        have e : ρ k ^ 2 * (Y1 + Y2 + Y3 + Y4) =
+            ρ k ^ 2 * Y1 + ρ k ^ 2 * Y2 + ρ k ^ 2 * Y3 + ρ k ^ 2 * Y4 := by ring
+        have e2 : C' * γ k = (32 * CN * W₁ * (1 + c₂ * T)) * γ k + (12 * CN ^ 2 * Bγ) * γ k := by
+          simp only [hC']; ring
+        rw [h1]
+        linarith)
+  obtain ⟨⟨MU, hMU⟩, ⟨MV, hMV⟩⟩ := box2
+  refine ⟨max MU MV, fun k => ⟨?_, ?_⟩⟩
+  · rw [hUA k]
+    exact mul_le_mul_of_nonneg_right ((hMU k).trans (le_max_left _ _)) (sq_nonneg _)
+  · rw [hVB k]
+    exact mul_le_mul_of_nonneg_right ((hMV k).trans (le_max_right _ _)) (sq_nonneg _)
+
+end Scalar
+
 end StochasticApproximation
