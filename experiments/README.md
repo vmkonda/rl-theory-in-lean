@@ -26,3 +26,5 @@ uv venv .venv && uv pip install --python .venv/bin/python numpy matplotlib
 | `check_projection.py` | Monte Carlo regression of the REINFORCE noise on the actor-critic noise |
 | `check_projection_exact.py`, `check_td0_gap.py` | Exact checks of Theorem 4.5 (orthogonality and the gap formula) |
 | `crossover.py` | Finite-time loss of REINFORCE vs the tabular TD(0) critic as the table grows (Remark 4.7) |
+| `check_projection_lambda.py` | Exact: the TD(0) critic noise is a projection of the TD(λ) noise (Theorem 4.7) |
+| `check_lambda_gap.py`, `check_lambda_gain.py`, `check_lambda_tower.py` | Exact checks of Lemma 4.6 and Theorem 4.7 (gain, gap formula, increment structure) |

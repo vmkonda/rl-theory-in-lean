@@ -267,17 +267,104 @@ N^{\text{AO}}_k \simeq N^{\text{AC}}_k + D_k,\qquad D_k = \delta_k(B_k - b(s_k))
 
 </div>
 
-*Lean:* `ScoreChain.td0_gain` ($`Ke_s = -b(s)`$, in the form $`\sum_sT_{ss'}b(s) = -X_{s'}`$), `ScoreChain.sum_carry_centered` (the orthogonality: $`\mathbb{E}[w(s_k,a_k)(B_k - b(s_k))] = 0`$) and `td0_noise_split` (the pathwise splitting $`g z = N^{\text{AC}} + \delta(Z - \psi - b) - (H' - H)`$). The step from these stationary identities to the long-run covariances, the martingale argument above, is not formalized.
+*Lean:* `ScoreChain.td0_gain` ($`Ke_s = -b(s)`$, in the form $`\sum_sT_{ss'}b(s) = -X_{s'}`$), `ScoreChain.sum_carry_centered` (the orthogonality: $`\mathbb{E}[w(s_k,a_k)(B_k - b(s_k))] = 0`$) and `td0_noise_split` (the pathwise splitting $`g z = N^{\text{AC}} + \delta(Z - \psi - b) - (H' - H)`$). The martingale step is `StateDriven.tendsto_secondMoment_of_centered_split`. Its hypotheses are:
 
-<div id="obs:tab" class="observation">
+- the filtration $`(\mathcal G_k)`$, under which the law of the next observation depends on the past only through the state;
 
-**Observation 4.6** (Intermediate $`\lambda`$). By Theorems [4.1](#thm:td1) and [4.5](#thm:td0), the tabular critic ties REINFORCE at $`\lambda = 1`$ and beats it at $`\lambda = 0`$. In between, $`N^{\text{AO}} - N^{\text{AC}}`$ is no longer orthogonal to $`N^{\text{AC}}`$: at $`\lambda = 0.5`$ the regression coefficient of $`N^{\text{AO}}`$ on $`N^{\text{AC}}`$ is 1.05–1.11, not 1 (`experiments/check_projection.py`). Even so, in every instance computed, $`\tilde\Gamma_{\text{AC}}(\lambda)`$ is increasing in $`\lambda`$ in the Loewner order (69 of 69 instances, `experiments/explore_value_critic.py`), with $`\mathrm{tr}\,\tilde\Gamma_{\text{AC}}(0)/\mathrm{tr}\,\tilde\Gamma_{\text{AO}}`$ between 0.10 and 0.91 (median 0.45). The optimal-gain loss relative to REINFORCE is 0.29–0.54 at $`\lambda = 0`$ in the seven two-parameter instances of the table below. Monotonicity in $`\lambda`$ is not proved. With random extra features (which do not represent $`V^\pi`$) and $`\lambda < 1`$ the critic is biased, with a gap $`J^* - J(\hat\theta)`$ of about $`2\times10^{-2}`$; whether it pays depends on the horizon through gap$`{}+\ell^*/k`$.
+- $`\mathbb{E}[\delta\mid\mathcal G_k] = 0`$;
+
+- $`\mathbb{E}[(B_k - b(s))1\{s_k = s\}] \to 0`$.
+
+Under these, $`D`$ is a martingale difference orthogonal to every function of $`(s_k, Y_{k+1})`$, and the limit covariances add. Two things are not formalized: that the restart chain with the filtration $`(\mathcal G_k)`$ satisfies these hypotheses, and the factored form of $`\mathbb{E}[DD^\top]`$.
+
+<div id="lem:gain" class="lemma">
+
+**Lemma 4.6** (The gain of the tabular TD($`\lambda`$) critic). *Under the hypotheses of Theorem [4.5](#thm:td0), for every $`\lambda \in [0,1]`$ the state block of $`-CA_c^{-1} = (I\;\, -K_\lambda)`$ is $`K_\lambda e_s = -(1-\lambda)\,b(s)`$.*
+
+</div>
+
+<div class="proof">
+
+*Proof.* For $`\lambda = 0`$ this is the gain in Theorem [4.5](#thm:td0); for $`\lambda = 1`$ it is Theorem [4.1](#thm:td1). Let $`0 < \lambda < 1`$ and write $`z_k = (z^\psi_k, z^e_k)`$ for the critic’s trace. Let $`R_k = z^\psi_k - \psi_k = \lambda c_kz^\psi_{k-1}`$, and define
+``` math
+P_\lambda = \mathbb{E}[R_ke_{s_k}^\top],\qquad E_\lambda = \mathbb{E}[z^e_ke_{s_k}^\top],\qquad M = \mathbb{E}[B_ke_{s_k}^\top].
+```
+The columns of $`M`$ are $`\nu(s)b(s)`$; let $`D_\nu`$ be the diagonal matrix of the $`\nu(s)`$.
+
+- *The blocks of $`A_c`$.* As in Theorem [4.5](#thm:td0), $`A_c =
+    \begin{pmatrix}-\Psi & X_\lambda\\ 0 & T_\lambda\end{pmatrix}`$ and $`K_\lambda = X_\lambda T_\lambda^{-1}`$, where $`X_\lambda = \mathbb{E}[z^\psi_k(c_{k+1}e_{s_{k+1}} - e_{s_k})^\top]`$ and $`T_\lambda = \mathbb{E}[z^e_k(c_{k+1}e_{s_{k+1}} - e_{s_k})^\top]`$. From $`z^e_{k+1} = \lambda c_{k+1}z^e_k + e_{s_{k+1}}`$, $`R_{k+1} = \lambda c_{k+1}z^\psi_k`$ and stationarity,
+  ``` math
+  T_\lambda = \lambda^{-1}(E_\lambda - D_\nu) - E_\lambda,\qquad X_\lambda = (\lambda^{-1} - 1)P_\lambda,
+  ```
+  using $`\mathbb{E}[\psi_ke_{s_k}^\top] = 0`$.
+
+- *A candidate gain.* Define $`\tilde X_k = R_k + (1-\lambda)\sum_{j\le k}\lambda^{k-j}\Pi_{jk}\,b(s_j)`$, where $`\Pi_{jk} = \prod_{i=j+1}^kc_i`$ is the indicator that $`j`$ and $`k`$ lie in the same episode. The proof of Theorem [4.7](#thm:mono) shows $`\mathbb{E}[\tilde X_k\mid s_k] = b(s_k)`$, that is, $`\mathbb{E}[\tilde X_ke_{s_k}^\top] = M`$. Since $`\sum_{j\le k}\lambda^{k-j}\Pi_{jk}b(s_j) = MD_\nu^{-1}z^e_k`$, this reads $`P_\lambda + (1-\lambda)MD_\nu^{-1}E_\lambda = M`$.
+
+- *It solves the critic’s equation.* For $`\tilde K = -(1-\lambda)MD_\nu^{-1}`$,
+  ``` math
+  \begin{align*}
+      \lambda\tilde KT_\lambda &= -(1-\lambda)MD_\nu^{-1}\big((1-\lambda)E_\lambda - D_\nu\big)\\
+      &= (1-\lambda)\big(M - (1-\lambda)MD_\nu^{-1}E_\lambda\big) = (1-\lambda)P_\lambda = \lambda X_\lambda .
+  \end{align*}
+  ```
+  So $`\tilde K = K_\lambda`$, because $`T_\lambda`$ is invertible.
+
+ ◻
+
+</div>
+
+<div id="thm:mono" class="theorem">
+
+**Theorem 4.7** (Shorter traces help the value-function critic). Under the hypotheses of Theorem [4.5](#thm:td0), let $`\tilde\Gamma(\lambda)`$ be the noise covariance of actor-critic with the tabular TD($`\lambda`$) critic at $`\theta^*`$. Then $`\tilde\Gamma(\lambda)`$ is nondecreasing in $`\lambda`$ in the Loewner order. More precisely, there are matrices $`\Delta_i \succeq 0`$, not depending on $`\lambda`$, with
+``` math
+\tilde\Gamma(\lambda) = \tilde\Gamma(0) + \sum_{i\ge1}\lambda^{2i}\Delta_i ,
+```
+where $`\Delta_i = \sum_s\nu(s)\,\mathbb{E}[\delta_k^2\mid s_k = s]\;\mathbb{E}[(Y_i - Y_{i-1})(Y_i - Y_{i-1})^\top\mid s_k = s]`$ and the $`Y_i`$ are defined in the proof. Hence the optimal-gain loss $`\ell^*`$ is nondecreasing in $`\lambda`$. TD(0) is the best tabular critic, and TD(1), which equals REINFORCE, is the worst.
+
+</div>
+
+<div class="proof">
+
+*Proof.* By Theorem [4.4](#thm:value), $`\hat r = (0, V)`$ for every $`\lambda`$.
+
+*The noise.* The effective noise is $`N_k(\lambda) = V(s_k)\psi_k + \delta_k(z^\psi_k - K_\lambda z^e_k)`$. By Lemma [4.6](#lem:gain) and $`z^e_k = \sum_{j\le k}\lambda^{k-j}\Pi_{jk}e_{s_j}`$,
+``` math
+N_k(\lambda) = V(s_k)\psi_k + \delta_k(\psi_k + X_{\lambda,k}),\qquad
+X_{\lambda,k} = R_k + (1-\lambda)\sum_{j\le k}\lambda^{k-j}\Pi_{jk}b(s_j).
+```
+In particular $`X_{0,k} = b(s_k)`$.
+
+*A martingale in the lookback.* For $`l \ge 0`$ let $`\mathcal F_l`$ be generated by $`s_{k-l}, a_{k-l}, Y_{k-l+1},\dots,Y_{k-1}`$ and $`(f_k, s_k)`$: the last $`l`$ steps before $`k`$, without the flag at time $`k-l`$. These $`\sigma`$-algebras increase with $`l`$. Split $`B_k = \sum_{j=k-l}^{k-1}\Pi_{jk}\psi_j + \Pi_{k-l,k}B_{k-l}`$. Given $`s_{k-l}`$, the variables generating $`\mathcal F_l`$ are independent of $`B_{k-l}`$, because the action is drawn afresh and the step law does not depend on the flag. Hence
+``` math
+Y_l := \mathbb{E}[B_k\mid\mathcal F_l] = \sum_{j=k-l}^{k-1}\Pi_{jk}\psi_j + \Pi_{k-l,k}\,b(s_{k-l}),
+\qquad Y_0 = b(s_k),\qquad Y_l \to B_k .
+```
+*The trace is a geometric average.* Summing the geometric weights $`(1-\lambda)\lambda^l`$ gives $`X_{\lambda,k} = \sum_{l\ge0}(1-\lambda)\lambda^lY_l = Y_0 + \sum_{i\ge1}\lambda^i(Y_i - Y_{i-1})`$. The increments $`Y_i - Y_{i-1}`$ are martingale differences for $`(\mathcal F_l)`$, and $`s_k \in \mathcal F_0`$. So $`\mathbb{E}[X_{\lambda,k}\mid s_k] = b(s_k)`$, and
+``` math
+\mathbb{E}\big[(X_{\lambda,k} - b(s_k))(X_{\lambda,k} - b(s_k))^\top\mid s_k\big]
+= \sum_{i\ge1}\lambda^{2i}\,\mathbb{E}[(Y_i - Y_{i-1})(Y_i - Y_{i-1})^\top\mid s_k].
+```
+*The covariances add.* $`N_k(\lambda) = N_k(0) + \delta_k(X_{\lambda,k} - b(s_k))`$. The second term has the form of $`D`$ in Theorem [4.5](#thm:td0), with $`X_{\lambda,k}`$ in place of $`B_k`$: it is known before the action $`a_k`$ and has conditional mean $`b(s_k)`$ given $`s_k`$. The argument of Theorem [4.5](#thm:td0) therefore gives $`\tilde\Gamma(\lambda) = \tilde\Gamma(0) + \mathbb{E}[\delta_k^2(X_{\lambda,k} - b(s_k))(X_{\lambda,k} - b(s_k))^\top]`$. The conditional independence factors this expectation into the stated sum. Monotonicity follows term by term, and the statement about $`\ell^*`$ follows by Proposition [3.6](#prop:compare). ◻
+
+</div>
+
+*Lean:* the step from the splitting to the sum of covariances is `StateDriven.tendsto_secondMoment_of_centered_split`, with $`B_k = X_{\lambda,k}`$. Lemma [4.6](#lem:gain) and the lookback representation are not formalized. Numerical checks:
+
+- `experiments/check_lambda_gap.py`, on 23 instances and $`\lambda \in \{0, 0.2,\dots,1\}`$: $`\mathbb{E}[X_\lambda\mid s] = b(s)`$ to $`5\times10^{-14}`$; the formula for $`\tilde\Gamma(\lambda) - \tilde\Gamma(0)`$ to $`2\times10^{-14}`$; and $`\mathrm{Cov}(X_\lambda\mid s)`$ increasing in $`\lambda`$.
+
+- `experiments/check_lambda_gain.py`: Lemma [4.6](#lem:gain), to $`5\times10^{-14}`$.
+
+- `experiments/check_lambda_tower.py` confirms the increment structure exactly: $`\mathbb{E}[X_aX_b^\top\mid s] = \mathbb{E}[X_mX_m^\top\mid s]`$ with $`m = \sqrt{ab}`$, to $`10^{-14}`$.
+
+<div class="remark">
+
+**Remark 4.8** (Not a projection). For $`0 < \lambda' < \lambda`$ the noise $`N(\lambda')`$ is *not* an orthogonal projection of $`N(\lambda)`$, because $`\mathbb{E}[X_{\lambda'}X_\lambda^\top\mid s] \ne \mathbb{E}[X_{\lambda'}X_{\lambda'}^\top\mid s]`$. This is why a Monte Carlo regression of $`N^{\text{AO}}`$ on $`N(0.5)`$ gives coefficients 1.05–1.11 rather than 1 (`experiments/check_projection.py`). $`N(0)`$ is a projection of every $`N(\lambda)`$ (`experiments/check_projection_lambda.py`, exact to $`10^{-14}`$), which is the case $`\lambda' = 0`$. In the instances computed, the loss at $`\lambda = 0`$ relative to REINFORCE is 0.29–0.54 in the seven two-parameter instances of the table below, and $`\mathrm{tr}\,\tilde\Gamma(0)/\mathrm{tr}\,\tilde\Gamma_{\text{AO}}`$ is between 0.10 and 0.91 (median 0.45) over 69 instances. With random extra features, which do not represent $`V^\pi`$, and $`\lambda < 1`$, the critic is biased, with a gap $`J^* - J(\hat\theta)`$ of about $`2\times10^{-2}`$. Whether it pays then depends on the horizon, through gap$`{}+\ell^*/k`$.
 
 </div>
 
 <div id="rem:finite" class="remark">
 
-**Remark 4.7** (Finite time). Theorem [4.5](#thm:td0) is asymptotic. The tabular critic has $`|S| + d`$ parameters, and each table entry is updated only when its state is visited, so before the asymptotics take hold it can lose to REINFORCE. `experiments/crossover.py` isolates this effect. It splits each state of a fixed 5-state instance into $`m`$ copies with Zipf visiting weights. This leaves $`J`$, $`H`$ and both asymptotic losses unchanged ($`\ell^*`$: 25.1 for REINFORCE, 6.48 for the critic) and grows the table to $`5m`$ entries. The quantity reported is $`(K/2)\,\mathbb{E}[J^* - J(\bar\theta_K)]`$, with Polyak averaging over $`[K/2, K]`$, the critic step $`\alpha_k = \alpha_0(k + 10^3)^{-1/2}`$, and 400 runs:
+**Remark 4.9** (Finite time). Theorem [4.5](#thm:td0) is asymptotic. The tabular critic has $`|S| + d`$ parameters, and each table entry is updated only when its state is visited, so before the asymptotics take hold it can lose to REINFORCE. `experiments/crossover.py` isolates this effect. It splits each state of a fixed 5-state instance into $`m`$ copies with Zipf visiting weights. This leaves $`J`$, $`H`$ and both asymptotic losses unchanged ($`\ell^*`$: 25.1 for REINFORCE, 6.48 for the critic) and grows the table to $`5m`$ entries. The quantity reported is $`(K/2)\,\mathbb{E}[J^* - J(\bar\theta_K)]`$, with Polyak averaging over $`[K/2, K]`$, the critic step $`\alpha_k = \alpha_0(k + 10^3)^{-1/2}`$, and 400 runs:
 
 <div class="center">
 
@@ -372,7 +459,7 @@ A large critic with rarely visited states and a small critic step lengthens the 
 
 <div class="remark">
 
-**Remark 4.8** (Numerical checks). `experiments/rates_chapter.py` checks Theorems [4.1](#thm:td1) and [4.2](#thm:compat) on the same instances: the directions, Jacobians $`H`$, noise covariances $`\tilde\Gamma`$ and losses agree to relative error $`7\times10^{-9}`$ and $`2\times10^{-9}`$ (the accuracy of the finite-difference Jacobian). It checks Theorem [4.4](#thm:value) to $`10^{-14}`$: the critic’s fixed point is $`(w, V^\pi)`$ and the direction is $`(1-\gamma)\nabla J`$, at $`\theta^*`$ and away from it, for $`\lambda \in \{0, 0.4, 0.8, 1\}`$. `experiments/check_projection_exact.py` and `experiments/check_td0_gap.py` check Theorem [4.5](#thm:td0) exactly (from the stationary moments of the chain) on 30 instances, to relative error $`2\times10^{-14}`$ and $`6\times10^{-15}`$. Earlier simulations of the actual two-time-scale algorithm (`experiments/sim_ac_tuned.py`) matched the predicted covariances to about 5%, supporting Assumption [2.2](#ass:lin) in these instances.
+**Remark 4.10** (Numerical checks). `experiments/rates_chapter.py` checks Theorems [4.1](#thm:td1) and [4.2](#thm:compat) on the same instances: the directions, Jacobians $`H`$, noise covariances $`\tilde\Gamma`$ and losses agree to relative error $`7\times10^{-9}`$ and $`2\times10^{-9}`$ (the accuracy of the finite-difference Jacobian). It checks Theorem [4.4](#thm:value) to $`10^{-14}`$: the critic’s fixed point is $`(w, V^\pi)`$ and the direction is $`(1-\gamma)\nabla J`$, at $`\theta^*`$ and away from it, for $`\lambda \in \{0, 0.4, 0.8, 1\}`$. `experiments/check_projection_exact.py` and `experiments/check_td0_gap.py` check Theorem [4.5](#thm:td0) exactly (from the stationary moments of the chain) on 30 instances, to relative error $`2\times10^{-14}`$ and $`6\times10^{-15}`$. Earlier simulations of the actual two-time-scale algorithm (`experiments/sim_ac_tuned.py`) matched the predicted covariances to about 5%, supporting Assumption [2.2](#ass:lin) in these instances.
 
 </div>
 
@@ -382,7 +469,7 @@ A large critic with rarely visited states and a small critic step lengthens the 
 
 - Propositions [3.3](#prop:loss), [3.5](#prop:dual) and [3.6](#prop:compare): formalized.
 
-- Theorems [4.1](#thm:td1), [4.2](#thm:compat), [4.4](#thm:value) and the stationary identities of Theorem [4.5](#thm:td0): formalized in `CriticTheorems.lean` for a finite model of the sampling chain, `ScoreChain`: a chain on (restart flag, state, action) whose next action is drawn from the policy given the next state. This covers the restart chain and any other such chain. Two facts carry all the proofs: a function with mean zero over actions has $`\mathbb{E}[c(Y_{k+1})F(Y_{k+1})\mid Y_k] = 0`$ (`sum_Q_c_eq_zero`), and its correlation with the trace is its correlation with the current features (`sum_mul_trace_eq`). The stationary trace moments $`m(y) = \mathbb{E}[z_k1\{Y_k = y\}]`$ enter through the recursion that characterizes them, $`m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)`$. `ScoreChain.tendsto_traceMoment` derives this recursion from the process. Along the chain, the moments of the trace converge to a solution whenever the law of $`Y_k`$ converges and $`\sum_{y'}Q(y,y')|\lambda c(y')| < 1`$. For the restart chain this condition holds with bound $`|\lambda|\gamma`$ (`ScoreChain.restart_contraction`). The law converges too: restarts draw from a fixed distribution with probability at least $`1 - \gamma`$, so the law satisfies $`P_{k+1} = LP_k + b`$, with $`L`$ an $`\ell^1`$ contraction by $`\gamma`$. Its limit is a stationary $`\nu`$ (`ScoreChain.tendsto_law_restart`). Hence `ScoreChain.tendsto_traceMoment_of_restart` rests on the model alone, for every $`|\lambda| \le 1`$.
+- Theorems [4.1](#thm:td1), [4.2](#thm:compat), [4.4](#thm:value), the stationary identities of Theorem [4.5](#thm:td0), and the martingale step of Theorems [4.5](#thm:td0) and [4.7](#thm:mono) (`OrthogonalNoise.lean`): formalized in `CriticTheorems.lean` for a finite model of the sampling chain, `ScoreChain`: a chain on (restart flag, state, action) whose next action is drawn from the policy given the next state. This covers the restart chain and any other such chain. Two facts carry all the proofs: a function with mean zero over actions has $`\mathbb{E}[c(Y_{k+1})F(Y_{k+1})\mid Y_k] = 0`$ (`sum_Q_c_eq_zero`), and its correlation with the trace is its correlation with the current features (`sum_mul_trace_eq`). The stationary trace moments $`m(y) = \mathbb{E}[z_k1\{Y_k = y\}]`$ enter through the recursion that characterizes them, $`m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)`$. `ScoreChain.tendsto_traceMoment` derives this recursion from the process. Along the chain, the moments of the trace converge to a solution whenever the law of $`Y_k`$ converges and $`\sum_{y'}Q(y,y')|\lambda c(y')| < 1`$. For the restart chain this condition holds with bound $`|\lambda|\gamma`$ (`ScoreChain.restart_contraction`). The law converges too: restarts draw from a fixed distribution with probability at least $`1 - \gamma`$, so the law satisfies $`P_{k+1} = LP_k + b`$, with $`L`$ an $`\ell^1`$ contraction by $`\gamma`$. Its limit is a stationary $`\nu`$ (`ScoreChain.tendsto_law_restart`). Hence `ScoreChain.tendsto_traceMoment_of_restart` rests on the model alone, for every $`|\lambda| \le 1`$.
 
 - The noise covariance $`\tilde\Gamma`$ of Theorem [3.1](#thm:cov), for trace-driven noise, is the limit computed from the stationary first and second trace moments (`tendsto_secondMoment_of_trace_noise_stationary`, in the companion note). It is no longer a hypothesis. This includes the unbounded REINFORCE trace. For the restart chain the whole statement rests on the model, in `ScoreChain.tendsto_secondMoment_of_restart_noise_centered`:
 

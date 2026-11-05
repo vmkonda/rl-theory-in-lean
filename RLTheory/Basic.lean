@@ -17,4 +17,5 @@ import RLTheory.StochasticApproximation.TwoTimeScaleMultiplicative
 import RLTheory.StochasticApproximation.RateComparison
 import RLTheory.StochasticApproximation.TraceMoments
 import RLTheory.StochasticApproximation.TwoTimeScaleTrace
+import RLTheory.StochasticApproximation.OrthogonalNoise
 import RLTheory.MarkovDecisionProcess.CriticTheorems
