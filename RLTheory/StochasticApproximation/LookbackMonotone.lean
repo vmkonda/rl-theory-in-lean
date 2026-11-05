@@ -504,6 +504,54 @@ theorem StateDriven.lookback_covariance_mono (hσ : StateDriven μ ℱ σ ξ P)
   exact ⟨sum_nonneg fun s _ => mul_nonneg (hσ20 s) (hm s).1,
     sum_le_sum fun s _ => mul_le_mul_of_nonneg_left (hm s).2 (hσ20 s)⟩
 
+omit [DecidableEq S] in
+/-- `E[F(σ_k, ξ_{k+1})] = Σ_s (Σ_x P(s, x) F(s, x)) P(σ_k = s)`. -/
+lemma StateDriven.integral_pair (hσ : StateDriven μ ℱ σ ξ P) [DecidableEq S] (k : ℕ)
+    (F : S → X → ℝ) :
+    ∫ ω, F (σ k ω) (ξ (k + 1) ω) ∂μ =
+      ∑ s, (∑ x, P s x * F s x) * ∫ ω, {ω | σ k ω = s}.indicator (fun _ => (1 : ℝ)) ω ∂μ := by
+  have hint : Integrable (fun ω => F (σ k ω) (ξ (k + 1) ω)) μ := by
+    have hm : Measurable fun ω => (σ k ω, ξ (k + 1) ω) :=
+      (((hσ.state k).mono (ℱ.mono (Nat.le_succ k)) le_rfl).prodMk (hσ.obs k)).mono
+        (ℱ.le (k + 1)) le_rfl
+    have hsm := (StronglyMeasurable.of_discrete (f := Function.uncurry F)).comp_measurable hm
+    refine (memLp_top_of_bound hsm.aestronglyMeasurable (∑ s, ∑ x, |F s x|)
+      (Eventually.of_forall fun ω => ?_)).integrable le_top
+    rw [Real.norm_eq_abs]
+    exact (single_le_sum (f := fun x => |F (σ k ω) x|) (fun _ _ => abs_nonneg _)
+      (mem_univ _)).trans (single_le_sum (f := fun s => ∑ x, |F s x|)
+        (fun _ _ => sum_nonneg fun _ _ => abs_nonneg _) (mem_univ _))
+  rw [← integral_condExp (ℱ.le k), integral_congr_ae (hσ.law₂ k F)]
+  have hset : ∀ s, MeasurableSet[ℱ k] {ω | σ k ω = s} := fun s =>
+    hσ.state k (measurableSet_singleton s)
+  have e : ∀ ω, ∑ x, P (σ k ω) x * F (σ k ω) x =
+      ∑ s, {ω | σ k ω = s}.indicator (fun _ => (1 : ℝ)) ω * ∑ x, P s x * F s x := fun ω => by
+    rw [sum_indicator_mul (σ := σ) ω (fun _ _ => 1) (fun s => ∑ x, P s x * F s x), one_mul]
+  rw [integral_congr_ae (Eventually.of_forall e),
+    integral_finset_sum _ fun s _ => ((integrable_const (1 : ℝ)).indicator
+      (ℱ.le k _ (hset s))).mul_const _]
+  exact sum_congr rfl fun s _ => by rw [integral_mul_const, mul_comm]
+
+/-- **The second moment of a function of the state and the next observation converges** when the
+law of the state does: `E[Φ Φᵀ] → Σ_s ν(s) Σ_x P(s, x) Φ(s, x) Φ(s, x)ᵀ`. -/
+theorem StateDriven.tendsto_secondMoment_pair (hσ : StateDriven μ ℱ σ ξ P) {n : ℕ}
+    (Φ : S → X → E n) {ν : S → ℝ}
+    (hlaw : ∀ s, Tendsto (fun k => ∫ ω, {ω | σ k ω = s}.indicator (fun _ => (1 : ℝ)) ω ∂μ)
+      atTop (𝓝 (ν s))) :
+    Tendsto (fun k => secondMoment μ fun ω => Φ (σ k ω) (ξ (k + 1) ω)) atTop
+      (𝓝 ((EuclideanSpace.equiv (Fin n × Fin n) ℝ).symm fun ij =>
+        ∑ s, (∑ x, P s x * (Φ s x ij.1 * Φ s x ij.2)) * ν s)) := by
+  refine tendsto_euclid_of_coord fun ij => ?_
+  have hL : ∀ k, MemLp (fun ω => Φ (σ k ω) (ξ (k + 1) ω)) 2 μ := fun k =>
+    memLp_of_finite ((hσ.stronglyMeasurable_pair Φ k).mono (ℱ.le (k + 1))).aestronglyMeasurable
+      (C := ∑ s, ∑ x, ‖Φ s x‖) fun ω => norm_le_sum_sum₂ Φ _ _
+  have e : ∀ k, (secondMoment μ fun ω => Φ (σ k ω) (ξ (k + 1) ω)) ij =
+      ∑ s, (∑ x, P s x * (Φ s x ij.1 * Φ s x ij.2)) *
+        ∫ ω, {ω | σ k ω = s}.indicator (fun _ => (1 : ℝ)) ω ∂μ := fun k => by
+    rw [secondMoment, crossMoment_apply (hL k) (hL k)]
+    exact hσ.integral_pair k (fun s x => Φ s x ij.1 * Φ s x ij.2)
+  exact (tendsto_finset_sum _ fun s _ => (hlaw s).const_mul _).congr fun k => (e k).symm
+
 end Process
 
 /-! ### The critic's traces -/

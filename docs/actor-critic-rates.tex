@@ -818,6 +818,16 @@ semidefinite too.
   The hypotheses are on the model: restarts reach every state and do not depend on the pair,
   continuation is at most $\gamma < 1$, $c(\text{restart}) = 0$ and $0 \le c \le 1$, and the step law
   does not depend on the flag.
+\item the merged theorem, \texttt{ScoreChain.restart\_actor\_covariance\_mono}. Run the linearized actor
+  $\theta_{k+1} = \theta_k - \beta_kA\theta_k + \beta_k(V(s_k)\psi_k + \delta_{k+1}(z^\psi_k - K_\lambda z^e_k))$ with the
+  gain $K_\lambda e_t = -(1-\lambda)b(t)$ of Lemma~\ref{lem:gain}, for $\lambda_1 \le \lambda_2$. Then
+  $\beta_k^{-1}\E[\theta_k\theta_k^\top] \to \Sigma_\lambda$, the Lyapunov solution for
+  $\tilde\Gamma(\lambda) = \Gamma_M + \Gamma_D(\lambda)$, and $\tilde\Gamma(\lambda_1) \preceq \tilde\Gamma(\lambda_2)$.
+  Beyond the model, the hypotheses describe the TD(0) noise:
+  $V\psi + \delta(\psi + b(s)) = \Phi(s_k, \xi_{k+1}) + h_k - h_{k+1}$, with $\Phi$ and $\delta$ centered given the
+  state (the Bellman equation for $\delta$). $\Gamma_M$ is computed from the law. The stationary law
+  $\nu$ is unique (\texttt{stationary\_unique\_restart}), so stating the recursions with
+  $b = \texttt{carryMean}$ hides no choice.
 \end{itemize}
 With \texttt{StateDriven.tendsto\_secondMoment\_of\_centered\_split} (with $B_k = X_{\lambda,k}$),
 $\tilde\Gamma(\lambda) = \tilde\Gamma(0) + \Gamma_D(\lambda)$, which proves the theorem.
