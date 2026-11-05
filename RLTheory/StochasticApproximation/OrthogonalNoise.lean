@@ -34,6 +34,7 @@ variable {d : ℕ} {Ω : Type*} {m0 : MeasurableSpace Ω} {μ : Measure Ω} [IsP
 
 /-! ### Covariances add -/
 
+omit [IsProbabilityMeasure μ] in
 lemma tendsto_transpose_crossMoment {d₁ d₂ : ℕ} {a : ℕ → Ω → E d₁} {c : ℕ → Ω → E d₂}
     (haL : ∀ k, MemLp (a k) 2 μ) (hcL : ∀ k, MemLp (c k) 2 μ)
     (h : Tendsto (fun k => crossMoment μ (a k) (c k)) atTop (𝓝 0)) :
@@ -143,7 +144,7 @@ omit [IsProbabilityMeasure μ] [Fintype S] [MeasurableSpace S] [DiscreteMeasurab
   [Fintype X] [MeasurableSpace X] [DiscreteMeasurableSpace X] in
 lemma indicator_eq_zero_of {k : ℕ} {s : S} {ω : Ω} (g : Ω → ℝ) (h : σ k ω ≠ s) :
     {ω | σ k ω = s}.indicator g ω = 0 :=
-  Set.indicator_of_not_mem (show ω ∉ {ω | σ k ω = s} from h) g
+  Set.indicator_of_notMem (show ω ∉ {ω | σ k ω = s} from h) g
 
 omit [IsProbabilityMeasure μ] [MeasurableSpace S] [DiscreteMeasurableSpace S]
   [Fintype X] [MeasurableSpace X] [DiscreteMeasurableSpace X] in
@@ -164,10 +165,12 @@ structure StateDriven (μ : Measure Ω) (ℱ : MeasureTheory.Filtration ℕ m0) 
   law : ∀ k (F : X → ℝ), μ[fun ω => F (ξ (k + 1) ω) | ℱ k] =ᵐ[μ]
     fun ω => ∑ x, P (σ k ω) x * F x
 
+omit [IsProbabilityMeasure μ] [Fintype S] [DiscreteMeasurableSpace S] in
 lemma StateDriven.stronglyMeasurable_obs (hσ : StateDriven μ ℱ σ ξ P) (F : X → ℝ) (k : ℕ) :
     StronglyMeasurable[ℱ (k + 1)] fun ω => F (ξ (k + 1) ω) :=
   (StronglyMeasurable.of_discrete (f := F)).comp_measurable (hσ.obs k)
 
+omit [Fintype S] [DiscreteMeasurableSpace S] in
 lemma StateDriven.integrable_obs (hσ : StateDriven μ ℱ σ ξ P) (F : X → ℝ) (k : ℕ) :
     Integrable (fun ω => F (ξ (k + 1) ω)) μ := by
   refine (memLp_top_of_bound ((hσ.stronglyMeasurable_obs F k).mono
@@ -176,6 +179,7 @@ lemma StateDriven.integrable_obs (hσ : StateDriven μ ℱ σ ξ P) (F : X → �
   rw [Real.norm_eq_abs]
   exact single_le_sum (f := fun x => |F x|) (fun _ _ => abs_nonneg _) (mem_univ _)
 
+omit [Fintype S] [DiscreteMeasurableSpace S] in
 /-- The conditional law, integrated against a bounded `𝒢_k`-measurable weight. -/
 lemma StateDriven.integral_mul (hσ : StateDriven μ ℱ σ ξ P) {k : ℕ} {W : Ω → ℝ}
     (hW : StronglyMeasurable[ℱ k] W) (hWB : ∃ C, ∀ ω, |W ω| ≤ C) (F : X → ℝ) :
@@ -225,12 +229,14 @@ lemma StateDriven.law₂ (hσ : StateDriven μ ℱ σ ξ P) [DecidableEq S] (k :
   simp only [hI]
   rw [sum_indicator_mul ω (fun _ _ => 1) (fun s => ∑ x, P (σ k ω) x * F s x), one_mul]
 
+omit [IsProbabilityMeasure μ] in
 lemma StateDriven.stronglyMeasurable_pair (hσ : StateDriven μ ℱ σ ξ P) {d₁ : ℕ}
     (Φ : S → X → E d₁) (k : ℕ) :
     StronglyMeasurable[ℱ (k + 1)] fun ω => Φ (σ k ω) (ξ (k + 1) ω) :=
   (StronglyMeasurable.of_discrete (f := Function.uncurry Φ)).comp_measurable
     (((hσ.state k).mono (ℱ.mono (Nat.le_succ k)) le_rfl).prodMk (hσ.obs k))
 
+omit [IsProbabilityMeasure μ] in
 /-- The centered variable `δ(ξ_{k+1}) (B_k - b(σ_k))` is `𝒢_{k+1}`-measurable. -/
 lemma StateDriven.stronglyMeasurable_centered (hσ : StateDriven μ ℱ σ ξ P) {d₂ : ℕ}
     {B : ℕ → Ω → E d₂} (hB : ∀ k, StronglyMeasurable[ℱ k] (B k)) (b : S → E d₂) (δ : X → ℝ)

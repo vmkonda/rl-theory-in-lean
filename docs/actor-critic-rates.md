@@ -348,7 +348,7 @@ Y_l := \mathbb{E}[B_k\mid\mathcal F_l] = \sum_{j=k-l}^{k-1}\Pi_{jk}\psi_j + \Pi_
 
 </div>
 
-*Lean:* the step from the splitting to the sum of covariances is `StateDriven.tendsto_secondMoment_of_centered_split`, with $`B_k = X_{\lambda,k}`$. Lemma [4.6](#lem:gain) and the lookback representation are not formalized. Numerical checks:
+*Lean:* the step from the splitting to the sum of covariances is `StateDriven.tendsto_secondMoment_of_centered_split`, with $`B_k = X_{\lambda,k}`$. Lemma [4.6](#lem:gain) is `ScoreChain.tdlam_gain` (for $`\lambda \ne 0`$; $`\lambda = 0`$ is `td0_gain`). It is built on `ScoreChain.carried_trace_moment`, the pointwise moment identity $`\mathbb{E}[\tilde X_k1\{Y_k = y\}] = \lambda\mathbb{E}[B_k1\{Y_k = y\}] + (1-\lambda)\nu(y)b(s)`$. Both sides solve the same contracting fixed-point equation, and the second one does so because of the centering fact `sum_carry_centered`. The lookback representation, and with it the monotonicity, is not formalized. Numerical checks:
 
 - `experiments/check_lambda_gap.py`, on 23 instances and $`\lambda \in \{0, 0.2,\dots,1\}`$: $`\mathbb{E}[X_\lambda\mid s] = b(s)`$ to $`5\times10^{-14}`$; the formula for $`\tilde\Gamma(\lambda) - \tilde\Gamma(0)`$ to $`2\times10^{-14}`$; and $`\mathrm{Cov}(X_\lambda\mid s)`$ increasing in $`\lambda`$.
 

@@ -467,6 +467,249 @@ theorem td0_gain [DecidableEq S] {n : ℕ} {ν : Bool × S × Ac → ℝ} (hν :
   rw [← sum_sub_distrib, sum_congr rfl fun y _ => e y, sum_sub_distrib, hB, sub_zero,
     sum_neg_distrib]
 
+/-! ### Lemma 4.6: the gain of the tabular TD(`λ`) critic -/
+
+/-- A vector fixed point of a contracting transfer operator is zero:
+if `d y' = (λ c y') Σ_y Q y y' d y` and `Σ_{y'} Q y y' |λ c y'| ≤ ρ < 1`, then `d = 0`. -/
+lemma eq_zero_of_transfer_fixed {n : ℕ} (hQ : ∀ y y', 0 ≤ M.Q y y') {lam ρ : ℝ}
+    (hρ : ∀ y, ∑ y', M.Q y y' * |lam * M.cY y'| ≤ ρ) (hρ1 : ρ < 1) {d : Bool × S × Ac → E n}
+    (hd : ∀ y', d y' = (lam * M.cY y') • ∑ y, M.Q y y' • d y) : d = 0 := by
+  funext y
+  ext j
+  set x : Bool × S × Ac → ℝ := fun y => d y j with hx
+  have hfix : ∀ y', x y' = transfer M.Q (fun y => lam * M.cY y) x y' := fun y' => by
+    simp only [hx, transfer]
+    conv_lhs => rw [hd y']
+    simp only [PiLp.smul_apply, smul_eq_mul, euclid_sum_apply']
+  have hle := l1_transfer_le hQ hρ x
+  simp only [← hfix] at hle
+  have hnn : 0 ≤ ∑ y, |x y| := sum_nonneg fun _ _ => abs_nonneg _
+  have h0 : ∑ y, |x y| = 0 := by nlinarith
+  have := (sum_eq_zero_iff_of_nonneg fun y _ => abs_nonneg (x y)).mp h0 y (mem_univ y)
+  simpa [hx] using this
+
+omit [Fintype Ac] in
+lemma stateSum_stationary_meanZero {n : ℕ} [Fintype Ac] {ν : Bool × S × Ac → ℝ}
+    (hν : ∀ y', ∑ y, ν y * M.Q y y' = ν y') {ψ : Bool × S × Ac → E n} (hψ : M.MeanZero ψ)
+    (s : S) : stateSum (fun y => ν y • ψ y) s = 0 := by
+  unfold stateSum
+  refine sum_eq_zero fun f _ => ?_
+  have : ∑ a, ν (f, s, a) • ψ (f, s, a) = (∑ y, ν y * M.kap y f s) • ∑ a, M.pol s a • ψ (f, s, a) := by
+    rw [smul_sum]
+    exact sum_congr rfl fun a _ => by rw [M.stationary_factor hν, MulAction.mul_smul]
+  rw [this, hψ f s, smul_zero]
+
+/-- **The moment of the critic's carried trace.** With `m_R = E[(z^ψ_k - ψ_k) 1{Y_k = ·}]`,
+`m_e(s) = E[z^e_k(s) 1{Y_k = ·}]` the TD(`λ`) trace moments and `b` the conditional mean of the
+REINFORCE carried trace, `m_R + (1-λ) Σ_s m_e(s) b(s) = λ m_B + (1-λ) ν b`, pointwise. Both sides
+solve the same contracting fixed-point equation. -/
+theorem carried_trace_moment [DecidableEq S] {n : ℕ} {ν : Bool × S × Ac → ℝ}
+    (hν : ∀ y', ∑ y, ν y * M.Q y y' = ν y') (hQ : ∀ y y', 0 ≤ M.Q y y') {lam ρ : ℝ}
+    (hρ : ∀ y, ∑ y', M.Q y y' * |lam * M.cY y'| ≤ ρ) (hρ1 : ρ < 1)
+    {ψ mψ mZ : Bool × S × Ac → E n} (hmψ : M.TraceMoment ν lam ψ mψ)
+    (hmZ : M.TraceMoment ν 1 ψ mZ) (me : S → Bool × S × Ac → ℝ)
+    (hme : ∀ s y', me s y' = ν y' * (if y'.2.1 = s then 1 else 0)
+      + lam * M.cY y' * ∑ y, M.Q y y' * me s y)
+    (hpol : ∀ s, ∑ a, M.pol s a = 1) (hνS : ∀ s, stateSum ν s ≠ 0)
+    (hkap : ∀ f₁ f₂ s a, M.kap (f₁, s, a) = M.kap (f₂, s, a)) (y : Bool × S × Ac) :
+    (mψ y - ν y • ψ y) + (1 - lam) • ∑ s, me s y • carryMean ν ψ mZ s =
+      lam • carry ν ψ mZ y + ((1 - lam) * ν y) • carryMean ν ψ mZ y.2.1 := by
+  set b := carryMean ν ψ mZ with hb
+  set W : Bool × S × Ac → E n := fun y => ∑ s, me s y • b s with hW
+  set uL : Bool × S × Ac → E n := fun y => (mψ y - ν y • ψ y) + (1 - lam) • W y with huL
+  set uR : Bool × S × Ac → E n := fun y => lam • carry ν ψ mZ y + ((1 - lam) * ν y) • b y.2.1
+    with huR
+  -- both solve `u y' = (λ c y') Σ_y Q y y' (ν ψ + u) y + (1-λ) ν y' b(y')`
+  have hL : ∀ y', uL y' = (lam * M.cY y') • ∑ y, M.Q y y' • (ν y • ψ y + uL y)
+      + ((1 - lam) * ν y') • b y'.2.1 := fun y' => by
+    have h1 : mψ y' - ν y' • ψ y' = (lam * M.cY y') • ∑ y, M.Q y y' • mψ y := by
+      rw [hmψ y']; abel
+    have h2 : W y' = ν y' • b y'.2.1 + (lam * M.cY y') • ∑ y, M.Q y y' • W y := by
+      have hme' : ∀ s, me s y' = ν y' * (if y'.2.1 = s then 1 else 0)
+          + lam * M.cY y' * ∑ y, M.Q y y' * me s y := fun s => hme s y'
+      simp only [hW, hme', add_smul, sum_add_distrib, MulAction.mul_smul]
+      congr 1
+      · rw [sum_eq_single y'.2.1]
+        · simp
+        · intro s _ hs; simp [Ne.symm hs]
+        · simp
+      · rw [smul_sum]
+        simp only [smul_sum, sum_smul, smul_smul]
+        rw [sum_comm]
+    have h3 : ∑ y, M.Q y y' • (ν y • ψ y + uL y) =
+        ∑ y, M.Q y y' • mψ y + (1 - lam) • ∑ y, M.Q y y' • W y := by
+      rw [smul_sum, ← sum_add_distrib]
+      refine sum_congr rfl fun y _ => ?_
+      simp only [huL]
+      rw [smul_comm (1 - lam) (M.Q y y') (W y), ← smul_add]
+      congr 1
+      abel
+    show (mψ y' - ν y' • ψ y') + (1 - lam) • W y' = _
+    rw [h3, h1, h2]
+    module
+  have hR : ∀ y', uR y' = (lam * M.cY y') • ∑ y, M.Q y y' • (ν y • ψ y + uR y)
+      + ((1 - lam) * ν y') • b y'.2.1 := fun y' => by
+    have hc : carry ν ψ mZ y' = M.cY y' • ∑ y, M.Q y y' • (ν y • ψ y + carry ν ψ mZ y) := by
+      rw [M.carry_eq hmZ]
+      congr 1
+      exact sum_congr rfl fun y _ => by simp [carry]
+    have hw : ∀ f₁ f₂ s a, M.Q (f₁, s, a) y' = M.Q (f₂, s, a) y' := fun f₁ f₂ s a => by
+      simp only [Q, hkap f₁ f₂ s a]
+    have hcent := M.sum_carry_centered hν hmZ hpol hνS (fun y => M.Q y y') hw
+    have h3 : ∑ y, M.Q y y' • (ν y • ψ y + uR y) =
+        ∑ y, M.Q y y' • (ν y • ψ y + carry ν ψ mZ y)
+          - (1 - lam) • ∑ y, M.Q y y' • (carry ν ψ mZ y - ν y • b y.2.1) := by
+      rw [smul_sum, ← sum_sub_distrib]
+      refine sum_congr rfl fun y _ => ?_
+      simp only [huR]
+      rw [smul_comm (1 - lam) (M.Q y y'), ← smul_sub]
+      congr 1
+      module
+    show lam • carry ν ψ mZ y' + ((1 - lam) * ν y') • b y'.2.1 = _
+    rw [h3, hcent, smul_zero, sub_zero, hc]
+    module
+  -- the difference is a fixed point of the contraction
+  have hd : ∀ y', (uL - uR) y' = (lam * M.cY y') • ∑ y, M.Q y y' • (uL - uR) y := fun y' => by
+    simp only [Pi.sub_apply]
+    rw [hL y', hR y']
+    simp only [smul_sub, sum_sub_distrib, smul_add, sum_add_distrib]
+    abel
+  have h0 := M.eq_zero_of_transfer_fixed hQ hρ hρ1 hd
+  exact sub_eq_zero.mp (congrFun h0 y)
+
+omit [Fintype Ac] in
+lemma sum_ind_smul [DecidableEq S] [Fintype Ac] {X : Type*} [AddCommGroup X] [Module ℝ X]
+    (F : Bool × S × Ac → X) (s' : S) :
+    ∑ y, (if y.2.1 = s' then (1 : ℝ) else 0) • F y = stateSum F s' := by
+  rw [sum_prod3]
+  unfold stateSum
+  refine sum_congr rfl fun f _ => ?_
+  simp only [ite_smul, one_smul, zero_smul]
+  rw [sum_comm]
+  simp [sum_ite_eq']
+
+omit [Fintype Ac] in
+/-- `λ Σ_y (Σ_{y' ∈ s'} Q y y' c y') x y = Σ_{y' ∈ s'} (λ c y') Σ_y Q y y' x y`. -/
+lemma smul_sum_into {X : Type*} [AddCommGroup X] [Module ℝ X] [Fintype Ac] (lam : ℝ)
+    (x : Bool × S × Ac → X) (s' : S) :
+    lam • ∑ y, M.into y s' • x y = stateSum (fun y' => (lam * M.cY y') • ∑ y, M.Q y y' • x y) s' := by
+  unfold stateSum into
+  simp only [smul_sum, sum_smul, smul_smul]
+  rw [sum_comm]
+  refine sum_congr rfl fun f _ => ?_
+  rw [sum_comm]
+  exact sum_congr rfl fun a _ => sum_congr rfl fun y _ => by congr 1; ring
+
+/-- **Lemma 4.6 (the gain of the tabular TD(`λ`) critic).** For the TD(`λ`) critic with features
+`(ψ, e_s)` at `r̂ = (0, V)`, `-C A_c⁻¹ = (I, -K_λ)` with `K_λ T_λ = X_λ`, where
+`T_λ s s' = E[z^e_k(s) (c_{k+1} 1{s_{k+1} = s'} - 1{s_k = s'})]` and
+`X_λ s' = E[z^ψ_k (c_{k+1} 1{s_{k+1} = s'} - 1{s_k = s'})]`. The columns `K_λ e_s = -(1-λ) b(s)` solve
+this equation: `Σ_s T_λ s s' (-(1-λ) b s) = X_λ s'`. Here `λ ≠ 0`; the case `λ = 0` is `td0_gain`. -/
+theorem tdlam_gain [DecidableEq S] {n : ℕ} {ν : Bool × S × Ac → ℝ}
+    (hν : ∀ y', ∑ y, ν y * M.Q y y' = ν y') (hQ : ∀ y y', 0 ≤ M.Q y y') {lam ρ : ℝ}
+    (hlam : lam ≠ 0) (hρ : ∀ y, ∑ y', M.Q y y' * |lam * M.cY y'| ≤ ρ) (hρ1 : ρ < 1)
+    {ψ mψ mZ : Bool × S × Ac → E n} (hψ : M.MeanZero ψ) (hmψ : M.TraceMoment ν lam ψ mψ)
+    (hmZ : M.TraceMoment ν 1 ψ mZ) (me : S → Bool × S × Ac → ℝ)
+    (hme : ∀ s y', me s y' = ν y' * (if y'.2.1 = s then 1 else 0)
+      + lam * M.cY y' * ∑ y, M.Q y y' * me s y)
+    (hpol : ∀ s, ∑ a, M.pol s a = 1) (hνS : ∀ s, stateSum ν s ≠ 0)
+    (hkap : ∀ f₁ f₂ s a, M.kap (f₁, s, a) = M.kap (f₂, s, a)) (s' : S) :
+    ∑ s, (∑ y, me s y * (M.into y s' - if y.2.1 = s' then 1 else 0)) •
+        (-(1 - lam) • carryMean ν ψ mZ s) =
+      ∑ y, (M.into y s' - if y.2.1 = s' then 1 else 0) • mψ y := by
+  set b := carryMean ν ψ mZ with hb
+  set P : E n := stateSum (fun y => mψ y - ν y • ψ y) s' with hP
+  set Es : S → ℝ := fun s => stateSum (me s) s' with hEs
+  -- `λ X = (1 - λ) P`
+  have hX : lam • ∑ y, (M.into y s' - if y.2.1 = s' then 1 else 0) • mψ y = (1 - lam) • P := by
+    simp only [sub_smul, sum_sub_distrib, smul_sub]
+    rw [M.smul_sum_into lam mψ s', sum_ind_smul]
+    have h1 : stateSum (fun y' => (lam * M.cY y') • ∑ y, M.Q y y' • mψ y) s' = P := by
+      simp only [hP]
+      unfold stateSum
+      dsimp only
+      exact sum_congr rfl fun f _ => sum_congr rfl fun a _ => by rw [hmψ (f, s', a)]; abel
+    have h2 : stateSum mψ s' = P := by
+      have := M.stateSum_stationary_meanZero hν hψ s'
+      simp only [hP, stateSum, sum_sub_distrib] at this ⊢
+      rw [this, sub_zero]
+    rw [h1, h2]
+    module
+  -- `λ T s s' = (1 - λ) E s - [s = s'] ν(s)`
+  have hT : ∀ s, lam * ∑ y, me s y * (M.into y s' - if y.2.1 = s' then 1 else 0) =
+      (1 - lam) * Es s - (if s = s' then stateSum ν s else 0) := fun s => by
+    have := M.smul_sum_into lam (me s) s'
+    simp only [smul_eq_mul] at this
+    simp only [mul_sub, sum_sub_distrib]
+    rw [show ∑ y, me s y * M.into y s' = ∑ y, M.into y s' * me s y from
+      sum_congr rfl fun _ _ => mul_comm _ _, this]
+    have h3 := sum_ind_smul (fun y => me s y) s'
+    simp only [smul_eq_mul] at h3
+    rw [show ∑ y, me s y * (if y.2.1 = s' then 1 else 0) = stateSum (me s) s' by
+      rw [← h3]; exact sum_congr rfl fun _ _ => mul_comm _ _]
+    have h4 : stateSum (fun y' => lam * M.cY y' * ∑ y, M.Q y y' * me s y) s' =
+        Es s - (if s = s' then stateSum ν s else 0) := by
+      have hpt : ∀ f a, lam * M.cY (f, s', a) * ∑ y, M.Q y (f, s', a) * me s y =
+          me s (f, s', a) - ν (f, s', a) * (if s' = s then 1 else 0) := fun f a => by
+        rw [hme s (f, s', a)]; ring
+      simp only [hEs]
+      unfold stateSum
+      dsimp only
+      simp only [hpt, sum_sub_distrib, ← sum_mul]
+      by_cases h : s = s'
+      · subst h; simp
+      · simp [Ne.symm h, h]
+    rw [h4]
+    ring
+  -- the state sum of `carried_trace_moment`
+  have hU : P + (1 - lam) • ∑ s, Es s • b s = stateSum (carry ν ψ mZ) s' := by
+    have hpt := M.carried_trace_moment hν hQ hρ hρ1 hmψ hmZ me hme hpol hνS hkap
+    have e : stateSum (fun y => (mψ y - ν y • ψ y) + (1 - lam) • ∑ s, me s y • b s) s' =
+        stateSum (fun y => lam • carry ν ψ mZ y + ((1 - lam) * ν y) • b y.2.1) s' := by
+      unfold stateSum
+      exact sum_congr rfl fun f _ => sum_congr rfl fun a _ => hpt (f, s', a)
+    have swap : ∀ G : S → Bool → Ac → E n,
+        ∑ f, ∑ a, ∑ s, G s f a = ∑ s, ∑ f, ∑ a, G s f a := fun G => by
+      calc ∑ f, ∑ a, ∑ s, G s f a = ∑ f, ∑ s, ∑ a, G s f a :=
+            sum_congr rfl fun f _ => sum_comm
+        _ = _ := sum_comm
+    have l : stateSum (fun y => (mψ y - ν y • ψ y) + (1 - lam) • ∑ s, me s y • b s) s' =
+        P + (1 - lam) • ∑ s, Es s • b s := by
+      simp only [hP, hEs]
+      unfold stateSum
+      dsimp only
+      simp only [sum_add_distrib, ← smul_sum, sum_smul]
+      rw [swap (fun s f a => me s (f, s', a) • b s)]
+    have r : stateSum (fun y => lam • carry ν ψ mZ y + ((1 - lam) * ν y) • b y.2.1) s' =
+        stateSum (carry ν ψ mZ) s' := by
+      have hm : stateSum ν s' • b s' = stateSum (carry ν ψ mZ) s' := by
+        rw [hb, carryMean, smul_smul, mul_inv_cancel₀ (hνS s'), one_smul]
+      unfold stateSum at hm ⊢
+      simp only [sum_add_distrib, ← smul_sum, MulAction.mul_smul, ← sum_smul] at hm ⊢
+      rw [hm]
+      module
+    rw [← l, e, r]
+  -- assemble: multiply by `λ`
+  apply smul_right_injective (E n) hlam
+  simp only
+  rw [hX, smul_sum]
+  have e : ∀ s, lam • ((∑ y, me s y * (M.into y s' - if y.2.1 = s' then 1 else 0)) •
+      (-(1 - lam) • b s)) = ((1 - lam) * Es s - (if s = s' then stateSum ν s else 0)) •
+      (-(1 - lam) • b s) := fun s => by rw [smul_smul, hT s]
+  rw [sum_congr rfl fun s _ => e s]
+  have key : ∑ s, ((1 - lam) * Es s - (if s = s' then stateSum ν s else 0)) • (-(1 - lam) • b s)
+      = (-(1 - lam) * (1 - lam)) • ∑ s, Es s • b s + (1 - lam) • (stateSum ν s' • b s') := by
+    simp only [sub_smul, sum_sub_distrib, ite_smul, zero_smul, sum_ite_eq', mem_univ, if_true]
+    rw [smul_sum]
+    have : ∀ s, ((1 - lam) * Es s) • (-(1 - lam) • b s) = (-(1 - lam) * (1 - lam)) • (Es s • b s) :=
+      fun s => by module
+    rw [sum_congr rfl fun s _ => this s]
+    module
+  have hm : stateSum ν s' • b s' = stateSum (carry ν ψ mZ) s' := by
+    rw [hb, carryMean, smul_smul, mul_inv_cancel₀ (hνS s'), one_smul]
+  rw [key, hm, ← hU]
+  module
+
 /-! ### The restart chain contracts -/
 
 omit [Fintype S] [Fintype Ac] in

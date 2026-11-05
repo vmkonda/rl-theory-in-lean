@@ -486,8 +486,13 @@ independence factors this expectation into the stated sum. Monotonicity follows 
 the statement about $\ell^*$ follows by Proposition~\ref{prop:compare}.
 \end{proof}
 \noindent\emph{Lean:} the step from the splitting to the sum of covariances is
-\texttt{StateDriven.tendsto\_secondMoment\_of\_centered\_split}, with $B_k = X_{\lambda,k}$. Lemma~\ref{lem:gain}
-and the lookback representation are not formalized. Numerical checks:
+\texttt{StateDriven.tendsto\_secondMoment\_of\_centered\_split}, with $B_k = X_{\lambda,k}$.
+Lemma~\ref{lem:gain} is \texttt{ScoreChain.tdlam\_gain} (for $\lambda \ne 0$; $\lambda = 0$ is \texttt{td0\_gain}).
+It is built on \texttt{ScoreChain.carried\_trace\_moment}, the pointwise moment identity
+$\E[\tilde X_k1\{Y_k = y\}] = \lambda\E[B_k1\{Y_k = y\}] + (1-\lambda)\nu(y)b(s)$. Both sides solve the same
+contracting fixed-point equation, and the second one does so because of the centering fact
+\texttt{sum\_carry\_centered}. The lookback representation, and with it the monotonicity, is not
+formalized. Numerical checks:
 \begin{itemize}
 \item \texttt{experiments/check\_lambda\_gap.py}, on 23 instances and $\lambda \in \{0, 0.2,\dots,1\}$:
   $\E[X_\lambda\mid s] = b(s)$ to $5\times10^{-14}$; the formula for
