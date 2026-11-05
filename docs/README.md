@@ -38,6 +38,7 @@ formalized and what is not.
 ## Rebuilding
 
 Edit the `.tex` file, then run `./build.sh` (or `./build.sh <name>`), which regenerates
-both the PDF and the Markdown. It requires `tectonic` and `pandoc`
+both the PDF and the Markdown. With no arguments it also builds `all-notes.pdf`, the five chapters
+in one document with a contents page and bookmarks (source: [`combined/all-notes.tex`](combined/all-notes.tex)). It requires `tectonic` and `pandoc`
 (`brew install tectonic pandoc`). The Markdown conversion uses the Pandoc filter
 [`tools/gfm.lua`](tools/gfm.lua).

@@ -33,3 +33,9 @@ open(sys.argv[2], "w").write(src)
 EOF
   pandoc "$tmp/$name.tex" -f latex -t gfm --wrap=none --lua-filter=tools/gfm.lua -o "$name.md"
 done
+
+# With no arguments, also collect the chapter PDFs into one (combined/all-notes.tex -> all-notes.pdf).
+if [ $# -eq 0 ]; then
+  echo "== all-notes"
+  (cd combined && tectonic --chatter minimal --outdir .. all-notes.tex)
+fi
