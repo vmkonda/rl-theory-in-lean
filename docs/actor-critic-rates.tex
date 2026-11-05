@@ -767,14 +767,50 @@ $\tilde\Gamma(\lambda) = \tilde\Gamma(0) + \E[\delta_k^2(X_{\lambda,k} - b(s_k))
 independence factors this expectation into the stated sum. Monotonicity follows term by term, and
 the statement about $\ell^*$ follows by Proposition~\ref{prop:compare}.
 \end{proof}
-\noindent\emph{Lean:} the step from the splitting to the sum of covariances is
-\texttt{StateDriven.tendsto\_secondMoment\_of\_centered\_split}, with $B_k = X_{\lambda,k}$.
-Lemma~\ref{lem:gain} is \texttt{ScoreChain.tdlam\_gain} (for $\lambda \ne 0$; $\lambda = 0$ is \texttt{td0\_gain}).
-It is built on \texttt{ScoreChain.carried\_trace\_moment}, the pointwise moment identity
-$\E[\tilde X_k1\{Y_k = y\}] = \lambda\E[B_k1\{Y_k = y\}] + (1-\lambda)\nu(y)b(s)$. Both sides solve the same
-contracting fixed-point equation, and the second one does so because of the centering fact
-\texttt{sum\_carry\_centered}. The lookback representation, and with it the monotonicity, is not
-formalized. Numerical checks:
+\emph{The same result from a one-step recursion.} The Lean proof avoids the lookback
+$\sigma$-algebras. The trace satisfies
+$X_{\lambda,k+1} = \lambda c_{k+1}(\psi_k + X_{\lambda,k}) + (1-\lambda)b(s_{k+1})$, so
+$W_k = X_{\lambda,k} - b(s_k)$ steps by
+\[
+  W_{k+1} = \lambda\,(\varepsilon_{k+1} + c_{k+1}W_k),\qquad
+  \varepsilon_{k+1} = c_{k+1}(\psi_k + b(s_k)) - b(s_{k+1}) = Y_1 - Y_0 .
+\]
+$W_k$ is known before the action $a_k$, and $\varepsilon_{k+1}$ is a function of the next observation, whose
+law given $\mathcal G_k$ depends only on $s_k$. Stationary centering of $\varepsilon$ is the
+equation defining $b$. So the state-conditioned moments $C_\lambda(s) = \lim\E[W_kW_k^\top1\{s_k = s\}]$ exist
+and solve
+\[
+  C_\lambda = \lambda^2(\bar E + \mathcal T C_\lambda),\qquad
+  \bar E(s) = \E[\varepsilon\varepsilon^\top1\{s_{k+1} = s\}],
+\]
+\[
+  (\mathcal TC)(s) = \sum_{s'}\E[c^21\{s_{k+1} = s\}\mid s_k = s']\,C(s'),
+\]
+where $\mathcal T \ge 0$ has row sums at most $\gamma$. The cross term vanishes in the limit because
+$\E[W_k1\{s_k = s\}] \to 0$. Unrolled, $C_\lambda = \sum_{i\ge1}\lambda^{2i}\mathcal T^{i-1}\bar E$, which is the
+sum $\sum_i\lambda^{2i}\Delta_i$ above. Any solution is positive semidefinite, by summing negative parts. For
+$\lambda_1 \le \lambda_2$ the difference $C_{\lambda_2} - C_{\lambda_1}$ solves the same equation with
+nonnegative forcing $(\lambda_2^2 - \lambda_1^2)(\bar E + \mathcal TC_{\lambda_2})$, so it is positive
+semidefinite too.
+
+\noindent\emph{Lean} (\texttt{LookbackMonotone.lean}):
+\begin{itemize}
+\item \texttt{centered\_trace\_step}: the recursion of $W$ from the TD($\lambda$) trace recursions and the gain of
+  Lemma~\ref{lem:gain};
+\item \texttt{tdlam\_noise\_split}: $N_k(\lambda) = N_k(0) + \delta_kW_k$;
+\item \texttt{StateDriven.tendsto\_lookback\_moments}: from the process, $\E[W_k1\{s_k = s\}] \to 0$ (the
+  centering hypothesis of \texttt{tendsto\_secondMoment\_of\_centered\_split}), and the second moments
+  converge to a solution of the fixed-point equation;
+\item \texttt{nonneg\_of\_fixed} and \texttt{mono\_of\_fixed}: positivity and monotonicity in $\lambda$;
+\item \texttt{StateDriven.lookback\_covariance\_mono}: for $0 \le \lambda_1 \le \lambda_2 \le 1$, the extra
+  covariances $\Gamma_D(\lambda) = \lim\E[\delta^2W_kW_k^\top]$ satisfy $0 \preceq \Gamma_D(\lambda_1) \preceq
+  \Gamma_D(\lambda_2)$, through the factorization \texttt{StateDriven.integral\_sq\_centered\_eq}.
+\end{itemize}
+With \texttt{StateDriven.tendsto\_secondMoment\_of\_centered\_split} (with $B_k = X_{\lambda,k}$),
+$\tilde\Gamma(\lambda) = \tilde\Gamma(0) + \Gamma_D(\lambda)$, which proves the theorem.
+Lemma~\ref{lem:gain} is \texttt{ScoreChain.tdlam\_gain} ($\lambda \ne 0$; $\lambda = 0$ is \texttt{td0\_gain}). It is
+built on \texttt{ScoreChain.carried\_trace\_moment}, the pointwise moment identity
+$\E[\tilde X_k1\{Y_k = y\}] = \lambda\E[B_k1\{Y_k = y\}] + (1-\lambda)\nu(y)b(s)$. Numerical checks:
 \begin{itemize}
 \item \texttt{experiments/check\_lambda\_gap.py}, on 23 instances and $\lambda \in \{0, 0.2,\dots,1\}$:
   $\E[X_\lambda\mid s] = b(s)$ to $5\times10^{-14}$; the formula for
@@ -869,7 +905,9 @@ the predicted covariances to about 5\%, supporting Assumption~\ref{ass:lin} in t
   noise hypotheses verified for finite-chain and trace-driven noise.
 \item Propositions~\ref{prop:loss}, \ref{prop:dual} and~\ref{prop:compare}: formalized.
 \item Theorems~\ref{thm:td1}, \ref{thm:compat}, \ref{thm:value}, the stationary identities of
-  Theorem~\ref{thm:td0}, and the martingale step of Theorems~\ref{thm:td0} and~\ref{thm:mono}
+  Theorem~\ref{thm:td0}, the monotonicity in $\lambda$ of Theorem~\ref{thm:mono}
+  (\texttt{StateDriven.lookback\_covariance\_mono}), and the martingale step of Theorems~\ref{thm:td0}
+  and~\ref{thm:mono}
   (\texttt{OrthogonalNoise.lean}): formalized in
   \texttt{CriticTheorems.lean} for a finite model of the sampling
   chain, \texttt{ScoreChain}: a chain on (restart flag, state, action) whose next action is drawn from

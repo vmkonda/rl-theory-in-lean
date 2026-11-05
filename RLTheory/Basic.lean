@@ -24,5 +24,6 @@ import RLTheory.StochasticApproximation.TwoTimeScaleMoments
 import RLTheory.StochasticApproximation.TwoTimeScaleMarkov
 import RLTheory.StochasticApproximation.ParamMarkovNoise
 import RLTheory.StochasticApproximation.DoeblinPoisson
+import RLTheory.StochasticApproximation.LookbackMonotone
 import RLTheory.MarkovDecisionProcess.CriticTheorems
 import RLTheory.MarkovDecisionProcess.RestartProcess

@@ -603,7 +603,35 @@ Y_l := \mathbb{E}[B_k\mid\mathcal F_l] = \sum_{j=k-l}^{k-1}\Pi_{jk}\psi_j + \Pi_
 
 </div>
 
-*Lean:* the step from the splitting to the sum of covariances is `StateDriven.tendsto_secondMoment_of_centered_split`, with $`B_k = X_{\lambda,k}`$. Lemma [4.6](#lem:gain) is `ScoreChain.tdlam_gain` (for $`\lambda \ne 0`$; $`\lambda = 0`$ is `td0_gain`). It is built on `ScoreChain.carried_trace_moment`, the pointwise moment identity $`\mathbb{E}[\tilde X_k1\{Y_k = y\}] = \lambda\mathbb{E}[B_k1\{Y_k = y\}] + (1-\lambda)\nu(y)b(s)`$. Both sides solve the same contracting fixed-point equation, and the second one does so because of the centering fact `sum_carry_centered`. The lookback representation, and with it the monotonicity, is not formalized. Numerical checks:
+*The same result from a one-step recursion.* The Lean proof avoids the lookback $`\sigma`$-algebras. The trace satisfies $`X_{\lambda,k+1} = \lambda c_{k+1}(\psi_k + X_{\lambda,k}) + (1-\lambda)b(s_{k+1})`$, so $`W_k = X_{\lambda,k} - b(s_k)`$ steps by
+``` math
+W_{k+1} = \lambda\,(\varepsilon_{k+1} + c_{k+1}W_k),\qquad
+  \varepsilon_{k+1} = c_{k+1}(\psi_k + b(s_k)) - b(s_{k+1}) = Y_1 - Y_0 .
+```
+$`W_k`$ is known before the action $`a_k`$, and $`\varepsilon_{k+1}`$ is a function of the next observation, whose law given $`\mathcal G_k`$ depends only on $`s_k`$. Stationary centering of $`\varepsilon`$ is the equation defining $`b`$. So the state-conditioned moments $`C_\lambda(s) = \lim\mathbb{E}[W_kW_k^\top1\{s_k = s\}]`$ exist and solve
+``` math
+C_\lambda = \lambda^2(\bar E + \mathcal T C_\lambda),\qquad
+  \bar E(s) = \mathbb{E}[\varepsilon\varepsilon^\top1\{s_{k+1} = s\}],
+```
+``` math
+(\mathcal TC)(s) = \sum_{s'}\mathbb{E}[c^21\{s_{k+1} = s\}\mid s_k = s']\,C(s'),
+```
+where $`\mathcal T \ge 0`$ has row sums at most $`\gamma`$. The cross term vanishes in the limit because $`\mathbb{E}[W_k1\{s_k = s\}] \to 0`$. Unrolled, $`C_\lambda = \sum_{i\ge1}\lambda^{2i}\mathcal T^{i-1}\bar E`$, which is the sum $`\sum_i\lambda^{2i}\Delta_i`$ above. Any solution is positive semidefinite, by summing negative parts. For $`\lambda_1 \le \lambda_2`$ the difference $`C_{\lambda_2} - C_{\lambda_1}`$ solves the same equation with nonnegative forcing $`(\lambda_2^2 - \lambda_1^2)(\bar E + \mathcal TC_{\lambda_2})`$, so it is positive semidefinite too.
+
+*Lean* (`LookbackMonotone.lean`):
+
+- `centered_trace_step`: the recursion of $`W`$ from the TD($`\lambda`$) trace recursions and the gain of Lemma [4.6](#lem:gain);
+
+- `tdlam_noise_split`: $`N_k(\lambda) = N_k(0) + \delta_kW_k`$;
+
+- `StateDriven.tendsto_lookback_moments`: from the process, $`\mathbb{E}[W_k1\{s_k = s\}] \to 0`$ (the centering hypothesis of `tendsto_secondMoment_of_centered_split`), and the second moments converge to a solution of the fixed-point equation;
+
+- `nonneg_of_fixed` and `mono_of_fixed`: positivity and monotonicity in $`\lambda`$;
+
+- `StateDriven.lookback_covariance_mono`: for $`0 \le \lambda_1 \le \lambda_2 \le 1`$, the extra covariances $`\Gamma_D(\lambda) = \lim\mathbb{E}[\delta^2W_kW_k^\top]`$ satisfy $`0 \preceq \Gamma_D(\lambda_1) \preceq
+    \Gamma_D(\lambda_2)`$, through the factorization `StateDriven.integral_sq_centered_eq`.
+
+With `StateDriven.tendsto_secondMoment_of_centered_split` (with $`B_k = X_{\lambda,k}`$), $`\tilde\Gamma(\lambda) = \tilde\Gamma(0) + \Gamma_D(\lambda)`$, which proves the theorem. Lemma [4.6](#lem:gain) is `ScoreChain.tdlam_gain` ($`\lambda \ne 0`$; $`\lambda = 0`$ is `td0_gain`). It is built on `ScoreChain.carried_trace_moment`, the pointwise moment identity $`\mathbb{E}[\tilde X_k1\{Y_k = y\}] = \lambda\mathbb{E}[B_k1\{Y_k = y\}] + (1-\lambda)\nu(y)b(s)`$. Numerical checks:
 
 - `experiments/check_lambda_gap.py`, on 23 instances and $`\lambda \in \{0, 0.2,\dots,1\}`$: $`\mathbb{E}[X_\lambda\mid s] = b(s)`$ to $`5\times10^{-14}`$; the formula for $`\tilde\Gamma(\lambda) - \tilde\Gamma(0)`$ to $`2\times10^{-14}`$; and $`\mathrm{Cov}(X_\lambda\mid s)`$ increasing in $`\lambda`$.
 
@@ -724,7 +752,7 @@ A large critic with rarely visited states and a small critic step lengthens the 
 
 - Propositions [3.3](#prop:loss), [3.5](#prop:dual) and [3.6](#prop:compare): formalized.
 
-- Theorems [4.1](#thm:td1), [4.2](#thm:compat), [4.4](#thm:value), the stationary identities of Theorem [4.5](#thm:td0), and the martingale step of Theorems [4.5](#thm:td0) and [4.7](#thm:mono) (`OrthogonalNoise.lean`): formalized in `CriticTheorems.lean` for a finite model of the sampling chain, `ScoreChain`: a chain on (restart flag, state, action) whose next action is drawn from the policy given the next state. This covers the restart chain and any other such chain. Two facts carry all the proofs: a function with mean zero over actions has $`\mathbb{E}[c(Y_{k+1})F(Y_{k+1})\mid Y_k] = 0`$ (`sum_Q_c_eq_zero`), and its correlation with the trace is its correlation with the current features (`sum_mul_trace_eq`). The stationary trace moments $`m(y) = \mathbb{E}[z_k1\{Y_k = y\}]`$ enter through the recursion that characterizes them, $`m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)`$. `ScoreChain.tendsto_traceMoment` derives this recursion from the process. Along the chain, the moments of the trace converge to a solution whenever the law of $`Y_k`$ converges and $`\sum_{y'}Q(y,y')|\lambda c(y')| < 1`$. For the restart chain this condition holds with bound $`|\lambda|\gamma`$ (`ScoreChain.restart_contraction`). The law converges too: restarts draw from a fixed distribution with probability at least $`1 - \gamma`$, so the law satisfies $`P_{k+1} = LP_k + b`$, with $`L`$ an $`\ell^1`$ contraction by $`\gamma`$. Its limit is a stationary $`\nu`$ (`ScoreChain.tendsto_law_restart`). Hence `ScoreChain.tendsto_traceMoment_of_restart` rests on the model alone, for every $`|\lambda| \le 1`$.
+- Theorems [4.1](#thm:td1), [4.2](#thm:compat), [4.4](#thm:value), the stationary identities of Theorem [4.5](#thm:td0), the monotonicity in $`\lambda`$ of Theorem [4.7](#thm:mono) (`StateDriven.lookback_covariance_mono`), and the martingale step of Theorems [4.5](#thm:td0) and [4.7](#thm:mono) (`OrthogonalNoise.lean`): formalized in `CriticTheorems.lean` for a finite model of the sampling chain, `ScoreChain`: a chain on (restart flag, state, action) whose next action is drawn from the policy given the next state. This covers the restart chain and any other such chain. Two facts carry all the proofs: a function with mean zero over actions has $`\mathbb{E}[c(Y_{k+1})F(Y_{k+1})\mid Y_k] = 0`$ (`sum_Q_c_eq_zero`), and its correlation with the trace is its correlation with the current features (`sum_mul_trace_eq`). The stationary trace moments $`m(y) = \mathbb{E}[z_k1\{Y_k = y\}]`$ enter through the recursion that characterizes them, $`m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)`$. `ScoreChain.tendsto_traceMoment` derives this recursion from the process. Along the chain, the moments of the trace converge to a solution whenever the law of $`Y_k`$ converges and $`\sum_{y'}Q(y,y')|\lambda c(y')| < 1`$. For the restart chain this condition holds with bound $`|\lambda|\gamma`$ (`ScoreChain.restart_contraction`). The law converges too: restarts draw from a fixed distribution with probability at least $`1 - \gamma`$, so the law satisfies $`P_{k+1} = LP_k + b`$, with $`L`$ an $`\ell^1`$ contraction by $`\gamma`$. Its limit is a stationary $`\nu`$ (`ScoreChain.tendsto_law_restart`). Hence `ScoreChain.tendsto_traceMoment_of_restart` rests on the model alone, for every $`|\lambda| \le 1`$.
 
 - The noise covariance $`\tilde\Gamma`$ of Theorem [3.1](#thm:cov), for trace-driven noise, is the limit computed from the stationary first and second trace moments (`tendsto_secondMoment_of_trace_noise_stationary`, in the companion note). It is no longer a hypothesis. This includes the unbounded REINFORCE trace. For the restart chain the whole statement rests on the model, in `ScoreChain.tendsto_secondMoment_of_restart_noise_centered`:
 
