@@ -22,6 +22,7 @@ import RLTheory.StochasticApproximation.Linearization
 import RLTheory.StochasticApproximation.TwoTimeScaleNonlinear
 import RLTheory.StochasticApproximation.TwoTimeScaleMoments
 import RLTheory.StochasticApproximation.TwoTimeScaleMarkov
+import RLTheory.StochasticApproximation.TwoTimeScaleParam
 import RLTheory.StochasticApproximation.ParamMarkovNoise
 import RLTheory.StochasticApproximation.DoeblinPoisson
 import RLTheory.StochasticApproximation.DoeblinCovariance

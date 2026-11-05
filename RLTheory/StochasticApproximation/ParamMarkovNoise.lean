@@ -49,8 +49,9 @@ lemma param_noise_decomp {θ : ℕ → Ω → E d} {ξ : ℕ → Ω → S} {H U 
 omit [DecidableEq S] in
 /-- A function of a continuous-in-the-parameter family at a finite random index is strongly
 measurable. -/
-lemma stronglyMeasurable_comp_finite {n : ℕ} {m : MeasurableSpace Ω} {t : Ω → E d} {X : Ω → S}
-    (ht : StronglyMeasurable[m] t) (hX : Measurable[m] X) {G : E d → S → E n}
+lemma stronglyMeasurable_comp_finite {n : ℕ} {T : Type*} [TopologicalSpace T]
+    {m : MeasurableSpace Ω} {t : Ω → T} {X : Ω → S}
+    (ht : StronglyMeasurable[m] t) (hX : Measurable[m] X) {G : T → S → E n}
     (hG : ∀ s, Continuous fun u => G u s) : StronglyMeasurable[m] (fun ω => G (t ω) (X ω)) := by
   have e : (fun ω => G (t ω) (X ω)) =
       fun ω => ∑ s ∈ univ, (X ⁻¹' {s}).indicator (fun ω => G (t ω) s) ω := by

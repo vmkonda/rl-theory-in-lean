@@ -248,7 +248,7 @@ A box $`[0, sU]\times[0, sV]`$ is then eventually invariant, so both normalized 
 
 <div id="thm:ttsmarkov" class="theorem">
 
-**Theorem 2.7** (Fourth moments for two time scales, Markov noise). *In Theorem [2.5](#thm:lintts), let the Poisson shifts $`h, g`$ be bounded and known at step $`k`$, let $`\|r^1_k\| \le C\beta_k`$ and $`\|r^2_k\| \le C\gamma_k`$ be known at step $`k`$, and let the noise and the start be bounded. Suppose the hypotheses of Theorem [2.6](#thm:ttsmoments) hold, the drifts are Lipschitz, and $`\gamma_k^2/\beta_k \to 0`$. Then $`\mathbb{E}\|x_k\|^4 = O(\gamma_k^2)`$ and $`\mathbb{E}\|y_k\|^4 = O(\gamma_k^2)`$, so Theorem [2.5](#thm:lintts) applies.*
+**Theorem 2.7** (Fourth moments for two time scales, Markov noise). *In Theorem [2.5](#thm:lintts), let the Poisson shifts $`h, g`$ be bounded and known at step $`k`$, let $`\|r^1_k\|, \|r^2_k\| \le C\gamma_k`$ be known at step $`k`$, and let the noise and the start be bounded. Suppose the hypotheses of Theorem [2.6](#thm:ttsmoments) hold, the drifts are Lipschitz, and $`\gamma_k^2/\beta_k \to 0`$. Then $`\mathbb{E}\|x_k\|^4 = O(\gamma_k^2)`$ and $`\mathbb{E}\|y_k\|^4 = O(\gamma_k^2)`$, so Theorem [2.5](#thm:lintts) applies.*
 
 </div>
 
@@ -368,9 +368,11 @@ So Theorem [2.4](#thm:linmarkov) applies with no hypothesis on the noise covari
 
 - `tendsto_secondMoment_of_doeblin_chain_auto`: Assumption [2.2](#ass:lin) for one time scale with $`\theta`$-dependent Doeblin sampling, from the model alone.
 
+*Two time scales.* The same decomposition holds for $`x_{k+1} = x_k + \beta_kH_1(p_k, \xi_{k+1})`$, $`y_{k+1} = y_k + \gamma_kH_2(p_k, \xi_{k+1})`$ with $`p_k = (x_k, y_k)`$ and $`\xi_{k+1} \sim P_{p_k}(\xi_k, \cdot)`$, one Poisson pair per component. Both remainders are $`O(\|p_k - p_{k-1}\|) = O(\gamma_k)`$, because the critic moves at rate $`\gamma`$. This includes the slow one, since the actor’s noise depends on the critic. Since $`\gamma^2/\beta \to 0`$, an $`O(\gamma)`$ slow remainder is negligible against the $`\sqrt\beta`$ fluctuations. Theorem [2.7](#thm:ttsmarkov) and `tendsto_tts_taylor` were stated for this. *Lean:* `tts_noise_decomp`, `tts_decomp_facts`, `tts_remainder_le`, `condExp_poisson_eq_zero` (any parameter space), and end to end `tendsto_tts_param_chain`. It assumes the limits of the three noise covariances.
+
 Not formalized:
 
-- Proposition [2.8](#prop:paramchain) for two time scales. The algebra is the same, and Theorem [2.7](#thm:ttsmarkov) takes the resulting $`h`$, $`g`$ and $`r`$;
+- the convergence of the two-time-scale noise covariances under moving Doeblin sampling, as in Proposition [2.11](#prop:doeblincov). It needs the cross-moment version of `tendsto_secondMoment_paramM` and the parameter $`(x, y)`$;
 
 - global dissipativity, which is a strong assumption, would be replaced in a local theory by a localization argument.
 

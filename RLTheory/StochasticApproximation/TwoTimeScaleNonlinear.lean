@@ -347,7 +347,7 @@ set_option maxHeartbeats 8000000 in
 `x_{k+1} = x_k + β_k (F₁(x_k, y_k) + m_{k+1} + r₁_k + h_k - h_{k+1})`,
 `y_{k+1} = y_k + γ_k (F₂(x_k, y_k) + m'_{k+1} + r₂_k + g_k - g_{k+1})` (in the deviations from the
 root), with a drift that is linear to first order, `F(x, y) = -A (x, y) + O(‖x‖² + ‖y‖²)`, sampling
-remainders `‖r₁_k‖ ≤ C_r β_k`, `‖r₂_k‖ ≤ C_r γ_k`, and fourth moments `E‖x_k‖⁴ = O(γ_k²)`,
+remainders `‖r₁_k‖, ‖r₂_k‖ ≤ C_r γ_k`, and fourth moments `E‖x_k‖⁴ = O(γ_k²)`,
 `E‖y_k‖⁴ = O(γ_k²)`, has the asymptotic covariances of its linearization: the conclusions of the
 linear two-time-scale theorem hold. -/
 theorem tendsto_tts_taylor [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βbar : ℝ}
@@ -376,7 +376,7 @@ theorem tendsto_tts_taylor [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βba
     (hmm : ∀ k, StronglyMeasurable[ℱ (k + 1)] (m (k + 1))) (hmL : ∀ k, MemLp (m (k + 1)) 2 μ)
     (hm'm : ∀ k, StronglyMeasurable[ℱ (k + 1)] (m' (k + 1)))
     (hm'L : ∀ k, MemLp (m' (k + 1)) 2 μ)
-    (hr₁m : ∀ k, StronglyMeasurable[ℱ (k + 1)] (r₁ k)) (hr₁b : ∀ k ω, ‖r₁ k ω‖ ≤ Cr * β k)
+    (hr₁m : ∀ k, StronglyMeasurable[ℱ (k + 1)] (r₁ k)) (hr₁b : ∀ k ω, ‖r₁ k ω‖ ≤ Cr * γ k)
     (hr₂m : ∀ k, StronglyMeasurable[ℱ (k + 1)] (r₂ k)) (hr₂b : ∀ k ω, ‖r₂ k ω‖ ≤ Cr * γ k)
     (h4xi : ∀ k, Integrable (fun ω => ‖x k ω‖ ^ 4) μ)
     (h4yi : ∀ k, Integrable (fun ω => ‖y k ω‖ ^ 4) μ)
@@ -410,8 +410,8 @@ theorem tendsto_tts_taylor [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βba
     (h4x k).trans (mul_le_mul_of_nonneg_right (le_max_left _ _) (sq_nonneg _))
   have h4y' : ∀ k, ∫ ω, ‖y k ω‖ ^ 4 ∂μ ≤ C₄' * γ k ^ 2 := fun k =>
     (h4y k).trans (mul_le_mul_of_nonneg_right (le_max_left _ _) (sq_nonneg _))
-  have hr₁b' : ∀ k ω, ‖r₁ k ω‖ ≤ Cr' * β k := fun k ω =>
-    (hr₁b k ω).trans (mul_le_mul_of_nonneg_right (le_max_left _ _) (hβ.pos k).le)
+  have hr₁b' : ∀ k ω, ‖r₁ k ω‖ ≤ Cr' * γ k := fun k ω =>
+    (hr₁b k ω).trans (mul_le_mul_of_nonneg_right (le_max_left _ _) (hγ.pos k).le)
   have hr₂b' : ∀ k ω, ‖r₂ k ω‖ ≤ Cr' * γ k := fun k ω =>
     (hr₂b k ω).trans (mul_le_mul_of_nonneg_right (le_max_left _ _) (hγ.pos k).le)
   obtain ⟨Bq₀, hBq₀⟩ := hβγ.bddAbove_range
@@ -425,7 +425,7 @@ theorem tendsto_tts_taylor [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βba
     + matCLM A₁₂ (y k ω)) + r₁ k ω with hρ₁
   set ρ₂ : ℕ → Ω → E d₂ := fun k ω => F₂ (x k ω) (y k ω) + (matCLM A₂₁ (x k ω)
     + matCLM A₂₂ (y k ω)) + r₂ k ω with hρ₂
-  have hb₁ : ∀ k ω, ‖ρ₁ k ω‖ ≤ L * (‖x k ω‖ ^ 2 + ‖y k ω‖ ^ 2) + Cr' * β k := fun k ω =>
+  have hb₁ : ∀ k ω, ‖ρ₁ k ω‖ ≤ L * (‖x k ω‖ ^ 2 + ‖y k ω‖ ^ 2) + Cr' * γ k := fun k ω =>
     (norm_add_le _ _).trans (add_le_add (hF₁ _ _) (hr₁b' k ω))
   have hb₂ : ∀ k ω, ‖ρ₂ k ω‖ ≤ L * (‖x k ω‖ ^ 2 + ‖y k ω‖ ^ 2) + Cr' * γ k := fun k ω =>
     (norm_add_le _ _).trans (add_le_add (hF₂ _ _) (hr₂b' k ω))
@@ -461,24 +461,23 @@ theorem tendsto_tts_taylor [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βba
       have := mul_le_mul_of_nonneg_left h4 (sq_nonneg L)
       rw [e]; linarith
     linarith
-  have hρ₁L : ∀ k, MemLp (ρ₁ k) 2 μ := fun k => hρL k (ρ₁ k) (Cr' * β k) (hρ₁m k) (hb₁ k)
+  have hρ₁L : ∀ k, MemLp (ρ₁ k) 2 μ := fun k => hρL k (ρ₁ k) (Cr' * γ k) (hρ₁m k) (hb₁ k)
   have hρ₂L : ∀ k, MemLp (ρ₂ k) 2 μ := fun k => hρL k (ρ₂ k) (Cr' * γ k) (hρ₂m k) (hb₂ k)
   -- their sizes
   set Kρ := 8 * L ^ 2 * C₄' + 2 * Cr' ^ 2 * (Bq ^ 2 + 1) with hKρ
   have hKρ0 : 0 ≤ Kρ := by positivity
   have rρ₁ : ∀ k, rms μ (ρ₁ k) ≤ √Kρ * γ k := fun k => by
     have hg := hγ.pos k
-    refine (rms_taylor_le (ρ := ρ₁ k) (x := x k) (y := y k) (hρ₁L k) (h4xi k) (h4yi k) hL (mul_nonneg hCr' (hβ.pos k).le) (hb₁ k)
+    refine (rms_taylor_le (ρ := ρ₁ k) (x := x k) (y := y k) (hρ₁L k) (h4xi k) (h4yi k) hL (mul_nonneg hCr' hg.le) (hb₁ k)
       (h4x' k) (h4y' k)).trans ?_
     rw [show √Kρ * γ k = √(Kρ * γ k ^ 2) by
       rw [Real.sqrt_mul hKρ0, Real.sqrt_sq hg.le]]
     refine Real.sqrt_le_sqrt ?_
     have hb2 : β k ^ 2 ≤ Bq ^ 2 * γ k ^ 2 := by
       have := pow_le_pow_left₀ (hβ.pos k).le (hbq k) 2; rwa [mul_pow] at this
-    have t2 := mul_le_mul_of_nonneg_left hb2 (by positivity : (0 : ℝ) ≤ 2 * Cr' ^ 2)
-    have t3 : 0 ≤ 2 * Cr' ^ 2 * γ k ^ 2 := by positivity
-    have e1 : 4 * L ^ 2 * C₄' * (γ k ^ 2 + γ k ^ 2) + 2 * (Cr' * β k) ^ 2 =
-        8 * L ^ 2 * C₄' * γ k ^ 2 + 2 * Cr' ^ 2 * β k ^ 2 := by ring
+    have t3 : 0 ≤ 2 * Cr' ^ 2 * (Bq ^ 2 * γ k ^ 2) := by positivity
+    have e1 : 4 * L ^ 2 * C₄' * (γ k ^ 2 + γ k ^ 2) + 2 * (Cr' * γ k) ^ 2 =
+        8 * L ^ 2 * C₄' * γ k ^ 2 + 2 * Cr' ^ 2 * γ k ^ 2 := by ring
     have e2 : Kρ * γ k ^ 2 = 8 * L ^ 2 * C₄' * γ k ^ 2 + 2 * Cr' ^ 2 * (Bq ^ 2 * γ k ^ 2)
         + 2 * Cr' ^ 2 * γ k ^ 2 := by simp only [hKρ]; ring
     linarith

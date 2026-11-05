@@ -313,7 +313,7 @@ step-size condition keeps the normalization of the slow moment by $\gamma$ contr
 
 \begin{theorem}[Fourth moments for two time scales, Markov noise]\label{thm:ttsmarkov}
 In Theorem~\ref{thm:lintts}, let the Poisson shifts $h, g$ be bounded and known at step $k$, let
-$\|r^1_k\| \le C\beta_k$ and $\|r^2_k\| \le C\gamma_k$ be known at step $k$, and let the noise and
+$\|r^1_k\|, \|r^2_k\| \le C\gamma_k$ be known at step $k$, and let the noise and
 the start be bounded. Suppose the hypotheses of Theorem~\ref{thm:ttsmoments} hold, the drifts are
 Lipschitz, and $\gamma_k^2/\beta_k \to 0$. Then $\E\|x_k\|^4 = O(\gamma_k^2)$ and
 $\E\|y_k\|^4 = O(\gamma_k^2)$, so Theorem~\ref{thm:lintts} applies.
@@ -462,10 +462,21 @@ $\theta$, so $\E[g(\theta_k, \xi_k)] - \E[g(\theta^*, \xi_k)] \to 0$ and $\E[g(\
   $\theta$-dependent Doeblin sampling, from the model alone.
 \end{itemize}
 
+\noindent\emph{Two time scales.} The same decomposition holds for
+$x_{k+1} = x_k + \beta_kH_1(p_k, \xi_{k+1})$, $y_{k+1} = y_k + \gamma_kH_2(p_k, \xi_{k+1})$ with $p_k = (x_k, y_k)$ and
+$\xi_{k+1} \sim P_{p_k}(\xi_k, \cdot)$, one Poisson pair per component. Both remainders are
+$O(\|p_k - p_{k-1}\|) = O(\gamma_k)$, because the critic moves at rate $\gamma$. This includes the slow one,
+since the actor's noise depends on the critic. Since $\gamma^2/\beta \to 0$, an $O(\gamma)$ slow remainder is
+negligible against the $\sqrt\beta$ fluctuations. Theorem~\ref{thm:ttsmarkov} and \texttt{tendsto\_tts\_taylor}
+were stated for this. \emph{Lean:} \texttt{tts\_noise\_decomp}, \texttt{tts\_decomp\_facts},
+\texttt{tts\_remainder\_le}, \texttt{condExp\_poisson\_eq\_zero} (any parameter space), and end to end
+\texttt{tendsto\_tts\_param\_chain}. It assumes the limits of the three noise covariances.
+
 Not formalized:
 \begin{itemize}
-\item Proposition~\ref{prop:paramchain} for two time scales. The algebra is the same, and
-  Theorem~\ref{thm:ttsmarkov} takes the resulting $h$, $g$ and $r$;
+\item the convergence of the two-time-scale noise covariances under moving Doeblin sampling, as in
+  Proposition~\ref{prop:doeblincov}. It needs the cross-moment version of
+  \texttt{tendsto\_secondMoment\_paramM} and the parameter $(x, y)$;
 \item global dissipativity, which is a strong assumption, would be replaced in a local theory by a
   localization argument.
 \end{itemize}

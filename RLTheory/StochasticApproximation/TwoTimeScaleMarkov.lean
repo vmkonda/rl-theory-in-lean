@@ -9,7 +9,7 @@ import RLTheory.StochasticApproximation.TwoTimeScaleMoments
 The fourth-moment hypotheses of `tendsto_tts_taylor` for the iteration
 `x_{k+1} = x_k + β_k (F₁(x_k, y_k) + M₁_{k+1} + r₁_k + h_k - h_{k+1})`,
 `y_{k+1} = y_k + γ_k (F₂(x_k, y_k) + M₂_{k+1} + r₂_k + g_k - g_{k+1})`,
-where `h, g` are bounded Poisson shifts and `r₁ = O(β)`, `r₂ = O(γ)` are sampling remainders.
+where `h, g` are bounded Poisson shifts and `r₁, r₂ = O(γ)` are sampling remainders.
 
 The proof shifts both components, `e_k = x_k + β_{k-1} h_k` and `ŷ_k = y_k + γ_{k-1} g_k`, so
 that each step is a part known at time `k` plus a martingale term. With Lipschitz drifts the known
@@ -193,7 +193,7 @@ Suppose:
 * `⟨x, F₁⟩ ≤ -η‖x‖² + K‖x‖‖z‖`, `⟨z, F₂⟩ ≤ -η‖z‖²`, `‖F_i‖ ≤ K(‖x‖ + ‖z‖)`, and the `F_i` are
   `L_F`-Lipschitz;
 * `M₁, M₂` are bounded martingale differences, the Poisson shifts `h, g` are bounded and known at
-  time `k`, `‖r₁_k‖ ≤ C β_k`, `‖r₂_k‖ ≤ C γ_k`, and the start is bounded;
+  time `k`, `‖r₁_k‖, ‖r₂_k‖ ≤ C γ_k`, and the start is bounded;
 * `β/γ → 0`, `γ²/β → 0` and eventually `γ_k / γ_{k+1} ≤ 1 + c₀ β_k` with `0 ≤ c₀ < η`.
 
 Then each iterate is bounded and `E‖x_k‖⁴, E‖y_k‖⁴ ≤ W γ_k²`. -/
@@ -220,7 +220,7 @@ theorem moment_bounds_tts_markov {β γ : ℕ → ℝ} {βbar : ℝ} (hβ : Step
     (hx0 : ∃ C, ∀ ω, ‖x 0 ω‖ ≤ C) (hy0 : ∃ C, ∀ ω, ‖y 0 ω‖ ≤ C)
     (hhm : ∀ k, StronglyMeasurable[ℱ k] (h k)) (hhb : ∀ k ω, ‖h k ω‖ ≤ Ch)
     (hgm : ∀ k, StronglyMeasurable[ℱ k] (g k)) (hgb : ∀ k ω, ‖g k ω‖ ≤ Ch)
-    (hr₁m : ∀ k, StronglyMeasurable[ℱ k] (r₁ k)) (hr₁b : ∀ k ω, ‖r₁ k ω‖ ≤ Cr * β k)
+    (hr₁m : ∀ k, StronglyMeasurable[ℱ k] (r₁ k)) (hr₁b : ∀ k ω, ‖r₁ k ω‖ ≤ Cr * γ k)
     (hr₂m : ∀ k, StronglyMeasurable[ℱ k] (r₂ k)) (hr₂b : ∀ k ω, ‖r₂ k ω‖ ≤ Cr * γ k)
     (hM₁ : ∀ k, StronglyMeasurable[ℱ (k + 1)] (M₁ (k + 1))) (hM₁b : ∀ k ω, ‖M₁ (k + 1) ω‖ ≤ CM)
     (hmart₁ : ∀ k j, μ[fun ω => M₁ (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
@@ -240,8 +240,8 @@ theorem moment_bounds_tts_markov {β γ : ℕ → ℝ} {βbar : ℝ} (hβ : Step
   have hM₂b' : ∀ k ω, ‖M₂ (k + 1) ω‖ ≤ CM₀ := fun k ω => (hM₂b k ω).trans (le_max_left _ _)
   have hhb' : ∀ k ω, ‖h k ω‖ ≤ Ch₀ := fun k ω => (hhb k ω).trans (le_max_left _ _)
   have hgb' : ∀ k ω, ‖g k ω‖ ≤ Ch₀ := fun k ω => (hgb k ω).trans (le_max_left _ _)
-  have hr₁b' : ∀ k ω, ‖r₁ k ω‖ ≤ Cr₀ * β k := fun k ω =>
-    (hr₁b k ω).trans (mul_le_mul_of_nonneg_right (le_max_left _ _) (hβ.pos k).le)
+  have hr₁b' : ∀ k ω, ‖r₁ k ω‖ ≤ Cr₀ * γ k := fun k ω =>
+    (hr₁b k ω).trans (mul_le_mul_of_nonneg_right (le_max_left _ _) (hγ.pos k).le)
   have hr₂b' : ∀ k ω, ‖r₂ k ω‖ ≤ Cr₀ * γ k := fun k ω =>
     (hr₂b k ω).trans (mul_le_mul_of_nonneg_right (le_max_left _ _) (hγ.pos k).le)
   obtain ⟨Bβ, hBβ⟩ := hβ.tendsto_zero.bddAbove_range
@@ -309,7 +309,7 @@ theorem moment_bounds_tts_markov {β γ : ℕ → ℝ} {βbar : ℝ} (hβ : Step
           (mul_le_mul_of_nonneg_left (hmax ω) (by positivity)) hK)
         have t2 : ‖F₁ (x k ω) (y k ω) + M₁ (k + 1) ω + r₁ k ω + h k ω - h (k + 1) ω‖ ≤ S := by
           have := hM₁b' k ω; have := hr₁b' k ω; have := hhb' k ω; have := hhb' (k + 1) ω
-          have : Cr₀ * β k ≤ Cr₀ * (β k + γ k) := mul_le_mul_of_nonneg_left (by linarith) hCr₀
+          have : Cr₀ * γ k ≤ Cr₀ * (β k + γ k) := mul_le_mul_of_nonneg_left (by linarith) hCr₀
           simp only [hS]; linarith
         have t3 := norm_smul_le_of_le hb.le t2
         have := norm_add_le (x k ω) (β k • (F₁ (x k ω) (y k ω) + M₁ (k + 1) ω + r₁ k ω
@@ -499,7 +499,7 @@ theorem moment_bounds_tts_markov {β γ : ℕ → ℝ} {βbar : ℝ} (hβ : Step
       have := mul_le_mul_of_nonneg_left h1 hLF
       simp only [hΛ]; linarith
     exact ⟨(hF₁L _ _ _ _).trans hdev, (hF₂L _ _ _ _).trans hdev⟩
-  set E₁ := CΔβ * Ch₀ * Bq + Cr₀ * Bq + Λ with hE₁
+  set E₁ := CΔβ * Ch₀ * Bq + Cr₀ + Λ with hE₁
   have hE₁0 : 0 ≤ E₁ := by positivity
   have hε₁b : ∀ k ω, ‖ε₁ k ω‖ ≤ E₁ * β k * γ k := fun k ω => by
     have hb := hβ.pos k
@@ -510,14 +510,12 @@ theorem moment_bounds_tts_markov {β γ : ℕ → ℝ} {βbar : ℝ} (hβ : Step
     have t3 := norm_smul_le_of_le hb.le (hΔb k ω).1
     have t := norm_add_three_le ((β k - β (k - 1)) • h k ω) (β k • r₁ k ω) (β k • Δ₁ k ω)
     have s1 := mul_le_mul_of_nonneg_left (hβγ' k) (by positivity : 0 ≤ CΔβ * Ch₀)
-    have s2 := mul_le_mul_of_nonneg_left (hβγ' k) hCr₀
-    have e1 : E₁ * β k * γ k = CΔβ * Ch₀ * (Bq * (β k * γ k)) + Cr₀ * (Bq * (β k * γ k))
+    have e1 : E₁ * β k * γ k = CΔβ * Ch₀ * (Bq * (β k * γ k)) + β k * (Cr₀ * γ k)
         + β k * (Λ * γ k) := by simp only [hE₁]; ring
     have e2 : CΔβ * β k ^ 2 * Ch₀ = CΔβ * Ch₀ * (β k * β k) := by ring
-    have e3 : β k * (Cr₀ * β k) = Cr₀ * (β k * β k) := by ring
     show ‖(β k - β (k - 1)) • h k ω + β k • r₁ k ω + β k • Δ₁ k ω‖ ≤ _
     linarith
-  set E₂ := CΔγ * Ch₀ + CΔβ * Bq ^ 2 * nD * Ch₀ + Cr₀ + nD * Cr₀ * Bq ^ 2 + Λ + nD * Λ * Bq
+  set E₂ := CΔγ * Ch₀ + CΔβ * Bq ^ 2 * nD * Ch₀ + Cr₀ + nD * Cr₀ * Bq + Λ + nD * Λ * Bq
     with hE₂
   have hE₂0 : 0 ≤ E₂ := by positivity
   have hε₂b : ∀ k ω, ‖ε₂ k ω‖ ≤ E₂ * γ k ^ 2 := fun k ω => by
@@ -538,13 +536,13 @@ theorem moment_bounds_tts_markov {β γ : ℕ → ℝ} {βbar : ℝ} (hβ : Step
     have t := norm_add_six_le ((γ k - γ (k - 1)) • g k ω) ((β k - β (k - 1)) • matCLM D (h k ω))
       (γ k • r₂ k ω) (β k • matCLM D (r₁ k ω)) (γ k • Δ₂ k ω) (β k • matCLM D (Δ₁ k ω))
     have s1 := mul_le_mul_of_nonneg_left (hββ k) (by positivity : 0 ≤ CΔβ * nD * Ch₀)
-    have s2 := mul_le_mul_of_nonneg_left (hββ k) (by positivity : 0 ≤ nD * Cr₀)
+    have s2 := mul_le_mul_of_nonneg_left (hβγ2 k) (by positivity : 0 ≤ nD * Cr₀)
     have s3 := mul_le_mul_of_nonneg_left (hβγ2 k) (by positivity : 0 ≤ nD * Λ)
     have e1 : E₂ * γ k ^ 2 = CΔγ * γ k ^ 2 * Ch₀ + CΔβ * nD * Ch₀ * (Bq ^ 2 * γ k ^ 2)
-        + γ k * (Cr₀ * γ k) + nD * Cr₀ * (Bq ^ 2 * γ k ^ 2) + γ k * (Λ * γ k)
+        + γ k * (Cr₀ * γ k) + nD * Cr₀ * (Bq * γ k ^ 2) + γ k * (Λ * γ k)
         + nD * Λ * (Bq * γ k ^ 2) := by simp only [hE₂]; ring
     have e2 : CΔβ * β k ^ 2 * (nD * Ch₀) = CΔβ * nD * Ch₀ * β k ^ 2 := by ring
-    have e3 : β k * (nD * (Cr₀ * β k)) = nD * Cr₀ * β k ^ 2 := by ring
+    have e3 : β k * (nD * (Cr₀ * γ k)) = nD * Cr₀ * (β k * γ k) := by ring
     have e4 : β k * (nD * (Λ * γ k)) = nD * Λ * (β k * γ k) := by ring
     show ‖(γ k - γ (k - 1)) • g k ω + (β k - β (k - 1)) • matCLM D (h k ω) + γ k • r₂ k ω
       + β k • matCLM D (r₁ k ω) + γ k • Δ₂ k ω + β k • matCLM D (Δ₁ k ω)‖ ≤ _
@@ -768,7 +766,7 @@ theorem tendsto_tts_dissipative_markov {β γ : ℕ → ℝ} {βbar : ℝ}
     (hx0 : ∃ C, ∀ ω, ‖x 0 ω‖ ≤ C) (hy0 : ∃ C, ∀ ω, ‖y 0 ω‖ ≤ C)
     (hhm : ∀ k, StronglyMeasurable[ℱ k] (h k)) (hhb : ∀ k ω, ‖h k ω‖ ≤ Ch)
     (hgm : ∀ k, StronglyMeasurable[ℱ k] (g k)) (hgb : ∀ k ω, ‖g k ω‖ ≤ Ch)
-    (hr₁m : ∀ k, StronglyMeasurable[ℱ k] (r₁ k)) (hr₁b : ∀ k ω, ‖r₁ k ω‖ ≤ Cr * β k)
+    (hr₁m : ∀ k, StronglyMeasurable[ℱ k] (r₁ k)) (hr₁b : ∀ k ω, ‖r₁ k ω‖ ≤ Cr * γ k)
     (hr₂m : ∀ k, StronglyMeasurable[ℱ k] (r₂ k)) (hr₂b : ∀ k ω, ‖r₂ k ω‖ ≤ Cr * γ k)
     (hM₁ : ∀ k, StronglyMeasurable[ℱ (k + 1)] (M₁ (k + 1))) (hM₁b : ∀ k ω, ‖M₁ (k + 1) ω‖ ≤ CM)
     (hmart₁ : ∀ k j, μ[fun ω => M₁ (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
