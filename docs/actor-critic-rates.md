@@ -628,8 +628,20 @@ where $`\mathcal T \ge 0`$ has row sums at most $`\gamma`$. The cross term vanis
 
 - `nonneg_of_fixed` and `mono_of_fixed`: positivity and monotonicity in $`\lambda`$;
 
-- `StateDriven.lookback_covariance_mono`: for $`0 \le \lambda_1 \le \lambda_2 \le 1`$, the extra covariances $`\Gamma_D(\lambda) = \lim\mathbb{E}[\delta^2W_kW_k^\top]`$ satisfy $`0 \preceq \Gamma_D(\lambda_1) \preceq
-    \Gamma_D(\lambda_2)`$, through the factorization `StateDriven.integral_sq_centered_eq`.
+- `StateDriven.lookback_covariance_mono`: for $`0 \le \lambda_1 \le \lambda_2 \le 1`$, the extra covariances $`\Gamma_D(\lambda) = \lim\mathbb{E}[\delta^2W_kW_k^\top]`$ exist and satisfy $`0 \preceq \Gamma_D(\lambda_1) \preceq
+    \Gamma_D(\lambda_2)`$, through the factorization `StateDriven.integral_sq_centered_eq`;
+
+- `ScoreChain.carryMean_step_centered`: the stationary centering of $`\varepsilon`$, from the definition of $`b`$ as `carryMean`;
+
+- end to end, `ScoreChain.restart_lambda_covariance_mono` (`LambdaMonotone.lean`): for the restart chain, described by its two stages and as a Markov chain on pairs, with the critic’s TD($`\lambda`$) traces started at $`z^\psi_0 = \psi_0`$, $`z^e_0 = e_{s_0}`$. From the model alone:
+
+  - the law converges to a stationary $`\nu`$;
+
+  - the REINFORCE trace moments exist, which defines $`b`$;
+
+  - $`\Gamma_D(\lambda_1) \preceq \Gamma_D(\lambda_2)`$.
+
+  The hypotheses are on the model: restarts reach every state and do not depend on the pair, continuation is at most $`\gamma < 1`$, $`c(\text{restart}) = 0`$ and $`0 \le c \le 1`$, and the step law does not depend on the flag.
 
 With `StateDriven.tendsto_secondMoment_of_centered_split` (with $`B_k = X_{\lambda,k}`$), $`\tilde\Gamma(\lambda) = \tilde\Gamma(0) + \Gamma_D(\lambda)`$, which proves the theorem. Lemma [4.6](#lem:gain) is `ScoreChain.tdlam_gain` ($`\lambda \ne 0`$; $`\lambda = 0`$ is `td0_gain`). It is built on `ScoreChain.carried_trace_moment`, the pointwise moment identity $`\mathbb{E}[\tilde X_k1\{Y_k = y\}] = \lambda\mathbb{E}[B_k1\{Y_k = y\}] + (1-\lambda)\nu(y)b(s)`$. Numerical checks:
 

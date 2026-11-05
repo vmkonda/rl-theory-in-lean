@@ -27,3 +27,4 @@ import RLTheory.StochasticApproximation.DoeblinPoisson
 import RLTheory.StochasticApproximation.LookbackMonotone
 import RLTheory.MarkovDecisionProcess.CriticTheorems
 import RLTheory.MarkovDecisionProcess.RestartProcess
+import RLTheory.MarkovDecisionProcess.LambdaMonotone

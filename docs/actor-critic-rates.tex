@@ -803,8 +803,21 @@ semidefinite too.
   converge to a solution of the fixed-point equation;
 \item \texttt{nonneg\_of\_fixed} and \texttt{mono\_of\_fixed}: positivity and monotonicity in $\lambda$;
 \item \texttt{StateDriven.lookback\_covariance\_mono}: for $0 \le \lambda_1 \le \lambda_2 \le 1$, the extra
-  covariances $\Gamma_D(\lambda) = \lim\E[\delta^2W_kW_k^\top]$ satisfy $0 \preceq \Gamma_D(\lambda_1) \preceq
-  \Gamma_D(\lambda_2)$, through the factorization \texttt{StateDriven.integral\_sq\_centered\_eq}.
+  covariances $\Gamma_D(\lambda) = \lim\E[\delta^2W_kW_k^\top]$ exist and satisfy $0 \preceq \Gamma_D(\lambda_1) \preceq
+  \Gamma_D(\lambda_2)$, through the factorization \texttt{StateDriven.integral\_sq\_centered\_eq};
+\item \texttt{ScoreChain.carryMean\_step\_centered}: the stationary centering of $\varepsilon$, from the
+  definition of $b$ as \texttt{carryMean};
+\item end to end, \texttt{ScoreChain.restart\_lambda\_covariance\_mono} (\texttt{LambdaMonotone.lean}): for
+  the restart chain, described by its two stages and as a Markov chain on pairs, with the critic's
+  TD($\lambda$) traces started at $z^\psi_0 = \psi_0$, $z^e_0 = e_{s_0}$. From the model alone:
+  \begin{itemize}
+  \item the law converges to a stationary $\nu$;
+  \item the REINFORCE trace moments exist, which defines $b$;
+  \item $\Gamma_D(\lambda_1) \preceq \Gamma_D(\lambda_2)$.
+  \end{itemize}
+  The hypotheses are on the model: restarts reach every state and do not depend on the pair,
+  continuation is at most $\gamma < 1$, $c(\text{restart}) = 0$ and $0 \le c \le 1$, and the step law
+  does not depend on the flag.
 \end{itemize}
 With \texttt{StateDriven.tendsto\_secondMoment\_of\_centered\_split} (with $B_k = X_{\lambda,k}$),
 $\tilde\Gamma(\lambda) = \tilde\Gamma(0) + \Gamma_D(\lambda)$, which proves the theorem.

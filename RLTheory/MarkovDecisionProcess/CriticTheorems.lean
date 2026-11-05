@@ -420,6 +420,120 @@ lemma sum_carry_centered {p : ℕ} {ν : Bool × S × Ac → ℝ} (hν : ∀ y',
   refine sum_eq_zero fun a _ => ?_
   rw [← smul_sum, h0 s, smul_zero]
 
+
+/-- Under a stationary law with a flag-free step, averages over the current pair reduce to the
+state marginal and the policy:
+`Σ_y ν(y) κ(y, f, s) g(s_y, a_y) = Σ_{s₀, a} κ((·, s₀, a), f, s) π(a | s₀) ν(s₀) g(s₀, a)`. -/
+lemma sum_stationary_kap {X : Type*} [AddCommGroup X] [Module ℝ X] {ν : Bool × S × Ac → ℝ}
+    (hν : ∀ y', ∑ y, ν y * M.Q y y' = ν y') (hpol : ∀ s, ∑ a, M.pol s a = 1)
+    (hkap : ∀ f₁ f₂ s a, M.kap (f₁, s, a) = M.kap (f₂, s, a)) (f : Bool) (s : S)
+    (g : S → Ac → X) :
+    ∑ y, (ν y * M.kap y f s) • g y.2.1 y.2.2 =
+      ∑ s₀, ∑ a, (M.kap (false, s₀, a) f s * M.pol s₀ a * stateSum ν s₀) • g s₀ a := by
+  have hn : ∀ f₀ s₀ a, ν (f₀, s₀, a) = (∑ y, ν y * M.kap y f₀ s₀) * M.pol s₀ a :=
+    fun f₀ s₀ a => M.stationary_factor hν f₀ s₀ a
+  have hνs : ∀ s₀, stateSum ν s₀ = ∑ f₀, ∑ y, ν y * M.kap y f₀ s₀ := fun s₀ => by
+    unfold stateSum
+    refine sum_congr rfl fun f₀ _ => ?_
+    rw [sum_congr rfl fun a _ => hn f₀ s₀ a, ← mul_sum, hpol, mul_one]
+  rw [sum_prod3]
+  calc ∑ f₀, ∑ s₀, ∑ a, (ν (f₀, s₀, a) * M.kap (f₀, s₀, a) f s) • g s₀ a
+      = ∑ s₀, ∑ a, ∑ f₀, (ν (f₀, s₀, a) * M.kap (f₀, s₀, a) f s) • g s₀ a := by
+        rw [sum_comm]; exact sum_congr rfl fun s₀ _ => sum_comm
+    _ = _ := by
+        refine sum_congr rfl fun s₀ _ => sum_congr rfl fun a _ => ?_
+        rw [← sum_smul, hνs, mul_sum]
+        congr 1
+        refine sum_congr rfl fun f₀ _ => ?_
+        rw [hn f₀ s₀ a, hkap f₀ false]
+        ring
+
+/-- **The lookback increment is centered.** With `b = carryMean`, the first increment of the
+lookback martingale, `ε = c(f', s') (ψ(s₀, a) + b(s₀)) - b(s')`, has stationary mean zero on
+every target state `s'`. This is the equation that defines `b` as the stationary conditional
+mean of the carried trace, and the centering hypothesis of
+`StateDriven.tendsto_lookback_moments`. -/
+theorem carryMean_step_centered {p : ℕ} {ν : Bool × S × Ac → ℝ}
+    (hν : ∀ y', ∑ y, ν y * M.Q y y' = ν y') {ψ m : Bool × S × Ac → E p}
+    (hm : M.TraceMoment ν 1 ψ m) (hpol : ∀ s, ∑ a, M.pol s a = 1) (hνS : ∀ s, stateSum ν s ≠ 0)
+    (hkap : ∀ f₁ f₂ s a, M.kap (f₁, s, a) = M.kap (f₂, s, a))
+    (hψ : ∀ f₁ f₂ s a, ψ (f₁, s, a) = ψ (f₂, s, a)) (s : S) :
+    ∑ s₀, ∑ a, ∑ f, (M.kap (false, s₀, a) f s * M.pol s₀ a * stateSum ν s₀) •
+      (M.c f s • (ψ (false, s₀, a) + carryMean ν ψ m s₀) - carryMean ν ψ m s) = 0 := by
+  set b := carryMean ν ψ m with hb
+  set w : Bool → S → Ac → ℝ := fun f s₀ a => M.kap (false, s₀, a) f s * M.pol s₀ a * stateSum ν s₀
+    with hw
+  have hc : ∀ f s a, carry ν ψ m (f, s, a) = M.pol s a • (M.c f s • ∑ y, M.kap y f s • m y) :=
+    fun f s a => M.carry_factor hm f s a
+  have hbS : ∀ s, stateSum ν s • b s = stateSum (carry ν ψ m) s := fun s => by
+    rw [hb, carryMean, smul_smul, mul_inv_cancel₀ (hνS s), one_smul]
+  have hmS : ∀ s, stateSum (carry ν ψ m) s = ∑ f, M.c f s • ∑ y, M.kap y f s • m y := fun s => by
+    unfold stateSum
+    refine sum_congr rfl fun f _ => ?_
+    simp only [hc, ← sum_smul, hpol, one_smul]
+  -- `Σ_y κ m = Σ_{s₀,a} w (ψ + b)`: split `m = ν ψ + carry`
+  have hcarry : ∀ f, ∑ y, M.kap y f s • carry ν ψ m y =
+      ∑ s₀, ∑ a, w f s₀ a • b s₀ := fun f => by
+    rw [sum_prod3]
+    calc ∑ f₀, ∑ s₀, ∑ a, M.kap (f₀, s₀, a) f s • carry ν ψ m (f₀, s₀, a)
+        = ∑ s₀, ∑ a, ∑ f₀, M.kap (f₀, s₀, a) f s • carry ν ψ m (f₀, s₀, a) := by
+          rw [sum_comm]; exact sum_congr rfl fun s₀ _ => sum_comm
+      _ = _ := by
+          refine sum_congr rfl fun s₀ _ => sum_congr rfl fun a _ => ?_
+          have e : ∀ f₀, M.kap (f₀, s₀, a) f s • carry ν ψ m (f₀, s₀, a) =
+              (M.kap (false, s₀, a) f s * M.pol s₀ a) •
+                (M.c f₀ s₀ • ∑ y, M.kap y f₀ s₀ • m y) := fun f₀ => by
+            rw [hc, hkap f₀ false, smul_smul]
+          rw [sum_congr rfl fun f₀ _ => e f₀, ← smul_sum, ← hmS, ← hbS, smul_smul]
+  have hm' : ∀ y, m y = ν y • ψ y + carry ν ψ m y := fun y => by simp [carry]
+  have hkm : ∀ f, ∑ y, M.kap y f s • m y = ∑ s₀, ∑ a, w f s₀ a • (ψ (false, s₀, a) + b s₀) :=
+    fun f => by
+      have h1 : ∑ y, (ν y * M.kap y f s) • ψ (false, y.2.1, y.2.2) =
+          ∑ s₀, ∑ a, w f s₀ a • ψ (false, s₀, a) :=
+        M.sum_stationary_kap hν hpol hkap f s (fun s₀ a => ψ (false, s₀, a))
+      have h2 : ∑ y, M.kap y f s • (ν y • ψ y) = ∑ y, (ν y * M.kap y f s) • ψ (false, y.2.1, y.2.2) :=
+        sum_congr rfl fun y => by
+          intro _
+          obtain ⟨f₀, s₀, a⟩ := y
+          rw [smul_smul, mul_comm, hψ f₀ false]
+      calc ∑ y, M.kap y f s • m y
+          = ∑ y, M.kap y f s • (ν y • ψ y) + ∑ y, M.kap y f s • carry ν ψ m y := by
+            rw [← sum_add_distrib]
+            exact sum_congr rfl fun y _ => by rw [hm' y, smul_add]
+        _ = ∑ s₀, ∑ a, w f s₀ a • ψ (false, s₀, a) + ∑ s₀, ∑ a, w f s₀ a • b s₀ := by
+            rw [h2, h1, hcarry]
+        _ = _ := by
+            rw [← sum_add_distrib]
+            exact sum_congr rfl fun s₀ _ => by
+              rw [← sum_add_distrib]
+              exact sum_congr rfl fun a _ => (smul_add _ _ _).symm
+  -- `Σ_{s₀,a,f} w = ν(s)`
+  have hmass : ∑ f, ∑ s₀, ∑ a, w f s₀ a = stateSum ν s := by
+    have h1 : ∀ f, ∑ y, (ν y * M.kap y f s) • (1 : ℝ) = ∑ s₀, ∑ a, w f s₀ a • (1 : ℝ) :=
+      fun f => M.sum_stationary_kap (X := ℝ) hν hpol hkap f s (fun _ _ => 1)
+    simp only [smul_eq_mul, mul_one] at h1
+    have h2 : stateSum ν s = ∑ f, ∑ y, ν y * M.kap y f s := by
+      unfold stateSum
+      refine sum_congr rfl fun f _ => ?_
+      simp only [M.stationary_factor hν f s, ← mul_sum, hpol, mul_one]
+    rw [h2]
+    exact sum_congr rfl fun f _ => (h1 f).symm
+  -- assemble
+  have swap : ∀ g : Bool → S → Ac → E p,
+      ∑ s₀, ∑ a, ∑ f, g f s₀ a = ∑ f, ∑ s₀, ∑ a, g f s₀ a := fun g => by
+    calc ∑ s₀, ∑ a, ∑ f, g f s₀ a = ∑ s₀, ∑ f, ∑ a, g f s₀ a := sum_congr rfl fun s₀ _ => sum_comm
+      _ = _ := sum_comm
+  calc ∑ s₀, ∑ a, ∑ f, w f s₀ a • (M.c f s • (ψ (false, s₀, a) + b s₀) - b s)
+      = ∑ f, ∑ s₀, ∑ a, (M.c f s • (w f s₀ a • (ψ (false, s₀, a) + b s₀)) - w f s₀ a • b s) := by
+        rw [swap]
+        exact sum_congr rfl fun f _ => sum_congr rfl fun s₀ _ => sum_congr rfl fun a _ => by
+          rw [smul_sub, smul_comm]
+    _ = ∑ f, (M.c f s • ∑ y, M.kap y f s • m y - (∑ s₀, ∑ a, w f s₀ a) • b s) := by
+        refine sum_congr rfl fun f _ => ?_
+        simp only [sum_sub_distrib, ← smul_sum, hkm, sum_smul]
+    _ = 0 := by
+        rw [sum_sub_distrib, ← sum_smul, ← hmS, hmass, hbS, sub_self]
+
 /-- **Theorem 4.5 (the gain).** For the TD(0) critic with features `(ψ, e_s)` at `r̂ = (0, V)`,
 `-C A_c⁻¹ = (I, -K)` with `K = X T⁻¹`, where `T s s' = E[1{s_k = s}(c_{k+1} 1{s_{k+1} = s'} -
 1{s_k = s'})]` and `X s' = E[ψ_k c_{k+1} 1{s_{k+1} = s'}]` (the term `E[ψ_k 1{s_k = s'}]`

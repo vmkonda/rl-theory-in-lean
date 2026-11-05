@@ -397,12 +397,12 @@ theorem StateDriven.lookback_covariance_mono (hσ : StateDriven μ ℱ σ ξ P)
     (hW₁m : ∀ k, StronglyMeasurable[ℱ k] (W₁ k)) (hW₁B : ∀ k, ∃ C, ∀ ω, ‖W₁ k ω‖ ≤ C)
     (hW₂ : ∀ k ω, W₂ (k + 1) ω = l₂ • (ε (ξ (k + 1) ω) + ĉ (ξ (k + 1) ω) • W₂ k ω))
     (hW₂m : ∀ k, StronglyMeasurable[ℱ k] (W₂ k)) (hW₂B : ∀ k, ∃ C, ∀ ω, ‖W₂ k ω‖ ≤ C)
-    {Γ₁ Γ₂ : Mat n}
-    (hΓ₁ : Tendsto (fun k => secondMoment μ fun ω => δ (ξ (k + 1) ω) • W₁ k ω) atTop (𝓝 Γ₁))
-    (hΓ₂ : Tendsto (fun k => secondMoment μ fun ω => δ (ξ (k + 1) ω) • W₂ k ω) atTop (𝓝 Γ₂))
-    (v : Fin n → ℝ) :
-    0 ≤ ∑ i, ∑ j, v i * v j * Γ₁ (i, j) ∧
-      ∑ i, ∑ j, v i * v j * Γ₁ (i, j) ≤ ∑ i, ∑ j, v i * v j * Γ₂ (i, j) := by
+    :
+    ∃ Γ₁ Γ₂ : Mat n,
+      Tendsto (fun k => secondMoment μ fun ω => δ (ξ (k + 1) ω) • W₁ k ω) atTop (𝓝 Γ₁) ∧
+      Tendsto (fun k => secondMoment μ fun ω => δ (ξ (k + 1) ω) • W₂ k ω) atTop (𝓝 Γ₂) ∧
+      ∀ v : Fin n → ℝ, 0 ≤ ∑ i, ∑ j, v i * v j * Γ₁ (i, j) ∧
+        ∑ i, ∑ j, v i * v j * Γ₁ (i, j) ≤ ∑ i, ∑ j, v i * v j * Γ₂ (i, j) := by
   obtain ⟨-, C₁, hC₁, hconv₁⟩ := hσ.tendsto_lookback_moments hσξ hP0 hc0 hc1 hρ hρ0 hρ1 hl0
     (hl12.trans hl2) hW₁ hW₁m hW₁B hlaw hcent
   obtain ⟨-, C₂, hC₂, hconv₂⟩ := hσ.tendsto_lookback_moments hσξ hP0 hc0 hc1 hρ hρ0 hρ1
@@ -410,16 +410,17 @@ theorem StateDriven.lookback_covariance_mono (hσ : StateDriven μ ℱ σ ξ P)
   set σ2 : S → ℝ := fun s => ∑ x, P s x * δ x ^ 2 with hσ2
   have hσ20 : ∀ s, 0 ≤ σ2 s := fun s => sum_nonneg fun x _ => mul_nonneg (hP0 _ _) (sq_nonneg _)
   -- the covariance is the `σ²`-weighted limit second moment
-  have key : ∀ (W : ℕ → Ω → E n) (Γ : Mat n) (C : S → Fin n → Fin n → ℝ),
+  set Γof : (S → Fin n → Fin n → ℝ) → Mat n := fun C =>
+    (EuclideanSpace.equiv (Fin n × Fin n) ℝ).symm fun ij => ∑ s, σ2 s * C s ij.1 ij.2 with hΓof
+  have hΓof : ∀ C i j, Γof C (i, j) = ∑ s, σ2 s * C s i j := fun C i j => rfl
+  have key : ∀ (W : ℕ → Ω → E n) (C : S → Fin n → Fin n → ℝ),
       (∀ k, StronglyMeasurable[ℱ k] (W k)) → (∀ k, ∃ C, ∀ ω, ‖W k ω‖ ≤ C) →
-      Tendsto (fun k => secondMoment μ fun ω => δ (ξ (k + 1) ω) • W k ω) atTop (𝓝 Γ) →
       (∀ s i j, Tendsto (fun k => ∫ ω, {ω | σ k ω = s}.indicator
         (fun ω => W k ω i * W k ω j) ω ∂μ) atTop (𝓝 (C s i j))) →
-      ∀ i j, Γ (i, j) = ∑ s, σ2 s * C s i j := by
-    intro W Γ C hWm hWB hΓ hconv i j
-    have h1 : Tendsto (fun k => (secondMoment μ fun ω => δ (ξ (k + 1) ω) • W k ω) (i, j)) atTop
-        (𝓝 (Γ (i, j))) :=
-      ((EuclideanSpace.proj (𝕜 := ℝ) (i, j)).continuous.tendsto _).comp hΓ
+      Tendsto (fun k => secondMoment μ fun ω => δ (ξ (k + 1) ω) • W k ω) atTop (𝓝 (Γof C)) := by
+    intro W C hWm hWB hconv
+    refine tendsto_euclid_of_coord fun ij => ?_
+    obtain ⟨i, j⟩ := ij
     have hL : ∀ k, MemLp (fun ω => δ (ξ (k + 1) ω) • W k ω) 2 μ := fun k => by
       obtain ⟨C, hC⟩ := hWB k
       refine MemLp.of_bound (((hσ.stronglyMeasurable_obs δ k).smul
@@ -435,12 +436,9 @@ theorem StateDriven.lookback_covariance_mono (hσ : StateDriven μ ℱ σ ξ P)
       have := hσ.integral_sq_centered_eq (hWm k) (hWB k) 0 δ i j
       simp only [Pi.zero_apply, sub_zero, PiLp.zero_apply] at this
       exact this
-    have h3 : Tendsto (fun k => ∑ s, σ2 s * ∫ ω, {ω | σ k ω = s}.indicator
-        (fun ω => W k ω i * W k ω j) ω ∂μ) atTop (𝓝 (∑ s, σ2 s * C s i j)) :=
-      tendsto_finset_sum _ fun s _ => (hconv s i j).const_mul _
-    exact tendsto_nhds_unique (h1.congr h2) h3
-  have hΓ₁e := key W₁ Γ₁ C₁ hW₁m hW₁B hΓ₁ hconv₁
-  have hΓ₂e := key W₂ Γ₂ C₂ hW₂m hW₂B hΓ₂ hconv₂
+    rw [hΓof]
+    exact (tendsto_finset_sum _ fun s _ => (hconv s i j).const_mul _).congr fun k => (h2 k).symm
+  refine ⟨Γof C₁, Γof C₂, key W₁ C₁ hW₁m hW₁B hconv₁, key W₂ C₂ hW₂m hW₂B hconv₂, fun v => ?_⟩
   -- quadratic forms
   set qf : (S → Fin n → Fin n → ℝ) → S → ℝ := fun C s => ∑ i, ∑ j, v i * v j * C s i j with hqf
   have hquad : ∀ (Γ : Mat n) (C : S → Fin n → Fin n → ℝ), (∀ i j, Γ (i, j) = ∑ s, σ2 s * C s i j)
@@ -502,7 +500,7 @@ theorem StateDriven.lookback_covariance_mono (hσ : StateDriven μ ℱ σ ξ P)
     nlinarith [hc0 x, hc1 x]
   have hm := fun s => mono_of_fixed hp₂0 hp₂ρ hρ1 hl0 hl12 hl2 he0 (hfix l₁ C₁ hC₁)
     (hfix l₂ C₂ hC₂) s
-  rw [hquad Γ₁ C₁ hΓ₁e, hquad Γ₂ C₂ hΓ₂e]
+  rw [hquad (Γof C₁) C₁ (hΓof C₁), hquad (Γof C₂) C₂ (hΓof C₂)]
   exact ⟨sum_nonneg fun s _ => mul_nonneg (hσ20 s) (hm s).1,
     sum_le_sum fun s _ => mul_le_mul_of_nonneg_left (hm s).2 (hσ20 s)⟩
 
