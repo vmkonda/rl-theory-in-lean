@@ -202,6 +202,8 @@ which is the partial sum of the actor-only noise $`g(Y_k)Z_k - f`$. The incomple
 
 </div>
 
+*Lean:* `ScoreChain.td1_tdSum` (TD(1) is regression of the returns), `ScoreChain.td1_critic_direction` (the direction), `ScoreChain.td1_selector` ($`-CA_c^{-1}`$ selects the score block), `td1_noise_coboundary` (the pathwise identity $`N^{\mathrm{AC}}_k = N^{\mathrm{AO}}_k + H_{k+1} - H_k`$ with $`H_k = v_k(z^\psi_k - \psi_k)`$, the step form of [(2)](#eq:tel)) and `tendsto_secondMoment_of_coboundary` (a coboundary does not change the asymptotic covariance).
+
 <div id="thm:compat" class="theorem">
 
 **Theorem 4.2** (Compatible critic). *Let the critic use only the compatible features, $`\phi = \psi`$, with TD($`\lambda`$) for any $`\lambda`$. Then for every $`\theta`$ the mean direction equals the actor-only direction with trace parameter $`\lambda`$, and at its root the two effective noises coincide. Hence the two methods have the same limit and the same loss, for every gain.*
@@ -213,6 +215,8 @@ which is the partial sum of the actor-only noise $`g(Y_k)Z_k - f`$. The incomple
 *Proof.* Given the past, the action $`a_{k+1}`$ is drawn from $`\pi_\theta(\cdot\mid s_{k+1})`$ and the score has zero mean over actions, so $`\mathbb{E}[z_kc_{k+1}\psi_{k+1}^\top] = 0`$ and $`\mathbb{E}[z_k\psi_k^\top] = \mathbb{E}[\psi\psi^\top] + \lambda\mathbb{E}[c_kz_{k-1}\psi_k^\top] = \mathbb{E}[\psi\psi^\top]`$. Hence $`A_c = -\mathbb{E}[\psi\psi^\top] = -C`$, $`r^* = C^{-1}b`$, and $`f = Cr^* = b = \mathbb{E}[g(Y_k)z_k]`$, the actor-only direction with trace $`\lambda`$ (the two traces coincide). At the common root $`b = 0`$, so $`\hat r = 0`$, the actor’s noise $`V_k = \psi_k\psi_k^\top\hat r - C\hat r`$ vanishes, $`W_k = d_kz_k = g(Y_k)z_k`$, and $`-CA_c^{-1} = I`$. So $`N_k = g(Y_k)z_k`$, the actor-only noise at the same point. ◻
 
 </div>
+
+*Lean:* `ScoreChain.compatible_tdSum`, `ScoreChain.compatible_critic_direction` and `ScoreChain.compatible_critic_tdMatrix`.
 
 <div class="remark">
 
@@ -232,6 +236,8 @@ which is the partial sum of the actor-only noise $`g(Y_k)Z_k - f`$. The incomple
 \mathbb{E}[\psi Q] = (1-\gamma)\nabla J(\theta)`$, using $`\mathbb{E}[\psi\,h(s)] = 0`$ for functions of the state. At $`\theta^*`$, $`\mathbb{E}[\psi A] = 0`$ gives $`w = 0`$. ◻
 
 </div>
+
+*Lean:* `ScoreChain.value_critic_fixed_point` and `ScoreChain.value_critic_direction`.
 
 <div id="obs:tab" class="observation">
 
@@ -326,7 +332,9 @@ which is the partial sum of the actor-only noise $`g(Y_k)Z_k - f`$. The incomple
 
 - Propositions [3.3](#prop:loss), [3.5](#prop:dual) and [3.6](#prop:compare): formalized.
 
-- Assumption [2.2](#ass:lin) is a hypothesis. Lemma [2.1](#lem:delta), Theorems [4.1](#thm:td1), [4.2](#thm:compat) and [4.4](#thm:value) are proved here and checked numerically, but not yet in Lean: they need the restart chain and the traces of a policy family formalized as stochastic processes.
+- Theorems [4.1](#thm:td1), [4.2](#thm:compat) and [4.4](#thm:value): formalized in `RLTheory/MarkovDecisionProcess/CriticTheorems.lean` for a finite model of the sampling chain, `ScoreChain`: a chain on (restart flag, state, action) whose next action is drawn from the policy given the next state. This covers the restart chain and any other such chain. Two facts carry all the proofs: a function with mean zero over actions has $`\mathbb{E}[c(Y_{k+1})F(Y_{k+1})\mid Y_k] = 0`$ (`sum_Q_c_eq_zero`), and its correlation with the trace is its correlation with the current features (`sum_mul_trace_eq`). The stationary trace moments $`m(y) = \mathbb{E}[z_k1\{Y_k = y\}]`$ enter through the recursion that characterizes them, $`m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)`$.
+
+- Assumption [2.2](#ass:lin) is a hypothesis, and Lemma [2.1](#lem:delta) (an implicit-function computation) is not formalized.
 
 # References
 

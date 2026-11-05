@@ -277,6 +277,12 @@ which is the partial sum of the actor-only noise $g(Y_k)Z_k - f$. The incomplete
 ends contribute terms bounded in $L^2$, because episode lengths are geometric. So the long-run
 covariances agree.
 \end{proof}
+\noindent\emph{Lean:} \texttt{ScoreChain.td1\_tdSum} (TD(1) is regression of the returns),
+\texttt{ScoreChain.td1\_critic\_direction} (the direction), \texttt{ScoreChain.td1\_selector}
+($-CA_c^{-1}$ selects the score block), \texttt{td1\_noise\_coboundary} (the pathwise identity
+$N^{\mathrm{AC}}_k = N^{\mathrm{AO}}_k + H_{k+1} - H_k$ with $H_k = v_k(z^\psi_k - \psi_k)$, the step form of
+\eqref{eq:tel}) and \texttt{tendsto\_secondMoment\_of\_coboundary} (a coboundary does not change the
+asymptotic covariance).
 
 \begin{theorem}[Compatible critic]\label{thm:compat}
 Let the critic use only the compatible features, $\phi = \psi$, with TD($\lambda$) for any $\lambda$.
@@ -293,6 +299,8 @@ direction with trace $\lambda$ (the two traces coincide). At the common root $b 
 actor's noise $V_k = \psi_k\psi_k^\top\hat r - C\hat r$ vanishes, $W_k = d_kz_k = g(Y_k)z_k$, and
 $-CA_c^{-1} = I$. So $N_k = g(Y_k)z_k$, the actor-only noise at the same point.
 \end{proof}
+\noindent\emph{Lean:} \texttt{ScoreChain.compatible\_tdSum}, \texttt{ScoreChain.compatible\_critic\_direction}
+and \texttt{ScoreChain.compatible\_critic\_tdMatrix}.
 
 \begin{remark}
 For $\lambda < 1$ both methods in Theorem~\ref{thm:compat} are biased: their common limit is the
@@ -327,6 +335,8 @@ The actor direction is then $Cr^* = \E[\psi\psi^\top]w + \E[\psi\bar\phi^\top]u 
 \E[\psi Q] = (1-\gamma)\nabla J(\theta)$, using $\E[\psi\,h(s)] = 0$ for functions of the state. At $\theta^*$,
 $\E[\psi A] = 0$ gives $w = 0$.
 \end{proof}
+\noindent\emph{Lean:} \texttt{ScoreChain.value\_critic\_fixed\_point} and
+\texttt{ScoreChain.value\_critic\_direction}.
 
 \begin{observation}[Variance of the value-function critic]\label{obs:tab}
 By Theorem~\ref{thm:value} and Proposition~\ref{prop:compare}, with tabular state features the
@@ -380,9 +390,17 @@ the predicted covariances to about 5\%, supporting Assumption~\ref{ass:lin} in t
   linear iterations (single and two time scales, additive and multiplicative Markov noise), with the
   noise hypotheses verified for finite-chain and trace-driven noise.
 \item Propositions~\ref{prop:loss}, \ref{prop:dual} and~\ref{prop:compare}: formalized.
-\item Assumption~\ref{ass:lin} is a hypothesis. Lemma~\ref{lem:delta}, Theorems~\ref{thm:td1},
-  \ref{thm:compat} and~\ref{thm:value} are proved here and checked numerically, but not yet in Lean: they need the
-  restart chain and the traces of a policy family formalized as stochastic processes.
+\item Theorems~\ref{thm:td1}, \ref{thm:compat} and~\ref{thm:value}: formalized in
+  \texttt{RLTheory/MarkovDecisionProcess/CriticTheorems.lean} for a finite model of the sampling
+  chain, \texttt{ScoreChain}: a chain on (restart flag, state, action) whose next action is drawn from
+  the policy given the next state. This covers the restart chain and any other such chain. Two
+  facts carry all the proofs: a function with mean zero over actions has
+  $\E[c(Y_{k+1})F(Y_{k+1})\mid Y_k] = 0$ (\texttt{sum\_Q\_c\_eq\_zero}), and its correlation with the
+  trace is its correlation with the current features (\texttt{sum\_mul\_trace\_eq}). The stationary
+  trace moments $m(y) = \E[z_k1\{Y_k = y\}]$ enter through the recursion that characterizes them,
+  $m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)$.
+\item Assumption~\ref{ass:lin} is a hypothesis, and Lemma~\ref{lem:delta} (an implicit-function
+  computation) is not formalized.
 \end{itemize}
 
 \begin{thebibliography}{9}
