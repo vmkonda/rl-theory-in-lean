@@ -700,7 +700,7 @@ lemma le_sq_of_one_le {t : ℝ} (ht : 1 ≤ t) : t ≤ t ^ 2 := by nlinarith
 lemma tts_R1_le {b gm t sb sg d₁' cw Kx mM G Sw Sa SbM Sc : ℝ}
     (hb : 0 < b) (hgm : 0 < gm) (hsb : 0 < sb) (hsb2 : sb ^ 2 = b) (hsg : 0 ≤ sg)
     (hsg2 : sg ^ 2 = gm) (ht : 1 ≤ t) (hd : 0 ≤ d₁') (hcw : 0 ≤ cw) (hK : 0 ≤ Kx) (hm : 0 ≤ mM)
-    (hG : 0 ≤ G) (hSw0 : 0 ≤ Sw) (hSa0 : 0 ≤ Sa) (hSbM0 : 0 ≤ SbM) (hSc0 : 0 ≤ Sc)
+    (hG : 0 ≤ G) (hSw0 : 0 ≤ Sw) (_hSa0 : 0 ≤ Sa) (_hSbM0 : 0 ≤ SbM) (hSc0 : 0 ≤ Sc)
     (hSw : Sw ≤ cw * sg * t) (hSa : Sa ≤ √2 * (d₁' * sb * t + b * (cw * sg * t)))
     (hSbM : SbM ≤ b * mM) (hSc : Sc ≤ Kx * b * gm) :
     b ^ 2 * Sw ^ 2 + b ^ 2 * G + ((Sa + SbM + Sc) * Sc + Sc * (Sa + SbM)) ≤
@@ -759,8 +759,8 @@ lemma tts_R2_le {b gm t sb sg d₁' d₂' cw cq Kx Ky mM mM' nD LΔ G Z Sx SDw S
     (hsg2 : sg ^ 2 = gm) (ht : 1 ≤ t) (hd₁ : 0 ≤ d₁') (hd₂ : 0 ≤ d₂') (hcw : 0 ≤ cw)
     (hcq : 0 ≤ cq) (hKx : 0 ≤ Kx) (hKy : 0 ≤ Ky) (hm : 0 ≤ mM) (hm' : 0 ≤ mM') (hnD : 0 ≤ nD)
     (hLΔ : 0 ≤ LΔ) (hG : 0 ≤ G)
-    (hSx0 : 0 ≤ Sx) (hSDw0 : 0 ≤ SDw) (hSw0 : 0 ≤ Sw) (hSq0 : 0 ≤ Sq) (hSM0 : 0 ≤ SM)
-    (hSDM0 : 0 ≤ SDM) (hSa0 : 0 ≤ Sa) (hSbM0 : 0 ≤ SbM) (hSc0 : 0 ≤ Sc) (hScy0 : 0 ≤ Scy)
+    (_hSx0 : 0 ≤ Sx) (hSDw0 : 0 ≤ SDw) (_hSw0 : 0 ≤ Sw) (hSq0 : 0 ≤ Sq) (_hSM0 : 0 ≤ SM)
+    (hSDM0 : 0 ≤ SDM) (_hSa0 : 0 ≤ Sa) (_hSbM0 : 0 ≤ SbM) (_hSc0 : 0 ≤ Sc) (hScy0 : 0 ≤ Scy)
     (hSay0 : 0 ≤ Say) (hSbv0 : 0 ≤ Sbv)
     (hSx : Sx ≤ d₁' * sb * t) (hSDw : SDw ≤ nD * (cw * sg * t)) (hSw : Sw ≤ cw * sg * t)
     (hZ : Z ≤ b * t ^ 2) (hSq : Sq ≤ cq * gm * sg * t) (hSM : SM ≤ mM) (hSDM : SDM ≤ nD * mM)
@@ -850,10 +850,10 @@ lemma tts_R2_le {b gm t sb sg d₁' d₂' cw cq Kx Ky mM mM' nD LΔ G Z Sx SDw S
 /-- The remainder of the fast recursion is `ε₃ γ² n`. -/
 lemma tts_R3_le {b gm t sg d₂' cw cq Ky mM mM' nD G Sy SDw Sq SM' SDM Scy Say Sbv : ℝ}
     (hb : 0 < b) (hgm : 0 < gm) (hsg : 0 < sg)
-    (hsg2 : sg ^ 2 = gm) (ht : 1 ≤ t) (hd₂ : 0 ≤ d₂') (hcw : 0 ≤ cw)
+    (hsg2 : sg ^ 2 = gm) (ht : 1 ≤ t) (hd₂ : 0 ≤ d₂') (_hcw : 0 ≤ cw)
     (hcq : 0 ≤ cq) (hKy : 0 ≤ Ky) (hm : 0 ≤ mM) (hm' : 0 ≤ mM') (hnD : 0 ≤ nD) (hG : 0 ≤ G)
-    (hSy0 : 0 ≤ Sy) (hSDw0 : 0 ≤ SDw) (hSq0 : 0 ≤ Sq) (hSM'0 : 0 ≤ SM') (hSDM0 : 0 ≤ SDM)
-    (hScy0 : 0 ≤ Scy) (hSay0 : 0 ≤ Say) (hSbv0 : 0 ≤ Sbv)
+    (_hSy0 : 0 ≤ Sy) (hSDw0 : 0 ≤ SDw) (hSq0 : 0 ≤ Sq) (_hSM'0 : 0 ≤ SM') (hSDM0 : 0 ≤ SDM)
+    (hScy0 : 0 ≤ Scy) (_hSay0 : 0 ≤ Say) (_hSbv0 : 0 ≤ Sbv)
     (hSy : Sy ≤ d₂' * sg * t) (hSDw : SDw ≤ nD * (cw * sg * t)) (hSq : Sq ≤ cq * gm * sg * t)
     (hSM' : SM' ≤ mM') (hSDM : SDM ≤ nD * mM) (hScy : Scy ≤ Ky * gm ^ 2)
     (hSay : Say ≤ √2 * (d₂' * sg * t + cq * gm * sg * t)) (hSbv : Sbv ≤ √2 * (gm * mM' + b * (nD * mM))) :
@@ -925,7 +925,7 @@ lemma tts_R3_le {b gm t sg d₂' cw cq Ky mM mM' nD G Sy SDw Sq SM' SDM Scy Say 
 /-- A pointwise bound on the slow remainder `c` of Lemma 3.1. -/
 lemma norm_tts_cx_le (Δ : Matrix (Fin d₁) (Fin d₁) ℝ) (A₁₂ : Matrix (Fin d₁) (Fin d₂) ℝ)
     (D : Matrix (Fin d₂) (Fin d₁) ℝ) {b b' gm Bq Cs : ℝ} (hb : 0 ≤ b) (hgm : 0 ≤ gm)
-    (hbq : b ≤ Bq * gm) (hCs : |b' - b| ≤ Cs * b ^ 2) (hBq : 0 ≤ Bq) (hCs0 : 0 ≤ Cs)
+    (hbq : b ≤ Bq * gm) (hCs : |b' - b| ≤ Cs * b ^ 2) (_hBq : 0 ≤ Bq) (hCs0 : 0 ≤ Cs)
     (hh hh' : E d₁) (gg : E d₂) :
     ‖b • (b • matCLM Δ hh + gm • matCLM A₁₂ gg + b • matCLM A₁₂ (matCLM D hh)) + (b' - b) • hh'‖ ≤
       b * gm * ((Bq * ‖matCLM Δ‖ + Bq * ‖matCLM A₁₂‖ * ‖matCLM D‖) * ‖hh‖
@@ -985,7 +985,7 @@ lemma norm_tts_cy_le (Δ : Matrix (Fin d₁) (Fin d₁) ℝ) (A₁₂ : Matrix (
     (A₂₂ : Matrix (Fin d₂) (Fin d₂) ℝ) (D : Matrix (Fin d₂) (Fin d₁) ℝ)
     {b b' gm gm' Bq Cs Ct : ℝ} (hb : 0 ≤ b) (hgm : 0 ≤ gm)
     (hbq : b ≤ Bq * gm) (hCs : |b' - b| ≤ Cs * b ^ 2) (hCt : |gm' - gm| ≤ Ct * gm ^ 2)
-    (hBq : 0 ≤ Bq) (hCs0 : 0 ≤ Cs) (hCt0 : 0 ≤ Ct) (hh hh' : E d₁) (gg gg' : E d₂) :
+    (_hBq : 0 ≤ Bq) (hCs0 : 0 ≤ Cs) (_hCt0 : 0 ≤ Ct) (hh hh' : E d₁) (gg gg' : E d₂) :
     ‖gm • matCLM A₂₂ (gm • gg + b • matCLM D hh)
         + b • matCLM D (b • matCLM Δ hh + gm • matCLM A₁₂ gg + b • matCLM A₁₂ (matCLM D hh))
         + (gm' - gm) • gg' + (b' - b) • matCLM D hh'‖ ≤
@@ -1134,5 +1134,797 @@ lemma rms_le_of_norm_le4 {d e₁ e₂ e₃ e₄ : ℕ} {f : Ω → E d} {u₁ : 
       + 2 * (a₃ * r₃) * (a₄ * r₄)) := by ring
   rw [e]
   linarith only [hc]
+
+/-! ### Sizes of the pieces -/
+
+lemma rms_le_sqrt_secondMoment {d : ℕ} {f : Ω → E d} (hf : MemLp f 2 μ) :
+    rms μ f ≤ √(d * ‖secondMoment μ f‖) :=
+  Real.sqrt_le_sqrt (integral_norm_sq_le hf)
+
+/-- The root-mean-square sizes of the pieces of one step, in terms of
+`t = √(1 + ‖X‖/β + ‖Z‖/β + ‖Y‖/γ)`. -/
+lemma tts_sizes (Δ : Matrix (Fin d₁) (Fin d₁) ℝ) (A₁₂ : Matrix (Fin d₁) (Fin d₂) ℝ)
+    (A₂₂ : Matrix (Fin d₂) (Fin d₂) ℝ) (D : Matrix (Fin d₂) (Fin d₁) ℝ)
+    {xs : Ω → E d₁} {ys : Ω → E d₂} {b gm Bq cw cq : ℝ} (hb : 0 < b) (hgm : 0 < gm)
+    (hBq : 0 ≤ Bq) (hbq : b ≤ Bq * gm) (hxsL : MemLp xs 2 μ) (hysL : MemLp ys 2 μ)
+    (hcw : cw = √2 * (‖matCLM Δ‖ * √d₁ * √Bq + ‖matCLM A₁₂‖ * √d₂))
+    (hcq : cq = √2 * (‖matCLM A₂₂‖ * √d₂ + Bq * ‖matCLM D‖ * cw)) :
+    let t := √(1 + ‖secondMoment μ xs‖ / b + ‖crossMoment μ xs ys‖ / b + ‖secondMoment μ ys‖ / gm)
+    let w := fun ω => matCLM Δ (xs ω) + matCLM A₁₂ (ys ω)
+    let q := fun ω => gm • matCLM A₂₂ (ys ω) + b • matCLM D (w ω)
+    1 ≤ t ∧ rms μ xs ≤ √d₁ * √b * t ∧ rms μ ys ≤ √d₂ * √gm * t ∧ rms μ w ≤ cw * √gm * t ∧
+    rms μ (fun ω => matCLM D (w ω)) ≤ ‖matCLM D‖ * (cw * √gm * t) ∧
+    rms μ q ≤ cq * gm * √gm * t ∧
+    rms μ (fun ω => xs ω - b • w ω) ≤ √2 * (√d₁ * √b * t + b * (cw * √gm * t)) ∧
+    rms μ (fun ω => ys ω - q ω) ≤ √2 * (√d₂ * √gm * t + cq * gm * √gm * t) ∧
+    ‖crossMoment μ xs ys‖ ≤ b * t ^ 2 := by
+  intro t w q
+  set X := ‖secondMoment μ xs‖
+  set Z := ‖crossMoment μ xs ys‖
+  set Y := ‖secondMoment μ ys‖
+  have hX0 : 0 ≤ X := norm_nonneg _
+  have hZ0 : 0 ≤ Z := norm_nonneg _
+  have hY0 : 0 ≤ Y := norm_nonneg _
+  have hn0 : 0 ≤ 1 + X / b + Z / b + Y / gm := by positivity
+  have ht2 : t ^ 2 = 1 + X / b + Z / b + Y / gm := Real.sq_sqrt hn0
+  have ht1 : 1 ≤ t := by
+    refine Real.le_sqrt_of_sq_le ?_
+    have : 0 ≤ X / b + Z / b + Y / gm := by positivity
+    linarith
+  have ht0 : 0 ≤ t := zero_le_one.trans ht1
+  have hXn : X ≤ b * t ^ 2 := by
+    rw [ht2]
+    have : X / b ≤ 1 + X / b + Z / b + Y / gm := by
+      have : 0 ≤ Z / b + Y / gm := by positivity
+      linarith
+    calc X = b * (X / b) := by field_simp
+      _ ≤ _ := mul_le_mul_of_nonneg_left this hb.le
+  have hZn : Z ≤ b * t ^ 2 := by
+    rw [ht2]
+    have : Z / b ≤ 1 + X / b + Z / b + Y / gm := by
+      have : 0 ≤ X / b + Y / gm := by positivity
+      linarith
+    calc Z = b * (Z / b) := by field_simp
+      _ ≤ _ := mul_le_mul_of_nonneg_left this hb.le
+  have hYn : Y ≤ gm * t ^ 2 := by
+    rw [ht2]
+    have : Y / gm ≤ 1 + X / b + Z / b + Y / gm := by
+      have : 0 ≤ X / b + Z / b := by positivity
+      linarith
+    calc Y = gm * (Y / gm) := by field_simp
+      _ ≤ _ := mul_le_mul_of_nonneg_left this hgm.le
+  have sq3 : ∀ {c u : ℝ}, 0 ≤ c → 0 ≤ u → √(c * (u * t ^ 2)) = √c * √u * t := by
+    intro c u hc hu
+    rw [Real.sqrt_mul hc, Real.sqrt_mul hu, Real.sqrt_sq ht0, mul_assoc]
+  have hSx : rms μ xs ≤ √d₁ * √b * t := by
+    refine (rms_le_sqrt_secondMoment hxsL).trans ?_
+    rw [← sq3 (Nat.cast_nonneg d₁) hb.le]
+    exact Real.sqrt_le_sqrt (mul_le_mul_of_nonneg_left hXn (Nat.cast_nonneg d₁))
+  have hSy : rms μ ys ≤ √d₂ * √gm * t := by
+    refine (rms_le_sqrt_secondMoment hysL).trans ?_
+    rw [← sq3 (Nat.cast_nonneg d₂) hgm.le]
+    exact Real.sqrt_le_sqrt (mul_le_mul_of_nonneg_left hYn (Nat.cast_nonneg d₂))
+  have hsb : √b ≤ √Bq * √gm := by
+    rw [← Real.sqrt_mul hBq]; exact Real.sqrt_le_sqrt hbq
+  have nΔ := norm_nonneg (matCLM Δ)
+  have n12 := norm_nonneg (matCLM A₁₂)
+  have n22 := norm_nonneg (matCLM A₂₂)
+  have nD := norm_nonneg (matCLM D)
+  have hΔL : MemLp (fun ω => matCLM Δ (xs ω)) 2 μ := (matCLM Δ).comp_memLp' hxsL
+  have hAL : MemLp (fun ω => matCLM A₁₂ (ys ω)) 2 μ := (matCLM A₁₂).comp_memLp' hysL
+  have hwL : MemLp w 2 μ := hΔL.add hAL
+  have hSw : rms μ w ≤ cw * √gm * t := by
+    refine (rms_add_le hΔL hAL).trans ?_
+    have h1 := rms_matCLM_le Δ hxsL (μ := μ)
+    have h2 := rms_matCLM_le A₁₂ hysL (μ := μ)
+    have h3 : √b * t ≤ √Bq * √gm * t := mul_le_mul_of_nonneg_right hsb ht0
+    have e : cw * √gm * t = √2 * (‖matCLM Δ‖ * √d₁ * (√Bq * √gm * t)
+        + ‖matCLM A₁₂‖ * (√d₂ * √gm * t)) := by rw [hcw]; ring
+    rw [e]
+    refine mul_le_mul_of_nonneg_left ?_ (Real.sqrt_nonneg _)
+    have h4 : ‖matCLM Δ‖ * rms μ xs ≤ ‖matCLM Δ‖ * √d₁ * (√Bq * √gm * t) := by
+      calc ‖matCLM Δ‖ * rms μ xs ≤ ‖matCLM Δ‖ * (√d₁ * √b * t) := mul_le_mul_of_nonneg_left hSx nΔ
+        _ = ‖matCLM Δ‖ * √d₁ * (√b * t) := by ring
+        _ ≤ _ := mul_le_mul_of_nonneg_left h3 (by positivity)
+    have h5 := mul_le_mul_of_nonneg_left hSy n12
+    linarith
+  have hSDw : rms μ (fun ω => matCLM D (w ω)) ≤ ‖matCLM D‖ * (cw * √gm * t) :=
+    (rms_matCLM_le D hwL).trans (mul_le_mul_of_nonneg_left hSw nD)
+  have hcw0 : 0 ≤ cw := by rw [hcw]; positivity
+  have hSq : rms μ q ≤ cq * gm * √gm * t := by
+    have hgA : MemLp (fun ω => gm • matCLM A₂₂ (ys ω)) 2 μ := ((matCLM A₂₂).comp_memLp' hysL).const_smul gm
+    have hbD : MemLp (fun ω => b • matCLM D (w ω)) 2 μ := ((matCLM D).comp_memLp' hwL).const_smul b
+    refine (rms_add_le hgA hbD).trans ?_
+    rw [rms_smul, rms_smul, abs_of_pos hgm, abs_of_pos hb]
+    have h1 := rms_matCLM_le A₂₂ hysL (μ := μ)
+    have e : cq * gm * √gm * t = √2 * (gm * (‖matCLM A₂₂‖ * (√d₂ * √gm * t))
+        + Bq * gm * (‖matCLM D‖ * (cw * √gm * t))) := by rw [hcq]; ring
+    rw [e]
+    refine mul_le_mul_of_nonneg_left ?_ (Real.sqrt_nonneg _)
+    have h2 : gm * rms μ (fun ω => matCLM A₂₂ (ys ω)) ≤ gm * (‖matCLM A₂₂‖ * (√d₂ * √gm * t)) :=
+      mul_le_mul_of_nonneg_left (h1.trans (mul_le_mul_of_nonneg_left hSy n22)) hgm.le
+    have h3 : b * rms μ (fun ω => matCLM D (w ω)) ≤ Bq * gm * (‖matCLM D‖ * (cw * √gm * t)) :=
+      mul_le_mul hbq hSDw (rms_nonneg _) (by positivity)
+    linarith
+  have hSa : rms μ (fun ω => xs ω - b • w ω) ≤ √2 * (√d₁ * √b * t + b * (cw * √gm * t)) := by
+    have hbw : MemLp (fun ω => b • w ω) 2 μ := hwL.const_smul b
+    refine (rms_sub_le hxsL hbw).trans ?_
+    rw [rms_smul, abs_of_pos hb]
+    refine mul_le_mul_of_nonneg_left (add_le_add hSx (mul_le_mul_of_nonneg_left hSw hb.le))
+      (Real.sqrt_nonneg _)
+  have hqL : MemLp q 2 μ := (((matCLM A₂₂).comp_memLp' hysL).const_smul gm).add
+    (((matCLM D).comp_memLp' hwL).const_smul b)
+  have hSay : rms μ (fun ω => ys ω - q ω) ≤ √2 * (√d₂ * √gm * t + cq * gm * √gm * t) :=
+    (rms_sub_le hysL hqL).trans (mul_le_mul_of_nonneg_left (add_le_add hSy hSq) (Real.sqrt_nonneg _))
+  exact ⟨ht1, hSx, hSy, hSw, hSDw, hSq, hSa, hSay, hZn⟩
+
+/-! ### The remainders of one step -/
+
+/-- The three parts of the vanishing factor of the remainders. -/
+noncomputable def ttsEps₁ (b gm G d₁' cw Kx mM : ℝ) : ℝ :=
+  cw ^ 2 * gm + G + 2 * (√2 * Kx * (d₁' * (gm / √b) + cw * gm * √gm) + mM * Kx * gm
+    + Kx ^ 2 * gm ^ 2)
+
+noncomputable def ttsEps₂ (b gm G d₁' d₂' cw cq Kx Ky mM mM' nD LΔ : ℝ) : ℝ :=
+  d₁' * nD * cw * (√b / √gm) + LΔ * (b / gm) + cw * cq * gm + G + (b / gm) * (nD * mM ^ 2)
+    + √2 * Ky * (d₁' * (gm / √b) + cw * √gm * gm) + mM * Ky * gm + Kx * Ky * gm ^ 2
+    + Kx * √2 * (d₂' * √gm + cq * gm * √gm) + Kx * √2 * (gm * mM' + b * (nD * mM))
+
+noncomputable def ttsEps₃ (b gm G d₂' cw cq Ky mM mM' nD : ℝ) : ℝ :=
+  2 * d₂' * nD * cw * (b / gm) + cq ^ 2 * gm + G + 2 * (b / gm) * (mM' * (nD * mM))
+    + (b / gm) ^ 2 * (nD * mM) ^ 2 + 2 * (√2 * Ky * (d₂' * √gm + cq * gm * √gm))
+    + 2 * (√2 * Ky * (gm * mM' + b * (nD * mM))) + Ky ^ 2 * gm ^ 2
+
+set_option maxHeartbeats 2000000 in
+/-- Lemma 3.2 of the write-up, for one step: the three remainders are bounded by the
+vanishing factors `ttsEps₁`, `ttsEps₂`, `ttsEps₃` times `β² n`, `β γ n`, `γ² n`. -/
+theorem tts_remainder_step [IsProbabilityMeasure μ] {ℱ : MeasurableSpace Ω} (hℱ : ℱ ≤ m0)
+    (Δ : Matrix (Fin d₁) (Fin d₁) ℝ) (A₁₂ : Matrix (Fin d₁) (Fin d₂) ℝ)
+    (A₂₂ : Matrix (Fin d₂) (Fin d₂) ℝ) (D : Matrix (Fin d₂) (Fin d₁) ℝ)
+    {xs xs' M h h' : Ω → E d₁} {ys ys' M' g g' : Ω → E d₂}
+    {b b' gm gm' Bq Cs Ct mh mg mM mM' cw cq Kx Ky : ℝ}
+    (hb : 0 < b) (hgm : 0 < gm) (hBq : 0 ≤ Bq) (hCs0 : 0 ≤ Cs) (hCt0 : 0 ≤ Ct)
+    (hbq : b ≤ Bq * gm) (hCs : |b' - b| ≤ Cs * b ^ 2) (hCt : |gm' - gm| ≤ Ct * gm ^ 2)
+    (hxs : StronglyMeasurable[ℱ] xs) (hys : StronglyMeasurable[ℱ] ys)
+    (hxsL : MemLp xs 2 μ) (hysL : MemLp ys 2 μ) (hML : MemLp M 2 μ) (hM'L : MemLp M' 2 μ)
+    (hhL : MemLp h 2 μ) (hh'L : MemLp h' 2 μ) (hgL : MemLp g 2 μ) (hg'L : MemLp g' 2 μ)
+    (hmart : ∀ j, μ[fun ω => M ω j | ℱ] =ᵐ[μ] 0) (hmart' : ∀ j, μ[fun ω => M' ω j | ℱ] =ᵐ[μ] 0)
+    (hmh : 0 ≤ mh) (hmg : 0 ≤ mg) (hmM : 0 ≤ mM) (hmM' : 0 ≤ mM')
+    (rh : rms μ h ≤ mh) (rh' : rms μ h' ≤ mh) (rg : rms μ g ≤ mg) (rg' : rms μ g' ≤ mg)
+    (rM : rms μ M ≤ mM) (rM' : rms μ M' ≤ mM')
+    (hcw : cw = √2 * (‖matCLM Δ‖ * √d₁ * √Bq + ‖matCLM A₁₂‖ * √d₂))
+    (hcq : cq = √2 * (‖matCLM A₂₂‖ * √d₂ + Bq * ‖matCLM D‖ * cw))
+    (hKx : Kx = 2 * ((Bq * ‖matCLM Δ‖ + Bq * ‖matCLM A₁₂‖ * ‖matCLM D‖) * mh
+      + ‖matCLM A₁₂‖ * mg + Cs * Bq * mh))
+    (hKy : Ky = 2 * ((Bq * ‖matCLM A₂₂‖ * ‖matCLM D‖ + Bq ^ 2 * ‖matCLM D‖ * ‖matCLM Δ‖
+          + Bq ^ 2 * ‖matCLM D‖ * ‖matCLM A₁₂‖ * ‖matCLM D‖) * mh
+        + (‖matCLM A₂₂‖ + Bq * ‖matCLM D‖ * ‖matCLM A₁₂‖) * mg + Ct * mg
+        + Cs * Bq ^ 2 * ‖matCLM D‖ * mh))
+    (hxs' : ∀ ω, xs' ω = (xs ω - b • (matCLM Δ (xs ω) + matCLM A₁₂ (ys ω))) + b • M ω
+      + (b • (b • matCLM Δ (h ω) + gm • matCLM A₁₂ (g ω) + b • matCLM A₁₂ (matCLM D (h ω)))
+        + (b' - b) • h' ω))
+    (hys' : ∀ ω, ys' ω = (ys ω - (gm • matCLM A₂₂ (ys ω)
+        + b • matCLM D (matCLM Δ (xs ω) + matCLM A₁₂ (ys ω))))
+      + (gm • M' ω + b • matCLM D (M ω))
+      + (gm • matCLM A₂₂ (gm • g ω + b • matCLM D (h ω))
+        + b • matCLM D (b • matCLM Δ (h ω) + gm • matCLM A₁₂ (g ω) + b • matCLM A₁₂ (matCLM D (h ω)))
+        + (gm' - gm) • g' ω + (b' - b) • matCLM D (h' ω)))
+    (Γ₁ : Mat d₁) (Γ₂ : Rect d₁ d₂) (Γ₃ : Mat d₂) :
+    let n := 1 + ‖secondMoment μ xs‖ / b + ‖crossMoment μ xs ys‖ / b + ‖secondMoment μ ys‖ / gm
+    ‖secondMoment μ xs' - (secondMoment μ xs - b • (lyapOp Δ (secondMoment μ xs)
+        + coupleCLM A₁₂ (crossMoment μ xs ys)) + b ^ 2 • Γ₁)‖ ≤
+      ttsEps₁ b gm ‖secondMoment μ M - Γ₁‖ √d₁ cw Kx mM * b ^ 2 * n ∧
+    ‖crossMoment μ xs' ys' - (crossMoment μ xs ys - gm • rmul A₂₂ (crossMoment μ xs ys)
+        - b • lmul A₁₂ (secondMoment μ ys) + (b * gm) • Γ₂)‖ ≤
+      ttsEps₂ b gm ‖crossMoment μ M M' - Γ₂‖ √d₁ √d₂ cw cq Kx Ky mM mM' ‖matCLM D‖
+        ‖(lmul Δ : Rect d₁ d₂ →L[ℝ] Rect d₁ d₂)‖ * (b * gm) * n ∧
+    ‖secondMoment μ ys' - (secondMoment μ ys - gm • lyapOp A₂₂ (secondMoment μ ys)
+        + gm ^ 2 • Γ₃)‖ ≤
+      ttsEps₃ b gm ‖secondMoment μ M' - Γ₃‖ √d₂ cw cq Ky mM mM' ‖matCLM D‖ * gm ^ 2 * n := by
+  intro n
+  obtain ⟨ht1, hSx, hSy, hSw, hSDw, hSq, hSa, hSay, hZn⟩ :=
+    tts_sizes (μ := μ) Δ A₁₂ A₂₂ D hb hgm hBq hbq hxsL hysL hcw hcq
+  set t := √n with ht_def
+  have ht2 : t ^ 2 = n := Real.sq_sqrt (by
+    have : 1 ≤ t := ht1
+    have h0 : 0 ≤ n := by
+      simp only [n]; positivity
+    exact h0)
+  have nΔ := norm_nonneg (matCLM Δ)
+  have n12 := norm_nonneg (matCLM A₁₂)
+  have n22 := norm_nonneg (matCLM A₂₂)
+  have nD := norm_nonneg (matCLM D)
+  have hcw0 : 0 ≤ cw := by rw [hcw]; positivity
+  have hcq0 : 0 ≤ cq := by rw [hcq]; positivity
+  have hKx0 : 0 ≤ Kx := by rw [hKx]; positivity
+  have hKy0 : 0 ≤ Ky := by rw [hKy]; positivity
+  -- the remainders and their sizes
+  set cx := fun ω => b • (b • matCLM Δ (h ω) + gm • matCLM A₁₂ (g ω)
+    + b • matCLM A₁₂ (matCLM D (h ω))) + (b' - b) • h' ω with hcx
+  set cy := fun ω => gm • matCLM A₂₂ (gm • g ω + b • matCLM D (h ω))
+    + b • matCLM D (b • matCLM Δ (h ω) + gm • matCLM A₁₂ (g ω) + b • matCLM A₁₂ (matCLM D (h ω)))
+    + (gm' - gm) • g' ω + (b' - b) • matCLM D (h' ω) with hcy
+  have hDhL : MemLp (fun ω => matCLM D (h ω)) 2 μ := (matCLM D).comp_memLp' hhL
+  have hinL : MemLp (fun ω => b • matCLM Δ (h ω) + gm • matCLM A₁₂ (g ω)
+      + b • matCLM A₁₂ (matCLM D (h ω))) 2 μ :=
+    ((((matCLM Δ).comp_memLp' hhL).const_smul b).add
+      (((matCLM A₁₂).comp_memLp' hgL).const_smul gm)).add
+      (((matCLM A₁₂).comp_memLp' hDhL).const_smul b)
+  have hcxL : MemLp cx 2 μ := (hinL.const_smul b).add (hh'L.const_smul (b' - b))
+  have hcyL : MemLp cy 2 μ :=
+    (((((matCLM A₂₂).comp_memLp' ((hgL.const_smul gm).add (hDhL.const_smul b))).const_smul gm).add
+      (((matCLM D).comp_memLp' hinL).const_smul b)).add (hg'L.const_smul (gm' - gm))).add
+      (((matCLM D).comp_memLp' hh'L).const_smul (b' - b))
+  have hSc : rms μ cx ≤ Kx * b * gm := by
+    have := rms_le_of_norm_le4 (μ := μ) hcxL hhL hgL hh'L hhL (mul_nonneg hb.le hgm.le)
+      (by positivity : 0 ≤ Bq * ‖matCLM Δ‖ + Bq * ‖matCLM A₁₂‖ * ‖matCLM D‖) n12
+      (mul_nonneg hCs0 hBq) le_rfl (fun ω => by
+        have := norm_tts_cx_le Δ A₁₂ D hb.le hgm.le hbq hCs hBq hCs0 (h ω) (h' ω) (g ω)
+        rw [zero_mul, add_zero]
+        exact this)
+    refine this.trans ?_
+    rw [hKx]
+    have e1 := mul_le_mul_of_nonneg_left rh
+      (by positivity : 0 ≤ Bq * ‖matCLM Δ‖ + Bq * ‖matCLM A₁₂‖ * ‖matCLM D‖)
+    have e2 := mul_le_mul_of_nonneg_left rg n12
+    have e3 := mul_le_mul_of_nonneg_left rh' (mul_nonneg hCs0 hBq)
+    have hbg := mul_nonneg hb.le hgm.le
+    nlinarith
+  have hScy : rms μ cy ≤ Ky * gm ^ 2 := by
+    have := rms_le_of_norm_le4 (μ := μ) hcyL hhL hgL hg'L hh'L (sq_nonneg gm)
+      (by positivity : 0 ≤ Bq * ‖matCLM A₂₂‖ * ‖matCLM D‖ + Bq ^ 2 * ‖matCLM D‖ * ‖matCLM Δ‖
+          + Bq ^ 2 * ‖matCLM D‖ * ‖matCLM A₁₂‖ * ‖matCLM D‖)
+      (by positivity : 0 ≤ ‖matCLM A₂₂‖ + Bq * ‖matCLM D‖ * ‖matCLM A₁₂‖) hCt0
+      (by positivity : 0 ≤ Cs * Bq ^ 2 * ‖matCLM D‖)
+      (fun ω => norm_tts_cy_le Δ A₁₂ A₂₂ D hb.le hgm.le hbq hCs hCt hBq hCs0 hCt0
+        (h ω) (h' ω) (g ω) (g' ω))
+    refine this.trans ?_
+    rw [hKy]
+    have e1 := mul_le_mul_of_nonneg_left rh
+      (by positivity : 0 ≤ Bq * ‖matCLM A₂₂‖ * ‖matCLM D‖ + Bq ^ 2 * ‖matCLM D‖ * ‖matCLM Δ‖
+          + Bq ^ 2 * ‖matCLM D‖ * ‖matCLM A₁₂‖ * ‖matCLM D‖)
+    have e2 := mul_le_mul_of_nonneg_left rg
+      (by positivity : 0 ≤ ‖matCLM A₂₂‖ + Bq * ‖matCLM D‖ * ‖matCLM A₁₂‖)
+    have e3 := mul_le_mul_of_nonneg_left rg' hCt0
+    have e4 := mul_le_mul_of_nonneg_left rh' (by positivity : 0 ≤ Cs * Bq ^ 2 * ‖matCLM D‖)
+    have hg2 := sq_nonneg gm
+    nlinarith
+  have hDML : MemLp (fun ω => matCLM D (M ω)) 2 μ := (matCLM D).comp_memLp' hML
+  have hSDM : rms μ (fun ω => matCLM D (M ω)) ≤ ‖matCLM D‖ * mM :=
+    (rms_matCLM_le D hML).trans (mul_le_mul_of_nonneg_left rM nD)
+  have hSbM : rms μ (fun ω => b • M ω) ≤ b * mM := by
+    rw [rms_smul, abs_of_pos hb]; exact mul_le_mul_of_nonneg_left rM hb.le
+  have hSbv : rms μ (fun ω => gm • M' ω + b • matCLM D (M ω)) ≤
+      √2 * (gm * mM' + b * (‖matCLM D‖ * mM)) := by
+    have hgM' : MemLp (fun ω => gm • M' ω) 2 μ := hM'L.const_smul gm
+    have hbDM : MemLp (fun ω => b • matCLM D (M ω)) 2 μ := hDML.const_smul b
+    refine (rms_add_le hgM' hbDM).trans ?_
+    rw [rms_smul, rms_smul, abs_of_pos hgm, abs_of_pos hb]
+    exact mul_le_mul_of_nonneg_left (add_le_add (mul_le_mul_of_nonneg_left rM' hgm.le)
+      (mul_le_mul_of_nonneg_left hSDM hb.le)) (Real.sqrt_nonneg _)
+  -- the step lemmas
+  have exs : xs' = fun ω => (xs ω - b • (matCLM Δ (xs ω) + matCLM A₁₂ (ys ω))) + b • M ω + cx ω :=
+    funext hxs'
+  have eys : ys' = fun ω => (ys ω - (gm • matCLM A₂₂ (ys ω)
+      + b • matCLM D (matCLM Δ (xs ω) + matCLM A₁₂ (ys ω))))
+      + (gm • M' ω + b • matCLM D (M ω)) + cy ω := funext hys'
+  have sX := tts_step_X (μ := μ) (b := b) hℱ Δ A₁₂ hxs hys hxsL hysL hML hcxL hmart Γ₁
+  have sZ := tts_step_Z (μ := μ) hℱ Δ A₁₂ A₂₂ D hb.le hgm.le hxs hys hxsL hysL hML hM'L hcxL hcyL
+    hmart hmart' Γ₂
+  have sY := tts_step_Y (μ := μ) hℱ Δ A₁₂ A₂₂ D hb.le hgm.le hxs hys hxsL hysL hML hM'L hcyL
+    hmart hmart' Γ₃
+  dsimp only at sZ sY
+  rw [exs, eys]
+  have sb0 : 0 < √b := Real.sqrt_pos.mpr hb
+  have sg0 : 0 < √gm := Real.sqrt_pos.mpr hgm
+  have sb2 : √b ^ 2 = b := Real.sq_sqrt hb.le
+  have sg2 : √gm ^ 2 = gm := Real.sq_sqrt hgm.le
+  have d1 := Real.sqrt_nonneg (d₁ : ℝ)
+  have d2 := Real.sqrt_nonneg (d₂ : ℝ)
+  refine ⟨?_, ?_, ?_⟩
+  · refine sX.trans ?_
+    have := tts_R1_le hb hgm sb0 sb2 sg0.le sg2 ht1 d1 hcw0 hKx0 hmM (norm_nonneg (secondMoment μ M - Γ₁))
+      (rms_nonneg _) (rms_nonneg _) (rms_nonneg _) (rms_nonneg _) hSw hSa hSbM hSc
+    rw [ht2] at this
+    exact this
+  · have hL : ‖lmul Δ (crossMoment μ xs ys)‖ ≤
+        ‖(lmul Δ : Rect d₁ d₂ →L[ℝ] Rect d₁ d₂)‖ * ‖crossMoment μ xs ys‖ := (lmul Δ).le_opNorm _
+    have := tts_R2_le hb hgm sb0 sb2 sg0 sg2 ht1 d1 d2 hcw0 hcq0 hKx0 hKy0 hmM hmM' nD
+      (norm_nonneg (lmul Δ : Rect d₁ d₂ →L[ℝ] Rect d₁ d₂)) (norm_nonneg (crossMoment μ M M' - Γ₂))
+      (rms_nonneg _) (rms_nonneg _) (rms_nonneg _) (rms_nonneg _)
+      (rms_nonneg _) (rms_nonneg _) (rms_nonneg _) (rms_nonneg _) (rms_nonneg _) (rms_nonneg _)
+      (rms_nonneg _) (rms_nonneg _) hSx hSDw hSw hZn hSq rM hSDM hSa hSbM hSc hScy hSay hSbv
+    rw [ht2] at this
+    refine sZ.trans (le_trans ?_ this)
+    have := mul_le_mul_of_nonneg_left hL hb.le
+    linarith
+  · have := tts_R3_le hb hgm sg0 sg2 ht1 d2 hcw0 hcq0 hKy0 hmM hmM' nD (norm_nonneg (secondMoment μ M' - Γ₃))
+      (rms_nonneg _) (rms_nonneg _) (rms_nonneg _) (rms_nonneg _) (rms_nonneg _) (rms_nonneg _)
+      (rms_nonneg _) (rms_nonneg _) hSy hSDw hSq rM' hSDM hScy hSay hSbv
+    rw [ht2] at this
+    exact sY.trans this
+
+/-! ### The shifted iterates -/
+
+lemma sqrt_le_sqrt_of_integral_le {d : ℕ} {f : Ω → E d} {C : ℝ}
+    (h : ∫ ω, ‖f ω‖ ^ 2 ∂μ ≤ C) : rms μ f ≤ √C := Real.sqrt_le_sqrt h
+
+lemma tendsto_sqrt_zero {f : ℕ → ℝ} (hf : Tendsto f atTop (𝓝 0)) :
+    Tendsto (fun k => √(f k)) atTop (𝓝 0) := by
+  have := (Real.continuous_sqrt.tendsto 0).comp hf
+  rwa [Real.sqrt_zero] at this
+
+set_option maxHeartbeats 4000000 in
+/-- Theorem 2.1 of the write-up for the shifted iterates `x̃ = x + β h`,
+`ỹ = y + D x + γ g + β D h`. -/
+theorem tts_shifted_limits [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βbar : ℝ}
+    (hβ : StepSizeRate β βbar) (hγ : StepSizeRate γ 0)
+    (hβγ : Tendsto (fun k => β k / γ k) atTop (𝓝 0))
+    (hγβ : Tendsto (fun k => γ k ^ 2 / β k) atTop (𝓝 0))
+    (A₁₁ : Matrix (Fin d₁) (Fin d₁) ℝ) (A₁₂ : Matrix (Fin d₁) (Fin d₂) ℝ)
+    (A₂₁ : Matrix (Fin d₂) (Fin d₁) ℝ) (A₂₂ : Matrix (Fin d₂) (Fin d₂) ℝ)
+    (D : Matrix (Fin d₂) (Fin d₁) ℝ) (hD : A₂₂ * D = A₂₁) {η : ℝ} (hη : 0 < η)
+    (hΔ : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A₁₁ - A₁₂ * D - (βbar / 2) • 1) *ᵥ x))
+    (hA₂₂ : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ (A₂₂ *ᵥ x))
+    (ℱ : MeasureTheory.Filtration ℕ m0) {x M h : ℕ → Ω → E d₁} {y M' g : ℕ → Ω → E d₂}
+    (hrec : TTSRecursion A₁₁ A₁₂ A₂₁ A₂₂ β γ x M h y M' g)
+    (hx0 : StronglyMeasurable[ℱ 0] (x 0)) (hx0L : MemLp (x 0) 2 μ)
+    (hy0 : StronglyMeasurable[ℱ 0] (y 0)) (hy0L : MemLp (y 0) 2 μ)
+    (hh : ∀ k, StronglyMeasurable[ℱ k] (h k)) (hhL : ∀ k, MemLp (h k) 2 μ)
+    {Ch Cg CM CM' : ℝ} (hhB : ∀ k, ∫ ω, ‖h k ω‖ ^ 2 ∂μ ≤ Ch)
+    (hg : ∀ k, StronglyMeasurable[ℱ k] (g k)) (hgL : ∀ k, MemLp (g k) 2 μ)
+    (hgB : ∀ k, ∫ ω, ‖g k ω‖ ^ 2 ∂μ ≤ Cg)
+    (hM : ∀ k, StronglyMeasurable[ℱ (k + 1)] (M (k + 1))) (hML : ∀ k, MemLp (M (k + 1)) 2 μ)
+    (hMB : ∀ k, ∫ ω, ‖M (k + 1) ω‖ ^ 2 ∂μ ≤ CM)
+    (hM' : ∀ k, StronglyMeasurable[ℱ (k + 1)] (M' (k + 1)))
+    (hM'L : ∀ k, MemLp (M' (k + 1)) 2 μ) (hM'B : ∀ k, ∫ ω, ‖M' (k + 1) ω‖ ^ 2 ∂μ ≤ CM')
+    (hmart : ∀ k j, μ[fun ω => M (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
+    (hmart' : ∀ k j, μ[fun ω => M' (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
+    {Γ₁₁ : Mat d₁} {Γ₁₂ : Rect d₁ d₂} {Γ₂₂ : Mat d₂}
+    (hΓ₁₁ : Tendsto (fun k => secondMoment μ (M (k + 1))) atTop (𝓝 Γ₁₁))
+    (hΓ₁₂ : Tendsto (fun k => crossMoment μ (M (k + 1)) (M' (k + 1))) atTop (𝓝 Γ₁₂))
+    (hΓ₂₂ : Tendsto (fun k => secondMoment μ (M' (k + 1))) atTop (𝓝 Γ₂₂))
+    {a : Mat d₁} {c : Rect d₁ d₂} {b : Mat d₂} (hb : lyapOp A₂₂ b = Γ₂₂)
+    (hc : rmul A₂₂ c + lmul A₁₂ b = Γ₁₂)
+    (ha : lyapOp (A₁₁ - A₁₂ * D - (βbar / 2) • 1) a + coupleCLM A₁₂ c = Γ₁₁) :
+    Tendsto (fun k => (β k)⁻¹ • secondMoment μ (ttsX β x h k)) atTop (𝓝 a) ∧
+      Tendsto (fun k => (β k)⁻¹ • crossMoment μ (ttsX β x h k) (ttsY D β γ x h y g k)) atTop
+        (𝓝 c) ∧
+      Tendsto (fun k => (γ k)⁻¹ • secondMoment μ (ttsY D β γ x h y g k)) atTop (𝓝 b) := by
+  set Δ := A₁₁ - A₁₂ * D with hΔdef
+  have hadapt := tts_adapted (μ := μ) ℱ hrec hx0 hx0L hy0 hy0L hh hhL hg hgL hM hML hM' hM'L
+  -- constants
+  obtain ⟨Cs, hCs0, hCs⟩ := hβ.abs_sub_le
+  obtain ⟨Ct, hCt0, hCt⟩ := hγ.abs_sub_le
+  obtain ⟨B0, hB0⟩ := hβγ.bddAbove_range
+  obtain ⟨Bq, hBq_def⟩ : ∃ B, B = max B0 0 := ⟨_, rfl⟩
+  have hBq : 0 ≤ Bq := hBq_def ▸ le_max_right _ _
+  have hbq : ∀ k, β k ≤ Bq * γ k := fun k => by
+    have h1 : β k / γ k ≤ Bq := (hB0 ⟨k, rfl⟩).trans (hBq_def ▸ le_max_left _ _)
+    rwa [div_le_iff₀ (hγ.pos k)] at h1
+  have hCh0 : 0 ≤ Ch := (integral_norm_sq_nonneg (μ := μ) (h 0)).trans (hhB 0)
+  have hCg0 : 0 ≤ Cg := (integral_norm_sq_nonneg (μ := μ) (g 0)).trans (hgB 0)
+  have hCM0 : 0 ≤ CM := (integral_norm_sq_nonneg (μ := μ) (M 1)).trans (hMB 0)
+  have hCM'0 : 0 ≤ CM' := (integral_norm_sq_nonneg (μ := μ) (M' 1)).trans (hM'B 0)
+  set mh := √Ch
+  set mg := √Cg
+  set mM := √CM
+  set mM' := √CM'
+  obtain ⟨cw, hcw⟩ : ∃ c, c = √2 * (‖matCLM Δ‖ * √d₁ * √Bq + ‖matCLM A₁₂‖ * √d₂) := ⟨_, rfl⟩
+  obtain ⟨cq, hcq⟩ : ∃ c, c = √2 * (‖matCLM A₂₂‖ * √d₂ + Bq * ‖matCLM D‖ * cw) := ⟨_, rfl⟩
+  obtain ⟨Kx, hKx⟩ : ∃ K, K = 2 * ((Bq * ‖matCLM Δ‖ + Bq * ‖matCLM A₁₂‖ * ‖matCLM D‖) * mh
+      + ‖matCLM A₁₂‖ * mg + Cs * Bq * mh) := ⟨_, rfl⟩
+  obtain ⟨Ky, hKy⟩ : ∃ K, K = 2 * ((Bq * ‖matCLM A₂₂‖ * ‖matCLM D‖
+        + Bq ^ 2 * ‖matCLM D‖ * ‖matCLM Δ‖
+        + Bq ^ 2 * ‖matCLM D‖ * ‖matCLM A₁₂‖ * ‖matCLM D‖) * mh
+      + (‖matCLM A₂₂‖ + Bq * ‖matCLM D‖ * ‖matCLM A₁₂‖) * mg + Ct * mg
+      + Cs * Bq ^ 2 * ‖matCLM D‖ * mh) := ⟨_, rfl⟩
+  have hcw0 : 0 ≤ cw := by rw [hcw]; positivity
+  have hcq0 : 0 ≤ cq := by rw [hcq]; positivity
+  have hKx0 : 0 ≤ Kx := by rw [hKx]; positivity
+  have hKy0 : 0 ≤ Ky := by rw [hKy]; positivity
+  set nD := ‖matCLM D‖
+  set LΔ := ‖(lmul Δ : Rect d₁ d₂ →L[ℝ] Rect d₁ d₂)‖
+  -- the vanishing factor
+  set G₁ := fun k => ‖secondMoment μ (M (k + 1)) - Γ₁₁‖
+  set G₂ := fun k => ‖crossMoment μ (M (k + 1)) (M' (k + 1)) - Γ₁₂‖
+  set G₃ := fun k => ‖secondMoment μ (M' (k + 1)) - Γ₂₂‖
+  set ε := fun k => ttsEps₁ (β k) (γ k) (G₁ k) √d₁ cw Kx mM
+    + ttsEps₂ (β k) (γ k) (G₂ k) √d₁ √d₂ cw cq Kx Ky mM mM' nD LΔ
+    + ttsEps₃ (β k) (γ k) (G₃ k) √d₂ cw cq Ky mM mM' nD with hε_def
+  have hnD : 0 ≤ nD := norm_nonneg _
+  have hLΔ : 0 ≤ LΔ := norm_nonneg _
+  have e₁0 : ∀ k, 0 ≤ ttsEps₁ (β k) (γ k) (G₁ k) √d₁ cw Kx mM := fun k => by
+    have := hβ.pos k; have := hγ.pos k; simp only [ttsEps₁, G₁]; positivity
+  have e₂0 : ∀ k, 0 ≤ ttsEps₂ (β k) (γ k) (G₂ k) √d₁ √d₂ cw cq Kx Ky mM mM' nD LΔ := fun k => by
+    have := hβ.pos k; have := hγ.pos k; simp only [ttsEps₂, G₂]; positivity
+  have e₃0 : ∀ k, 0 ≤ ttsEps₃ (β k) (γ k) (G₃ k) √d₂ cw cq Ky mM mM' nD := fun k => by
+    have := hβ.pos k; have := hγ.pos k; simp only [ttsEps₃, G₃]; positivity
+  have hε0 : ∀ k, 0 ≤ ε k := fun k => add_nonneg (add_nonneg (e₁0 k) (e₂0 k)) (e₃0 k)
+  -- the vanishing factor tends to zero
+  have hb0 := hβ.tendsto_zero
+  have hg0 := hγ.tendsto_zero
+  have hsg : Tendsto (fun k => √(γ k)) atTop (𝓝 0) := tendsto_sqrt_zero hg0
+  have hρ : Tendsto (fun k => γ k / √(β k)) atTop (𝓝 0) := by
+    refine (tendsto_sqrt_zero hγβ).congr fun k => ?_
+    rw [Real.sqrt_div' _ (hβ.pos k).le, Real.sqrt_sq (hγ.pos k).le]
+  have hθ : Tendsto (fun k => √(β k) / √(γ k)) atTop (𝓝 0) := by
+    refine (tendsto_sqrt_zero hβγ).congr fun k => ?_
+    rw [Real.sqrt_div' _ (hγ.pos k).le]
+  have hG₁ : Tendsto G₁ atTop (𝓝 0) := by
+    simpa [G₁] using (hΓ₁₁.sub_const Γ₁₁).norm
+  have hG₂ : Tendsto G₂ atTop (𝓝 0) := by
+    simpa [G₂] using (hΓ₁₂.sub_const Γ₁₂).norm
+  have hG₃ : Tendsto G₃ atTop (𝓝 0) := by
+    simpa [G₃] using (hΓ₂₂.sub_const Γ₂₂).norm
+  have hε : Tendsto ε atTop (𝓝 0) := by
+    have l1 : Tendsto (fun k => ttsEps₁ (β k) (γ k) (G₁ k) √d₁ cw Kx mM) atTop (𝓝 0) := by
+      simp only [ttsEps₁]
+      have := ((hg0.const_mul (cw ^ 2)).add hG₁).add ((((((hρ.const_mul √d₁).add
+        ((hg0.mul hsg).const_mul cw)).const_mul (√2 * Kx)).add (hg0.const_mul (mM * Kx))).add
+        ((hg0.pow 2).const_mul (Kx ^ 2))).const_mul 2)
+      convert this using 1
+      · funext k; ring
+      · simp
+    have l2 : Tendsto (fun k => ttsEps₂ (β k) (γ k) (G₂ k) √d₁ √d₂ cw cq Kx Ky mM mM' nD LΔ)
+        atTop (𝓝 0) := by
+      simp only [ttsEps₂]
+      have t1 := hθ.const_mul (√d₁ * nD * cw)
+      have t2 := hβγ.const_mul LΔ
+      have t3 := hg0.const_mul (cw * cq)
+      have t4 := hβγ.mul_const (nD * mM ^ 2)
+      have t5 := ((hρ.const_mul √d₁).add ((hsg.mul hg0).const_mul cw)).const_mul (√2 * Ky)
+      have t6 := hg0.const_mul (mM * Ky)
+      have t7 := (hg0.pow 2).const_mul (Kx * Ky)
+      have t8 := ((hsg.const_mul √d₂).add ((hg0.mul hsg).const_mul cq)).const_mul (Kx * √2)
+      have t9 := ((hg0.const_mul mM').add (hb0.const_mul (nD * mM))).const_mul (Kx * √2)
+      have := ((((((((t1.add t2).add t3).add hG₂).add t4).add t5).add t6).add t7).add t8).add t9
+      convert this using 1
+      · funext k; ring
+      · simp
+    have l3 : Tendsto (fun k => ttsEps₃ (β k) (γ k) (G₃ k) √d₂ cw cq Ky mM mM' nD) atTop (𝓝 0) := by
+      simp only [ttsEps₃]
+      have := (((((((hβγ.const_mul (2 * √d₂ * nD * cw)).add (hg0.const_mul (cq ^ 2))).add hG₃).add
+        (hβγ.const_mul (2 * (mM' * (nD * mM))))).add ((hβγ.pow 2).mul_const ((nD * mM) ^ 2))).add
+        (((hsg.const_mul √d₂).add ((hg0.mul hsg).const_mul cq)).const_mul (2 * (√2 * Ky)))).add
+        (((hg0.const_mul mM').add (hb0.const_mul (nD * mM))).const_mul (2 * (√2 * Ky)))).add
+        ((hg0.pow 2).const_mul (Ky ^ 2))
+      convert this using 1
+      · funext k; ring
+      · simp
+    simpa using (l1.add l2).add l3
+  -- one step of the three moments
+  have hstep : ∀ k, _ := fun k =>
+    tts_remainder_step (μ := μ) (ℱ.le k) Δ A₁₂ A₂₂ D
+      (xs := ttsX β x h k) (xs' := ttsX β x h (k + 1)) (M := M (k + 1)) (h := h k) (h' := h (k + 1))
+      (ys := ttsY D β γ x h y g k) (ys' := ttsY D β γ x h y g (k + 1)) (M' := M' (k + 1))
+      (g := g k) (g' := g (k + 1)) (hβ.pos k) (hγ.pos k) hBq hCs0 hCt0 (hbq k) (hCs k) (hCt k)
+      ((hadapt k).1.1.add ((hh k).const_smul (β k)))
+      ((((hadapt k).2.1.add ((matCLM D).continuous.comp_stronglyMeasurable (hadapt k).1.1)).add
+        ((hg k).const_smul (γ k))).add
+        (((matCLM D).continuous.comp_stronglyMeasurable (hh k)).const_smul (β k)))
+      ((hadapt k).1.2.add ((hhL k).const_smul (β k)))
+      ((((hadapt k).2.2.add ((matCLM D).comp_memLp' (hadapt k).1.2)).add
+        ((hgL k).const_smul (γ k))).add (((matCLM D).comp_memLp' (hhL k)).const_smul (β k)))
+      (hML k) (hM'L k) (hhL k) (hhL (k + 1)) (hgL k) (hgL (k + 1)) (hmart k) (hmart' k)
+      (Real.sqrt_nonneg _) (Real.sqrt_nonneg _) (Real.sqrt_nonneg _) (Real.sqrt_nonneg _)
+      (Real.sqrt_le_sqrt (hhB k)) (Real.sqrt_le_sqrt (hhB (k + 1))) (Real.sqrt_le_sqrt (hgB k))
+      (Real.sqrt_le_sqrt (hgB (k + 1))) (Real.sqrt_le_sqrt (hMB k)) (Real.sqrt_le_sqrt (hM'B k))
+      hcw hcq hKx hKy (ttsX_succ hrec k) (ttsY_succ hD hrec k) Γ₁₁ Γ₁₂ Γ₂₂
+  set X := fun k => secondMoment μ (ttsX β x h k)
+  set Z := fun k => crossMoment μ (ttsX β x h k) (ttsY D β γ x h y g k)
+  set Y := fun k => secondMoment μ (ttsY D β γ x h y g k)
+  set R₁ := fun k => X (k + 1) - (X k - β k • (lyapOp Δ (X k) + coupleCLM A₁₂ (Z k))
+    + β k ^ 2 • Γ₁₁)
+  set R₂ := fun k => Z (k + 1) - (Z k - γ k • rmul A₂₂ (Z k) - β k • lmul A₁₂ (Y k)
+    + (β k * γ k) • Γ₁₂)
+  set R₃ := fun k => Y (k + 1) - (Y k - γ k • lyapOp A₂₂ (Y k) + γ k ^ 2 • Γ₂₂)
+  have hn0 : ∀ k, 0 ≤ 1 + ‖X k‖ / β k + ‖Z k‖ / β k + ‖Y k‖ / γ k := fun k => by
+    have := hβ.pos k; have := hγ.pos k; positivity
+  have hR₁ : ∀ k, ‖R₁ k‖ ≤ ε k * β k ^ 2 * (1 + ‖X k‖ / β k + ‖Z k‖ / β k + ‖Y k‖ / γ k) := by
+    intro k
+    have hs := hstep k
+    dsimp only at hs
+    have hle : ttsEps₁ (β k) (γ k) (G₁ k) √d₁ cw Kx mM ≤ ε k := by
+      have := e₂0 k; have := e₃0 k; simp only [ε]; linarith
+    have := mul_le_mul_of_nonneg_right hle (mul_nonneg (sq_nonneg (β k)) (hn0 k))
+    have h1 := hs.1
+    linarith
+  have hR₂ : ∀ k, ‖R₂ k‖ ≤ ε k * (β k * γ k) * (1 + ‖X k‖ / β k + ‖Z k‖ / β k + ‖Y k‖ / γ k) := by
+    intro k
+    have hs := hstep k
+    dsimp only at hs
+    have hle : ttsEps₂ (β k) (γ k) (G₂ k) √d₁ √d₂ cw cq Kx Ky mM mM' nD LΔ ≤ ε k := by
+      have := e₁0 k; have := e₃0 k; simp only [ε]; linarith
+    have := mul_le_mul_of_nonneg_right hle
+      (mul_nonneg (mul_nonneg (hβ.pos k).le (hγ.pos k).le) (hn0 k))
+    have h1 := hs.2.1
+    linarith
+  have hR₃ : ∀ k, ‖R₃ k‖ ≤ ε k * γ k ^ 2 * (1 + ‖X k‖ / β k + ‖Z k‖ / β k + ‖Y k‖ / γ k) := by
+    intro k
+    have hs := hstep k
+    dsimp only at hs
+    have hle : ttsEps₃ (β k) (γ k) (G₃ k) √d₂ cw cq Ky mM mM' nD ≤ ε k := by
+      have := e₁0 k; have := e₂0 k; simp only [ε]; linarith
+    have := mul_le_mul_of_nonneg_right hle (mul_nonneg (sq_nonneg (γ k)) (hn0 k))
+    have h1 := hs.2.2
+    linarith
+  exact tendsto_two_time_scale_moments hβ hγ hβγ Δ A₁₂ A₂₂ hη hΔ hA₂₂ hε hε0 hR₁ hR₂ hR₃
+    (fun k => by simp only [R₁]; abel) (fun k => by simp only [R₂]; abel)
+    (fun k => by simp only [R₃]; abel) hb hc ha
+
+
+/-! ### The main theorem -/
+
+lemma norm_crossMoment_sub_sub_le {u p : Ω → E d₁} {v q : Ω → E d₂} (hu : MemLp u 2 μ)
+    (hp : MemLp p 2 μ) (hv : MemLp v 2 μ) (hq : MemLp q 2 μ) :
+    ‖crossMoment μ (fun ω => u ω - p ω) (fun ω => v ω - q ω) - crossMoment μ u v‖ ≤
+      rms μ u * rms μ q + rms μ p * rms μ v + rms μ p * rms μ q := by
+  rw [crossMoment_sub_sub hu hp hv hq]
+  have e : crossMoment μ u v - crossMoment μ u q - crossMoment μ p v + crossMoment μ p q
+      - crossMoment μ u v = -crossMoment μ u q - crossMoment μ p v + crossMoment μ p q := by abel
+  rw [e]
+  have n1 := norm_crossMoment_le_rms (μ := μ) hu hq
+  have n2 := norm_crossMoment_le_rms (μ := μ) hp hv
+  have n3 := norm_crossMoment_le_rms (μ := μ) hp hq
+  have t1 := norm_add_le (-crossMoment μ u q - crossMoment μ p v) (crossMoment μ p q)
+  have t2 := norm_sub_le (-crossMoment μ u q) (crossMoment μ p v)
+  rw [norm_neg] at t2
+  linarith
+
+lemma tendsto_norm_of_smul {V : Type*} [NormedAddCommGroup V] [NormedSpace ℝ V] {s : ℕ → ℝ}
+    {P : ℕ → V} {L : V} (hs : ∀ k, 0 < s k) (hs0 : Tendsto s atTop (𝓝 0))
+    (hP : Tendsto (fun k => (s k)⁻¹ • P k) atTop (𝓝 L)) : Tendsto (fun k => ‖P k‖) atTop (𝓝 0) := by
+  have h1 := (hs0.smul hP).norm
+  rw [zero_smul, norm_zero] at h1
+  refine h1.congr fun k => ?_
+  rw [smul_smul, mul_inv_cancel₀ (hs k).ne', one_smul]
+
+set_option maxHeartbeats 4000000 in
+/-- **Theorem 2.1 of `docs/two-time-scale-covariance.md`.** For the linear two-time-scale
+iteration with Markov noise in Poisson form, with `D = A₂₂⁻¹ A₂₁` and `ŷ = y + D x`,
+`β⁻¹ E[x xᵀ] → a`, `β⁻¹ E[x ŷᵀ] → c`, `γ⁻¹ E[ŷ ŷᵀ] → b`, where
+`A₂₂ b + b A₂₂ᵀ = Γ₂₂`, `c A₂₂ᵀ + A₁₂ b = Γ₁₂` and
+`(Δ - β̄/2) a + a (Δ - β̄/2)ᵀ + A₁₂ cᵀ + c A₁₂ᵀ = Γ₁₁` with `Δ = A₁₁ - A₁₂ D`. -/
+theorem tendsto_two_time_scale_covariance [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βbar : ℝ}
+    (hβ : StepSizeRate β βbar) (hγ : StepSizeRate γ 0)
+    (hβγ : Tendsto (fun k => β k / γ k) atTop (𝓝 0))
+    (hγβ : Tendsto (fun k => γ k ^ 2 / β k) atTop (𝓝 0))
+    (A₁₁ : Matrix (Fin d₁) (Fin d₁) ℝ) (A₁₂ : Matrix (Fin d₁) (Fin d₂) ℝ)
+    (A₂₁ : Matrix (Fin d₂) (Fin d₁) ℝ) (A₂₂ : Matrix (Fin d₂) (Fin d₂) ℝ)
+    (D : Matrix (Fin d₂) (Fin d₁) ℝ) (hD : A₂₂ * D = A₂₁) {η : ℝ} (hη : 0 < η)
+    (hΔ : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A₁₁ - A₁₂ * D - (βbar / 2) • 1) *ᵥ x))
+    (hA₂₂ : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ (A₂₂ *ᵥ x))
+    (ℱ : MeasureTheory.Filtration ℕ m0) {x M h : ℕ → Ω → E d₁} {y M' g : ℕ → Ω → E d₂}
+    (hrec : TTSRecursion A₁₁ A₁₂ A₂₁ A₂₂ β γ x M h y M' g)
+    (hx0 : StronglyMeasurable[ℱ 0] (x 0)) (hx0L : MemLp (x 0) 2 μ)
+    (hy0 : StronglyMeasurable[ℱ 0] (y 0)) (hy0L : MemLp (y 0) 2 μ)
+    (hh : ∀ k, StronglyMeasurable[ℱ k] (h k)) (hhL : ∀ k, MemLp (h k) 2 μ)
+    (hhB : ∃ C, ∀ k, ∫ ω, ‖h k ω‖ ^ 2 ∂μ ≤ C)
+    (hg : ∀ k, StronglyMeasurable[ℱ k] (g k)) (hgL : ∀ k, MemLp (g k) 2 μ)
+    (hgB : ∃ C, ∀ k, ∫ ω, ‖g k ω‖ ^ 2 ∂μ ≤ C)
+    (hM : ∀ k, StronglyMeasurable[ℱ (k + 1)] (M (k + 1))) (hML : ∀ k, MemLp (M (k + 1)) 2 μ)
+    (hMB : ∃ C, ∀ k, ∫ ω, ‖M (k + 1) ω‖ ^ 2 ∂μ ≤ C)
+    (hM' : ∀ k, StronglyMeasurable[ℱ (k + 1)] (M' (k + 1)))
+    (hM'L : ∀ k, MemLp (M' (k + 1)) 2 μ) (hM'B : ∃ C, ∀ k, ∫ ω, ‖M' (k + 1) ω‖ ^ 2 ∂μ ≤ C)
+    (hmart : ∀ k j, μ[fun ω => M (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
+    (hmart' : ∀ k j, μ[fun ω => M' (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
+    {Γ₁₁ : Mat d₁} {Γ₁₂ : Rect d₁ d₂} {Γ₂₂ : Mat d₂}
+    (hΓ₁₁ : Tendsto (fun k => secondMoment μ (M (k + 1))) atTop (𝓝 Γ₁₁))
+    (hΓ₁₂ : Tendsto (fun k => crossMoment μ (M (k + 1)) (M' (k + 1))) atTop (𝓝 Γ₁₂))
+    (hΓ₂₂ : Tendsto (fun k => secondMoment μ (M' (k + 1))) atTop (𝓝 Γ₂₂)) :
+    ∃ a c b, lyapOp A₂₂ b = Γ₂₂ ∧ rmul A₂₂ c + lmul A₁₂ b = Γ₁₂ ∧
+      lyapOp (A₁₁ - A₁₂ * D - (βbar / 2) • 1) a + coupleCLM A₁₂ c = Γ₁₁ ∧
+      Tendsto (fun k => (β k)⁻¹ • secondMoment μ (x k)) atTop (𝓝 a) ∧
+      Tendsto (fun k => (β k)⁻¹ • crossMoment μ (x k) (fun ω => y k ω + matCLM D (x k ω)))
+        atTop (𝓝 c) ∧
+      Tendsto (fun k => (γ k)⁻¹ • secondMoment μ (fun ω => y k ω + matCLM D (x k ω))) atTop
+        (𝓝 b) := by
+  obtain ⟨Ch, hCh⟩ := hhB
+  obtain ⟨Cg, hCg⟩ := hgB
+  obtain ⟨CM, hCM⟩ := hMB
+  obtain ⟨CM', hCM'⟩ := hM'B
+  -- the limits
+  obtain ⟨b, hb⟩ := exists_solution_of_coercive (lyapOp A₂₂) (by positivity : (0 : ℝ) < 2 * η)
+    (lyapOp_coercive A₂₂ hA₂₂) Γ₂₂
+  obtain ⟨c, hc⟩ := exists_solution_of_coercive (rmul A₂₂ : Rect d₁ d₂ →L[ℝ] Rect d₁ d₂) hη
+    (rmul_coercive A₂₂ hA₂₂) (Γ₁₂ - lmul A₁₂ b)
+  obtain ⟨a, ha⟩ := exists_solution_of_coercive (lyapOp (A₁₁ - A₁₂ * D - (βbar / 2) • 1))
+    (by positivity : (0 : ℝ) < 2 * η) (lyapOp_coercive _ hΔ) (Γ₁₁ - coupleCLM A₁₂ c)
+  have hc' : rmul A₂₂ c + lmul A₁₂ b = Γ₁₂ := by rw [hc]; abel
+  have ha' : lyapOp (A₁₁ - A₁₂ * D - (βbar / 2) • 1) a + coupleCLM A₁₂ c = Γ₁₁ := by
+    rw [ha]; abel
+  refine ⟨a, c, b, hb, hc', ha', ?_⟩
+  obtain ⟨lX, lZ, lY⟩ := tts_shifted_limits hβ hγ hβγ hγβ A₁₁ A₁₂ A₂₁ A₂₂ D hD hη hΔ hA₂₂ ℱ
+    hrec hx0 hx0L hy0 hy0L hh hhL hCh hg hgL hCg hM hML hCM hM' hM'L hCM' hmart hmart'
+    hΓ₁₁ hΓ₁₂ hΓ₂₂ hb hc' ha'
+  have hadapt := tts_adapted (μ := μ) ℱ hrec hx0 hx0L hy0 hy0L hh hhL hg hgL hM hML hM' hM'L
+  set X := fun k => secondMoment μ (ttsX β x h k)
+  set Y := fun k => secondMoment μ (ttsY D β γ x h y g k)
+  have hX0 := tendsto_norm_of_smul hβ.pos hβ.tendsto_zero lX
+  have hY0 := tendsto_norm_of_smul hγ.pos hγ.tendsto_zero lY
+  have hxsL : ∀ k, MemLp (ttsX β x h k) 2 μ := fun k => (hadapt k).1.2.add ((hhL k).const_smul (β k))
+  have hysL : ∀ k, MemLp (ttsY D β γ x h y g k) 2 μ := fun k =>
+    (((hadapt k).2.2.add ((matCLM D).comp_memLp' (hadapt k).1.2)).add
+      ((hgL k).const_smul (γ k))).add (((matCLM D).comp_memLp' (hhL k)).const_smul (β k))
+  have hCh0 : 0 ≤ Ch := (integral_norm_sq_nonneg (μ := μ) (h 0)).trans (hCh 0)
+  have hCg0 : 0 ≤ Cg := (integral_norm_sq_nonneg (μ := μ) (g 0)).trans (hCg 0)
+  set mh := √Ch
+  set mg := √Cg
+  set nD := ‖matCLM D‖
+  have hmh : ∀ k, rms μ (h k) ≤ mh := fun k => Real.sqrt_le_sqrt (hCh k)
+  have hmg : ∀ k, rms μ (g k) ≤ mg := fun k => Real.sqrt_le_sqrt (hCg k)
+  -- the shifts
+  have hu : ∀ k, MemLp (fun ω => β k • h k ω) 2 μ := fun k => (hhL k).const_smul (β k)
+  have hv : ∀ k, MemLp (fun ω => γ k • g k ω + β k • matCLM D (h k ω)) 2 μ := fun k =>
+    ((hgL k).const_smul (γ k)).add (((matCLM D).comp_memLp' (hhL k)).const_smul (β k))
+  have rmu : ∀ k, rms μ (fun ω => β k • h k ω) ≤ β k * mh := fun k => by
+    rw [rms_smul, abs_of_pos (hβ.pos k)]; exact mul_le_mul_of_nonneg_left (hmh k) (hβ.pos k).le
+  have rmv : ∀ k, rms μ (fun ω => γ k • g k ω + β k • matCLM D (h k ω)) ≤
+      √2 * (γ k * mg + β k * (nD * mh)) := fun k => by
+    have h1 : MemLp (fun ω => γ k • g k ω) 2 μ := (hgL k).const_smul (γ k)
+    have h2 : MemLp (fun ω => β k • matCLM D (h k ω)) 2 μ :=
+      ((matCLM D).comp_memLp' (hhL k)).const_smul (β k)
+    refine (rms_add_le h1 h2).trans ?_
+    rw [rms_smul, rms_smul, abs_of_pos (hγ.pos k), abs_of_pos (hβ.pos k)]
+    exact mul_le_mul_of_nonneg_left (add_le_add (mul_le_mul_of_nonneg_left (hmg k) (hγ.pos k).le)
+      (mul_le_mul_of_nonneg_left ((rms_matCLM_le D (hhL k)).trans
+        (mul_le_mul_of_nonneg_left (hmh k) (norm_nonneg _))) (hβ.pos k).le)) (Real.sqrt_nonneg _)
+  have ex : ∀ k, x k = fun ω => ttsX β x h k ω - β k • h k ω := fun k => by
+    funext ω; simp [ttsX]
+  have ey : ∀ k, (fun ω => y k ω + matCLM D (x k ω)) =
+      fun ω => ttsY D β γ x h y g k ω - (γ k • g k ω + β k • matCLM D (h k ω)) := fun k => by
+    funext ω; simp only [ttsY]; abel
+  have rx : ∀ k, rms μ (ttsX β x h k) ≤ √(d₁ * ‖X k‖) := fun k => rms_le_sqrt_secondMoment (hxsL k)
+  have ry : ∀ k, rms μ (ttsY D β γ x h y g k) ≤ √(d₂ * ‖Y k‖) := fun k =>
+    rms_le_sqrt_secondMoment (hysL k)
+  have hsX : Tendsto (fun k => √(d₁ * ‖X k‖)) atTop (𝓝 0) := by
+    have := hX0.const_mul (d₁ : ℝ); rw [mul_zero] at this; exact tendsto_sqrt_zero this
+  have hsY : Tendsto (fun k => √(d₂ * ‖Y k‖)) atTop (𝓝 0) := by
+    have := hY0.const_mul (d₂ : ℝ); rw [mul_zero] at this; exact tendsto_sqrt_zero this
+  have hmh0 : 0 ≤ mh := Real.sqrt_nonneg _
+  have hmg0 : 0 ≤ mg := Real.sqrt_nonneg _
+  have hnD0 : 0 ≤ nD := norm_nonneg _
+  refine ⟨?_, ?_, ?_⟩
+  · -- the slow iterate
+    have hd : ∀ k, ‖(β k)⁻¹ • secondMoment μ (x k) - (β k)⁻¹ • X k‖ ≤
+        2 * (mh * √(d₁ * ‖X k‖)) + β k * mh ^ 2 := by
+      intro k
+      have hb := hβ.pos k
+      rw [← smul_sub, norm_smul, Real.norm_eq_abs, abs_inv, abs_of_pos hb, ex k]
+      have h1 := norm_crossMoment_sub_sub_le (hxsL k) (hu k) (hxsL k) (hu k) (μ := μ)
+      have h2 := mul_le_mul (rx k) (rmu k) (rms_nonneg _) (Real.sqrt_nonneg _)
+      have h3 := mul_le_mul (rmu k) (rx k) (rms_nonneg _) (by positivity)
+      have h4 := mul_le_mul (rmu k) (rmu k) (rms_nonneg _) (by positivity)
+      have h5 : ‖secondMoment μ (fun ω => ttsX β x h k ω - β k • h k ω) - X k‖ ≤
+          β k * (2 * (mh * √(d₁ * ‖X k‖)) + β k * mh ^ 2) := by
+        have e : secondMoment μ (fun ω => ttsX β x h k ω - β k • h k ω) - X k =
+            crossMoment μ (fun ω => ttsX β x h k ω - β k • h k ω)
+              (fun ω => ttsX β x h k ω - β k • h k ω)
+            - crossMoment μ (ttsX β x h k) (ttsX β x h k) := rfl
+        rw [e]
+        have e2 : β k * (2 * (mh * √(d₁ * ‖X k‖)) + β k * mh ^ 2) =
+            √(d₁ * ‖X k‖) * (β k * mh) + β k * mh * √(d₁ * ‖X k‖) + β k * mh * (β k * mh) := by ring
+        rw [e2]
+        linarith
+      calc (β k)⁻¹ * ‖secondMoment μ (fun ω => ttsX β x h k ω - β k • h k ω) - X k‖
+          ≤ (β k)⁻¹ * (β k * (2 * (mh * √(d₁ * ‖X k‖)) + β k * mh ^ 2)) :=
+            mul_le_mul_of_nonneg_left h5 (by positivity)
+        _ = _ := by field_simp
+    have hlim : Tendsto (fun k => 2 * (mh * √(d₁ * ‖X k‖)) + β k * mh ^ 2) atTop (𝓝 0) := by
+      simpa using ((hsX.const_mul mh).const_mul 2).add (hβ.tendsto_zero.mul_const (mh ^ 2))
+    have := lX.add (squeeze_zero_norm hd hlim)
+    rw [add_zero] at this
+    exact this.congr fun k => by abel
+  · -- the cross term
+    set Z := fun k => crossMoment μ (ttsX β x h k) (ttsY D β γ x h y g k)
+    set sx := fun k => √(d₁ * ‖(β k)⁻¹ • X k‖)
+    have hsx : ∀ k, √(d₁ * ‖X k‖) = sx k * √(β k) := fun k => by
+      have hb := hβ.pos k
+      have : (d₁ : ℝ) * ‖X k‖ = d₁ * ‖(β k)⁻¹ • X k‖ * β k := by
+        rw [norm_smul, Real.norm_eq_abs, abs_inv, abs_of_pos hb]; field_simp
+      rw [this, Real.sqrt_mul (by positivity)]
+    have hd : ∀ k, ‖(β k)⁻¹ • crossMoment μ (x k) (fun ω => y k ω + matCLM D (x k ω))
+        - (β k)⁻¹ • Z k‖ ≤
+        √2 * sx k * (mg * (γ k / √(β k)) + nD * mh * √(β k)) + mh * √(d₂ * ‖Y k‖)
+          + mh * (√2 * (γ k * mg + β k * (nD * mh))) := by
+      intro k
+      have hb := hβ.pos k
+      have sb := Real.sqrt_pos.mpr hb
+      have sb2 : √(β k) ^ 2 = β k := Real.sq_sqrt hb.le
+      rw [← smul_sub, norm_smul, Real.norm_eq_abs, abs_inv, abs_of_pos hb, ey k]
+      conv_lhs => rw [show (x k) = fun ω => ttsX β x h k ω - β k • h k ω from ex k]
+      have h1 := norm_crossMoment_sub_sub_le (hxsL k) (hu k) (hysL k) (hv k) (μ := μ)
+      have hsx0 : 0 ≤ sx k := Real.sqrt_nonneg _
+      have rx' : rms μ (ttsX β x h k) ≤ sx k * √(β k) := (rx k).trans (hsx k).le
+      have h2 := mul_le_mul rx' (rmv k) (rms_nonneg _) (by positivity)
+      have h3 := mul_le_mul (rmu k) (ry k) (rms_nonneg _) (by positivity)
+      have h4 := mul_le_mul (rmu k) (rmv k) (rms_nonneg _) (by positivity)
+      have e1 : sx k * √(β k) * (√2 * (γ k * mg + β k * (nD * mh))) =
+          β k * (√2 * sx k * (mg * (γ k / √(β k)) + nD * mh * √(β k))) := by
+        have hne : √(β k) ≠ 0 := sb.ne'
+        set r := √(β k)
+        rw [← sb2]
+        field_simp
+        ring
+      have h5 : ‖crossMoment μ (fun ω => ttsX β x h k ω - β k • h k ω)
+          (fun ω => ttsY D β γ x h y g k ω - (γ k • g k ω + β k • matCLM D (h k ω))) - Z k‖ ≤
+          β k * (√2 * sx k * (mg * (γ k / √(β k)) + nD * mh * √(β k)) + mh * √(d₂ * ‖Y k‖)
+            + mh * (√2 * (γ k * mg + β k * (nD * mh)))) := by
+        have e2 : β k * (√2 * sx k * (mg * (γ k / √(β k)) + nD * mh * √(β k)) + mh * √(d₂ * ‖Y k‖)
+            + mh * (√2 * (γ k * mg + β k * (nD * mh)))) =
+            sx k * √(β k) * (√2 * (γ k * mg + β k * (nD * mh))) + β k * mh * √(d₂ * ‖Y k‖)
+              + β k * mh * (√2 * (γ k * mg + β k * (nD * mh))) := by rw [e1]; ring
+        rw [e2]
+        linarith
+      calc (β k)⁻¹ * ‖crossMoment μ (fun ω => ttsX β x h k ω - β k • h k ω)
+            (fun ω => ttsY D β γ x h y g k ω - (γ k • g k ω + β k • matCLM D (h k ω))) - Z k‖
+          ≤ (β k)⁻¹ * (β k * (√2 * sx k * (mg * (γ k / √(β k)) + nD * mh * √(β k))
+            + mh * √(d₂ * ‖Y k‖) + mh * (√2 * (γ k * mg + β k * (nD * mh))))) :=
+            mul_le_mul_of_nonneg_left h5 (by positivity)
+        _ = _ := by field_simp
+    have hρ : Tendsto (fun k => γ k / √(β k)) atTop (𝓝 0) := by
+      refine (tendsto_sqrt_zero hγβ).congr fun k => ?_
+      rw [Real.sqrt_div' _ (hβ.pos k).le, Real.sqrt_sq (hγ.pos k).le]
+    have hsb := tendsto_sqrt_zero hβ.tendsto_zero
+    have hsxl : Tendsto sx atTop (𝓝 (√(d₁ * ‖a‖))) :=
+      (Real.continuous_sqrt.tendsto _).comp (lX.norm.const_mul (d₁ : ℝ))
+    have hlim : Tendsto (fun k => √2 * sx k * (mg * (γ k / √(β k)) + nD * mh * √(β k))
+        + mh * √(d₂ * ‖Y k‖) + mh * (√2 * (γ k * mg + β k * (nD * mh)))) atTop (𝓝 0) := by
+      have := (((hsxl.const_mul √2).mul ((hρ.const_mul mg).add (hsb.const_mul (nD * mh)))).add
+        (hsY.const_mul mh)).add (((((hγ.tendsto_zero.mul_const mg).add
+          (hβ.tendsto_zero.mul_const (nD * mh))).const_mul √2)).const_mul mh)
+      convert this using 1
+      simp
+    have := lZ.add (squeeze_zero_norm hd hlim)
+    rw [add_zero] at this
+    exact this.congr fun k => by abel
+  · -- the fast iterate
+    have hd : ∀ k, ‖(γ k)⁻¹ • secondMoment μ (fun ω => y k ω + matCLM D (x k ω)) - (γ k)⁻¹ • Y k‖ ≤
+        2 * √2 * √(d₂ * ‖Y k‖) * (mg + β k / γ k * (nD * mh))
+          + 2 * γ k * (mg + β k / γ k * (nD * mh)) ^ 2 := by
+      intro k
+      have hg := hγ.pos k
+      have hb := hβ.pos k
+      rw [← smul_sub, norm_smul, Real.norm_eq_abs, abs_inv, abs_of_pos hg, ey k]
+      have h1 := norm_crossMoment_sub_sub_le (hysL k) (hv k) (hysL k) (hv k) (μ := μ)
+      have h2 := mul_le_mul (ry k) (rmv k) (rms_nonneg _) (Real.sqrt_nonneg _)
+      have h3 := mul_le_mul (rmv k) (ry k) (rms_nonneg _) (by positivity)
+      have h4 := mul_le_mul (rmv k) (rmv k) (rms_nonneg _) (by positivity)
+      have s2 : √2 ^ 2 = 2 := Real.sq_sqrt (by norm_num)
+      have e1 : γ k * (2 * √2 * √(d₂ * ‖Y k‖) * (mg + β k / γ k * (nD * mh))
+          + 2 * γ k * (mg + β k / γ k * (nD * mh)) ^ 2) =
+          √(d₂ * ‖Y k‖) * (√2 * (γ k * mg + β k * (nD * mh)))
+            + √2 * (γ k * mg + β k * (nD * mh)) * √(d₂ * ‖Y k‖)
+            + √2 * (γ k * mg + β k * (nD * mh)) * (√2 * (γ k * mg + β k * (nD * mh))) := by
+        field_simp
+        rw [show √2 * (γ k * mg + β k * (nD * mh)) * (√2 * (γ k * mg + β k * (nD * mh)))
+          = √2 ^ 2 * (γ k * mg + β k * (nD * mh)) ^ 2 by ring, s2]
+        ring
+      have h5 : ‖secondMoment μ (fun ω => ttsY D β γ x h y g k ω - (γ k • g k ω
+          + β k • matCLM D (h k ω))) - Y k‖ ≤ γ k * (2 * √2 * √(d₂ * ‖Y k‖)
+          * (mg + β k / γ k * (nD * mh)) + 2 * γ k * (mg + β k / γ k * (nD * mh)) ^ 2) := by
+        rw [e1]
+        have e : secondMoment μ (fun ω => ttsY D β γ x h y g k ω - (γ k • g k ω
+            + β k • matCLM D (h k ω))) - Y k = crossMoment μ (fun ω => ttsY D β γ x h y g k ω
+              - (γ k • g k ω + β k • matCLM D (h k ω))) (fun ω => ttsY D β γ x h y g k ω
+              - (γ k • g k ω + β k • matCLM D (h k ω)))
+            - crossMoment μ (ttsY D β γ x h y g k) (ttsY D β γ x h y g k) := rfl
+        rw [e]
+        linarith
+      calc (γ k)⁻¹ * ‖secondMoment μ (fun ω => ttsY D β γ x h y g k ω - (γ k • g k ω
+            + β k • matCLM D (h k ω))) - Y k‖
+          ≤ (γ k)⁻¹ * (γ k * (2 * √2 * √(d₂ * ‖Y k‖) * (mg + β k / γ k * (nD * mh))
+            + 2 * γ k * (mg + β k / γ k * (nD * mh)) ^ 2)) :=
+            mul_le_mul_of_nonneg_left h5 (by positivity)
+        _ = _ := by field_simp
+    have hlim : Tendsto (fun k => 2 * √2 * √(d₂ * ‖Y k‖) * (mg + β k / γ k * (nD * mh))
+        + 2 * γ k * (mg + β k / γ k * (nD * mh)) ^ 2) atTop (𝓝 0) := by
+      have hq := (tendsto_const_nhds (x := mg)).add (hβγ.mul_const (nD * mh))
+      have := ((hsY.const_mul (2 * √2)).mul hq).add ((hγ.tendsto_zero.const_mul 2).mul (hq.pow 2))
+      simpa using this
+    have := lY.add (squeeze_zero_norm hd hlim)
+    rw [add_zero] at this
+    exact this.congr fun k => by abel
 
 end StochasticApproximation

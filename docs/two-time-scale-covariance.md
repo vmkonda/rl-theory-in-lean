@@ -88,6 +88,8 @@ where $`\Sigma_{22}`$, $`\Sigma_{12}`$, $`\Sigma_{11}`$ are the unique solutions
 
 </div>
 
+*Lean:* `tendsto_two_time_scale_covariance`, fully formalized. There $`D`$ is any matrix with $`A_{22}D = A_{21}`$, stability takes the positive-definite form of Remark 1.3 of the single-time-scale note for $`A_{22}`$ and $`\Delta_{\bar\beta}`$, and the noise hypotheses are as in Theorem 2.1 of that note.
+
 These are equations (7.14)–(7.16) of Konda (2002), there for i.i.d. noise. Eliminating $`\Sigma_{12}`$ and $`\Sigma_{22}`$ gives the analogue of Theorem 7.8 there.
 
 <div id="cor:eff" class="corollary">
@@ -149,6 +151,8 @@ and the bounds follow from $`|\beta_{k+1} - \beta_k| \le C\beta_k^2`$, $`|\gamma
 
 </div>
 
+*Lean:* `ttsX_succ`, `ttsY_succ` (the identities), `norm_tts_cx_le`, `norm_tts_cy_le` (pointwise bounds on $`c_k`$, $`c'_k`$).
+
 ### 3.2 Second-moment recursions
 
 Let $`X_k = \mathbb{E}[\tilde x_k\tilde x_k^\top]`$, $`Z_k = \mathbb{E}[\tilde x_k\tilde y_k^\top]`$ and $`Y_k = \mathbb{E}[\tilde y_k\tilde y_k^\top]`$, and
@@ -197,6 +201,8 @@ using $`\sqrt{n} \le n`$; this is where $`\gamma_k^2/\beta_k \to 0`$ is used.
 
 </div>
 
+*Lean:* `tts_remainder_step`, from the one-step expansions `tts_step_X`, `tts_step_Z`, `tts_step_Y` (built on `crossMoment_step`), the size bounds `tts_sizes`, and the arithmetic of `tts_R1_le`, `tts_R2_le`, `tts_R3_le`.
+
 ### 3.3 A deterministic lemma for coupled recursions
 
 <div id="lem:coupled" class="lemma">
@@ -237,6 +243,8 @@ and similarly $`\|e^a_{k+1}\| \le \lambda K_a`$. So $`a_k, b_k, c_k`$ are bounde
 *Convergence.* Lemma 2.7 of the single-time-scale note (with step sizes $`\gamma_k`$, $`\sum\gamma_k \ge \sum\beta_k = \infty`$) gives $`e^b_k \to 0`$; then the perturbation $`\delta^2_k - K_{23}e^b_k \to 0`$ gives $`e^c_k \to 0`$; then $`e^a_k \to 0`$ in the same way. ◻
 
 </div>
+
+*Lean:* `tendsto_zero_of_coupled_recursion`; the normalization of the next subsection is `tendsto_two_time_scale_moments`.
 
 ### 3.4 Proof of Theorem [2.1](#thm:main)
 

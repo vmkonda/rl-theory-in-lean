@@ -137,6 +137,11 @@ where $\Sigma_{22}$, $\Sigma_{12}$, $\Sigma_{11}$ are the unique solutions of
 \end{align}
 \end{theorem}
 
+\noindent\emph{Lean:} \texttt{tendsto\_two\_time\_scale\_covariance}, fully formalized. There $D$ is
+any matrix with $A_{22}D = A_{21}$, stability takes the positive-definite form of Remark~1.3 of the
+single-time-scale note for $A_{22}$ and $\Delta_{\bar\beta}$, and the noise hypotheses are as in
+Theorem~2.1 of that note.
+
 These are equations (7.14)--(7.16) of Konda (2002), there for i.i.d.\ noise. Eliminating
 $\Sigma_{12}$ and $\Sigma_{22}$ gives the analogue of Theorem~7.8 there.
 
@@ -196,6 +201,8 @@ single-time-scale note. One finds
 and the bounds follow from $|\beta_{k+1} - \beta_k| \le C\beta_k^2$, $|\gamma_{k+1} - \gamma_k| \le C\gamma_k^2$
 and $\beta_k \le \gamma_k$.
 \end{proof}
+\noindent\emph{Lean:} \texttt{ttsX\_succ}, \texttt{ttsY\_succ} (the identities),
+\texttt{norm\_tts\_cx\_le}, \texttt{norm\_tts\_cy\_le} (pointwise bounds on $c_k$, $c'_k$).
 
 \subsection{Second-moment recursions}
 
@@ -252,6 +259,10 @@ $C\sqrt{\beta_kn_k}\,\beta_k\gamma_k \le C\beta_k^2(\gamma_k/\sqrt{\beta_k})n_k$
 of order $\beta_k$ are at most $C\beta_k\gamma_kn_k = (\beta_k/\gamma_k)\gamma_k^2n_k$, and the cross
 terms with $c'$ are at most $C\sqrt{\gamma_kn_k}\,\gamma_k^2$.
 \end{proof}
+\noindent\emph{Lean:} \texttt{tts\_remainder\_step}, from the one-step expansions
+\texttt{tts\_step\_X}, \texttt{tts\_step\_Z}, \texttt{tts\_step\_Y} (built on
+\texttt{crossMoment\_step}), the size bounds \texttt{tts\_sizes}, and the arithmetic of
+\texttt{tts\_R1\_le}, \texttt{tts\_R2\_le}, \texttt{tts\_R3\_le}.
 
 \subsection{A deterministic lemma for coupled recursions}
 
@@ -297,6 +308,8 @@ and similarly $\|e^a_{k+1}\| \le \lambda K_a$. So $a_k, b_k, c_k$ are bounded an
 $\sum\gamma_k \ge \sum\beta_k = \infty$) gives $e^b_k \to 0$; then the perturbation
 $\delta^2_k - K_{23}e^b_k \to 0$ gives $e^c_k \to 0$; then $e^a_k \to 0$ in the same way.
 \end{proof}
+\noindent\emph{Lean:} \texttt{tendsto\_zero\_of\_coupled\_recursion}; the normalization of the next
+subsection is \texttt{tendsto\_two\_time\_scale\_moments}.
 
 \subsection{Proof of Theorem~\ref{thm:main}}
 
