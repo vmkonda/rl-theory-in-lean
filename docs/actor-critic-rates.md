@@ -246,9 +246,43 @@ A box $`[0, sU]\times[0, sV]`$ is then eventually invariant, so both normalized 
 
 - end to end, `tendsto_tts_dissipative`: the two-time-scale iteration with dissipative drifts and bounded martingale noise has the asymptotic covariances of its linearization.
 
-Not formalized:
+<div id="thm:ttsmarkov" class="theorem">
 
-- two-time-scale moment bounds with Poisson shifts and sampling remainders. The single-time-scale shift trick of Theorem [2.4](#thm:linmarkov) should carry over;
+**Theorem 2.7** (Fourth moments for two time scales, Markov noise). *In Theorem [2.5](#thm:lintts), let the Poisson shifts $`h, g`$ be bounded and known at step $`k`$, let $`\|r^1_k\| \le C\beta_k`$ and $`\|r^2_k\| \le C\gamma_k`$ be known at step $`k`$, and let the noise and the start be bounded. Suppose the hypotheses of Theorem [2.6](#thm:ttsmoments) hold, the drifts are Lipschitz, and $`\gamma_k^2/\beta_k \to 0`$. Then $`\mathbb{E}\|x_k\|^4 = O(\gamma_k^2)`$ and $`\mathbb{E}\|y_k\|^4 = O(\gamma_k^2)`$, so Theorem [2.5](#thm:lintts) applies.*
+
+</div>
+
+<div class="proof">
+
+*Proof.* *The shift.* Set $`e_k = x_k + \beta_{k-1}h_k`$, $`\hat y_k = y_k + \gamma_{k-1}g_k`$ and $`w_k = \hat y_k + De_k`$. Then $`e_{k+1} = u_k + \beta_kM^1_{k+1}`$ and $`w_{k+1} = v_k + \gamma_k\tilde M_{k+1}`$, where
+``` math
+u_k = e_k + \beta_kF_1(e_k, \hat y_k) + \varepsilon^1_k,\qquad
+  v_k = w_k + \gamma_kF_2(e_k, \hat y_k) + \beta_kDF_1(e_k, \hat y_k) + \varepsilon^2_k
+```
+are known at step $`k`$. The errors collect the step differences $`(\beta_k - \beta_{k-1})h_k`$ and $`(\gamma_k - \gamma_{k-1})g_k`$, which are $`O(\beta^2)`$ and $`O(\gamma^2)`$, the remainders $`r`$, and the change of the drifts between $`(x_k, y_k)`$ and $`(e_k, \hat y_k)`$, which is $`O(\gamma)`$ by the Lipschitz bound. So $`\|\varepsilon^1_k\| = O(\beta_k\gamma_k)`$ and $`\|\varepsilon^2_k\| = O(\gamma_k^2)`$.
+
+*The perturbed steps.* The steps of Theorem [2.6](#thm:ttsmoments) apply at $`(e_k, \hat y_k)`$. Expanding $`\|p + \varepsilon\|^2 \le \|p\|^2 + 2\|p\|\|\varepsilon\| + \|\varepsilon\|^2`$ and using Young’s inequality with weight $`\theta\beta_k`$ (slow) or $`\theta\gamma_k`$ (fast), with $`\theta = (\eta - c_0)/2`$, gives
+``` math
+\|u_k\|^2 \le (1 - (\eta - \theta)\beta_k + \kappa\beta_k^2)\|e_k\|^2 + c_1\beta_k\|w_k\|^2 + G\beta_k^2,
+```
+``` math
+\|v_k\|^2 \le (1 - (\eta - \theta)\gamma_k + c_2\tau_k)\|w_k\|^2 + c_2\tau_k\|e_k\|^2 + G\gamma_k^2 .
+```
+The slow cross term costs $`\varepsilon^2/\beta = O(\beta\gamma^2)`$, which is $`O(\beta^2)`$ because $`\gamma^2 = O(\beta)`$.
+
+*The recursions.* The additive terms $`G\beta^2`$ and $`G\gamma^2`$ have the order of the noise, so the recursions of Theorem [2.6](#thm:ttsmoments) hold with rate $`\eta - \theta > c_0`$ and larger noise constants. Hence $`\mathbb{E}\|e_k\|^4, \mathbb{E}\|w_k\|^4 = O(\gamma_k^2)`$. Since $`x_k - e_k`$ and $`y_k - \hat y_k`$ are $`O(\gamma_k)`$ and $`y = w - De + (y - \hat y)`$, the same holds for $`x_k`$ and $`y_k`$. ◻
+
+</div>
+
+*Lean:*
+
+- `moment_bounds_tts_markov`, through `slow_perturb_scalar` and `fast_perturb_scalar`;
+
+- the moment engine `tts_moments_of_steps`: abstract steps $`u + \beta M`$, $`v + \gamma N`$ with additive $`G`$ terms. `moment_bounds_tts` uses it too, with $`G = 0`$;
+
+- end to end, `tendsto_tts_dissipative_markov`: the two-time-scale iteration with dissipative Lipschitz drifts, Poisson shifts and sampling remainders has the asymptotic covariances of its linearization.
+
+Not formalized:
 
 - the derivation of the decomposition $`M + h - h' + r`$, with $`r = O(\beta)`$, from a parameter-dependent finite chain;
 
@@ -646,7 +680,7 @@ A large critic with rarely visited states and a small critic step lengthens the 
 
   The centering condition is the stationary mean of the noise, $`\sum_{y,y'}Q(y,y')(F(y,y')m(y) + \nu(y)e(y,y')) = 0`$ (`centering_eq_noise_mean`). At the root of the mean direction this holds by definition.
 
-- Lemma [2.1](#lem:delta): formalized (`hasFDerivAt_implicit`). Assumption [2.2](#ass:lin): proved for one time scale with a dissipative drift, Markov noise and state-dependent sampling (Theorems [2.3](#thm:linearize) and [2.4](#thm:linmarkov)), and for two time scales with dissipative drifts and martingale noise (Theorems [2.5](#thm:lintts) and [2.6](#thm:ttsmoments)).
+- Lemma [2.1](#lem:delta): formalized (`hasFDerivAt_implicit`). Assumption [2.2](#ass:lin): proved for one time scale with a dissipative drift, Markov noise and state-dependent sampling (Theorems [2.3](#thm:linearize) and [2.4](#thm:linmarkov)), and for two time scales with dissipative drifts, with martingale noise (Theorems [2.5](#thm:lintts) and [2.6](#thm:ttsmoments)) and with Markov noise (Theorem [2.7](#thm:ttsmarkov)).
 
 # References
 

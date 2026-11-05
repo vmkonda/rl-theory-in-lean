@@ -821,6 +821,245 @@ section Main
 variable {d₁ d₂ : ℕ} {Ω : Type*} {m0 : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
 
 set_option maxHeartbeats 8000000 in
+/-- **The moment engine for two time scales.** Let `x_{k+1} = u_k + β_k M_{k+1}` and
+`z_{k+1} = v_k + γ_k N_{k+1}`, with `u_k, v_k` known at time `k` and `M, N` bounded martingale
+differences. If the known parts contract,
+* `‖u_k‖² ≤ (1 - ηβ_k + κβ_k²) ‖x_k‖² + c₁ β_k ‖z_k‖² + G β_k²`,
+* eventually `‖v_k‖² ≤ (1 - ηγ_k + c₂τ_k) ‖z_k‖² + c₂τ_k ‖x_k‖² + G γ_k²`, `τ = γ² + β²/γ`,
+
+and `β/γ → 0`, `γ_k / γ_{k+1} ≤ 1 + c₀ β_k` with `0 ≤ c₀ < η`, then
+`E‖x_k‖⁴, E‖z_k‖⁴ ≤ W γ_k²`. The additive `G` terms absorb small perturbations of the drift,
+such as Poisson shifts and sampling remainders. -/
+lemma tts_moments_of_steps {β γ : ℕ → ℝ} (hβp : ∀ k, 0 < β k) (hγp : ∀ k, 0 < γ k)
+    (hβ0 : Tendsto β atTop (𝓝 0)) (hγ0 : Tendsto γ atTop (𝓝 0))
+    (hβγ : Tendsto (fun k => β k / γ k) atTop (𝓝 0)) {η c₀ κ c₁ c₂ G CM CN : ℝ}
+    (hc₀ : 0 ≤ c₀) (hc₀η : c₀ < η) (hratio : ∀ᶠ k in atTop, γ k / γ (k + 1) ≤ 1 + c₀ * β k)
+    (hc₁ : 0 ≤ c₁) (hc₂ : 0 ≤ c₂) (hG : 0 ≤ G) (hq : ∀ k, 0 ≤ 1 - η * β k + κ * β k ^ 2)
+    (ℱ : MeasureTheory.Filtration ℕ m0) {x u M : ℕ → Ω → E d₁} {z v N : ℕ → Ω → E d₂}
+    (hxm : ∀ k, StronglyMeasurable[ℱ k] (x k)) (hzm : ∀ k, StronglyMeasurable[ℱ k] (z k))
+    (hum : ∀ k, StronglyMeasurable[ℱ k] (u k)) (hvm : ∀ k, StronglyMeasurable[ℱ k] (v k))
+    (hbd : ∀ k, ∃ C, 0 ≤ C ∧ ∀ ω, ‖x k ω‖ ≤ C ∧ ‖z k ω‖ ≤ C)
+    (hubd : ∀ k, ∃ C, ∀ ω, ‖u k ω‖ ≤ C) (hvbd : ∀ k, ∃ C, ∀ ω, ‖v k ω‖ ≤ C)
+    (hMm : ∀ k, StronglyMeasurable[ℱ (k + 1)] (M (k + 1))) (hMb : ∀ k ω, ‖M (k + 1) ω‖ ≤ CM)
+    (hMmart : ∀ k j, μ[fun ω => M (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
+    (hNm : ∀ k, StronglyMeasurable[ℱ (k + 1)] (N (k + 1))) (hNb : ∀ k ω, ‖N (k + 1) ω‖ ≤ CN)
+    (hNmart : ∀ k j, μ[fun ω => N (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
+    (hxs : ∀ k ω, x (k + 1) ω = u k ω + β k • M (k + 1) ω)
+    (hzs : ∀ k ω, z (k + 1) ω = v k ω + γ k • N (k + 1) ω)
+    (hu2 : ∀ k ω, ‖u k ω‖ ^ 2 ≤ (1 - η * β k + κ * β k ^ 2) * ‖x k ω‖ ^ 2
+      + c₁ * β k * ‖z k ω‖ ^ 2 + G * β k ^ 2)
+    (hv2 : ∀ᶠ k in atTop, ∀ ω, ‖v k ω‖ ^ 2 ≤
+      (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * ‖z k ω‖ ^ 2
+        + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * ‖x k ω‖ ^ 2 + G * γ k ^ 2) :
+    ∃ W, ∀ k, ∫ ω, ‖x k ω‖ ^ 4 ∂μ ≤ W * γ k ^ 2 ∧ ∫ ω, ‖z k ω‖ ^ 4 ∂μ ≤ W * γ k ^ 2 := by
+  have hη : 0 < η := by linarith
+  set a : ℕ → ℝ := fun k => ∫ ω, ‖x k ω‖ ^ 2 ∂μ with ha
+  set b : ℕ → ℝ := fun k => ∫ ω, ‖z k ω‖ ^ 2 ∂μ with hb'
+  set A : ℕ → ℝ := fun k => ∫ ω, ‖x k ω‖ ^ 4 ∂μ with hA
+  set B : ℕ → ℝ := fun k => ∫ ω, ‖z k ω‖ ^ 4 ∂μ with hB
+  have ha0 : ∀ k, 0 ≤ a k := fun k => integral_nonneg fun _ => by positivity
+  have hb0 : ∀ k, 0 ≤ b k := fun k => integral_nonneg fun _ => by positivity
+  have hbI : ∀ (g : Ω → ℝ), AEStronglyMeasurable g μ → (∃ C, ∀ ω, |g ω| ≤ C) →
+      Integrable g μ := fun g hg ⟨C, hC⟩ => (memLp_top_of_bound hg C
+        (Eventually.of_forall fun ω => by rw [Real.norm_eq_abs]; exact hC ω)).integrable le_top
+  have hxa : ∀ k, AEStronglyMeasurable (x k) μ := fun k =>
+    ((hxm k).mono (ℱ.le k)).aestronglyMeasurable
+  have hza : ∀ k, AEStronglyMeasurable (z k) μ := fun k =>
+    ((hzm k).mono (ℱ.le k)).aestronglyMeasurable
+  have ipow : ∀ {n : ℕ} (w : Ω → E n) (p : ℕ), AEStronglyMeasurable w μ →
+      (∃ C, ∀ ω, ‖w ω‖ ≤ C) → Integrable (fun ω => ‖w ω‖ ^ p) μ := by
+    intro n w p hw ⟨C, hC⟩
+    refine hbI _ (hw.norm.pow p) ⟨max C 0 ^ p, fun ω => ?_⟩
+    rw [abs_of_nonneg (by positivity)]
+    exact pow_le_pow_left₀ (norm_nonneg _) ((hC ω).trans (le_max_left _ _)) p
+  have ix : ∀ k p, Integrable (fun ω => ‖x k ω‖ ^ p) μ := fun k p => by
+    obtain ⟨C, -, hC⟩ := hbd k; exact ipow _ p (hxa k) ⟨C, fun ω => (hC ω).1⟩
+  have iz : ∀ k p, Integrable (fun ω => ‖z k ω‖ ^ p) μ := fun k p => by
+    obtain ⟨C, -, hC⟩ := hbd k; exact ipow _ p (hza k) ⟨C, fun ω => (hC ω).2⟩
+  have iu : ∀ k p, Integrable (fun ω => ‖u k ω‖ ^ p) μ := fun k p =>
+    ipow _ p ((hum k).mono (ℱ.le k)).aestronglyMeasurable (hubd k)
+  have iv : ∀ k p, Integrable (fun ω => ‖v k ω‖ ^ p) μ := fun k p =>
+    ipow _ p ((hvm k).mono (ℱ.le k)).aestronglyMeasurable (hvbd k)
+  -- integrals of the comparison functions
+  have I2 : ∀ (f g : Ω → ℝ) (p q r : ℝ), Integrable f μ → Integrable g μ →
+      ∫ ω, (p * f ω + q * g ω + r) ∂μ = p * ∫ ω, f ω ∂μ + q * ∫ ω, g ω ∂μ + r := by
+    intro f g p q r hf hg
+    have i1 : Integrable (fun ω => p * f ω + q * g ω) μ := (hf.const_mul p).add (hg.const_mul q)
+    rw [integral_add i1 (integrable_const r), integral_add (hf.const_mul p) (hg.const_mul q),
+      integral_const_mul, integral_const_mul]
+    simp
+  have I4 : ∀ (f g f' g' : Ω → ℝ) (p q p' q' r : ℝ), Integrable f μ → Integrable g μ →
+      Integrable f' μ → Integrable g' μ →
+      ∫ ω, (p * f ω + q * g ω + (p' * f' ω + q' * g' ω) + r) ∂μ =
+        p * ∫ ω, f ω ∂μ + q * ∫ ω, g ω ∂μ + (p' * ∫ ω, f' ω ∂μ + q' * ∫ ω, g' ω ∂μ) + r := by
+    intro f g f' g' p q p' q' r hf hg hf' hg'
+    have i1 : Integrable (fun ω => p * f ω + q * g ω) μ := (hf.const_mul p).add (hg.const_mul q)
+    have i2 : Integrable (fun ω => p' * f' ω + q' * g' ω) μ :=
+      (hf'.const_mul p').add (hg'.const_mul q')
+    have i3 : Integrable (fun ω => p * f ω + q * g ω + (p' * f' ω + q' * g' ω)) μ := i1.add i2
+    rw [integral_add i3 (integrable_const r), integral_add i1 i2,
+      integral_add (hf.const_mul p) (hg.const_mul q),
+      integral_add (hf'.const_mul p') (hg'.const_mul q'), integral_const_mul, integral_const_mul,
+      integral_const_mul, integral_const_mul]
+    simp
+  have hηγ : ∀ᶠ k in atTop, η * γ k ≤ 1 := by
+    have h := hγ0.const_mul η
+    rw [mul_zero] at h
+    exact h.eventually (ge_mem_nhds (by norm_num))
+  set t₀ := (η - c₀) / 4 with ht₀
+  have ht₀0 : 0 < t₀ := by simp only [ht₀]; linarith
+  -- the slow component
+  have hiu : ∀ k, ∫ ω, ‖u k ω‖ ^ 2 ∂μ ≤ (1 - η * β k + κ * β k ^ 2) * a k
+      + c₁ * β k * b k + G * β k ^ 2 := fun k => by
+    calc ∫ ω, ‖u k ω‖ ^ 2 ∂μ ≤ ∫ ω, ((1 - η * β k + κ * β k ^ 2) * ‖x k ω‖ ^ 2
+          + c₁ * β k * ‖z k ω‖ ^ 2 + G * β k ^ 2) ∂μ :=
+          integral_mono (iu k 2) ((((ix k 2).const_mul _).add ((iz k 2).const_mul _)).add
+            (integrable_const _)) (hu2 k)
+      _ = _ := I2 _ _ _ _ _ (ix k 2) (iz k 2)
+  have hiu4 : ∀ k, ∫ ω, (‖u k ω‖ ^ 2) ^ 2 ∂μ ≤
+      (1 + t₀ * β k) * (1 - η * β k + κ * β k ^ 2) ^ 2 * A k
+        + (1 + 1 / (t₀ * β k)) * (c₁ * β k) ^ 2 * B k
+        + (2 * G * β k ^ 2 * (1 - η * β k + κ * β k ^ 2) * a k
+          + 2 * G * β k ^ 2 * (c₁ * β k) * b k) + G ^ 2 * β k ^ 4 := fun k => by
+    have hb := hβp k
+    have iu4 : Integrable (fun ω => (‖u k ω‖ ^ 2) ^ 2) μ := by
+      have := iu k 4
+      refine this.congr (Eventually.of_forall fun ω => ?_)
+      simp only; ring
+    have hpt : ∀ ω, (‖u k ω‖ ^ 2) ^ 2 ≤
+        (1 + t₀ * β k) * (1 - η * β k + κ * β k ^ 2) ^ 2 * ‖x k ω‖ ^ 4
+        + (1 + 1 / (t₀ * β k)) * (c₁ * β k) ^ 2 * ‖z k ω‖ ^ 4
+        + (2 * G * β k ^ 2 * (1 - η * β k + κ * β k ^ 2) * ‖x k ω‖ ^ 2
+          + 2 * G * β k ^ 2 * (c₁ * β k) * ‖z k ω‖ ^ 2) + G ^ 2 * β k ^ 4 := fun ω => by
+      set P := (1 - η * β k + κ * β k ^ 2) * ‖x k ω‖ ^ 2 + c₁ * β k * ‖z k ω‖ ^ 2 with hP
+      have h1 := pow_le_pow_left₀ (sq_nonneg _) (hu2 k ω) 2
+      have h2 := young_sq (p := (1 - η * β k + κ * β k ^ 2) * ‖x k ω‖ ^ 2)
+        (q := c₁ * β k * ‖z k ω‖ ^ 2) (mul_pos ht₀0 hb)
+      have e1 : (P + G * β k ^ 2) ^ 2 = P ^ 2 + 2 * G * β k ^ 2 * P + G ^ 2 * β k ^ 4 := by ring
+      have e2 : (1 + t₀ * β k) * ((1 - η * β k + κ * β k ^ 2) * ‖x k ω‖ ^ 2) ^ 2
+          + (1 + 1 / (t₀ * β k)) * (c₁ * β k * ‖z k ω‖ ^ 2) ^ 2 =
+          (1 + t₀ * β k) * (1 - η * β k + κ * β k ^ 2) ^ 2 * ‖x k ω‖ ^ 4
+          + (1 + 1 / (t₀ * β k)) * (c₁ * β k) ^ 2 * ‖z k ω‖ ^ 4 := by ring
+      have e3 : 2 * G * β k ^ 2 * P = 2 * G * β k ^ 2 * (1 - η * β k + κ * β k ^ 2) * ‖x k ω‖ ^ 2
+          + 2 * G * β k ^ 2 * (c₁ * β k) * ‖z k ω‖ ^ 2 := by simp only [hP]; ring
+      have h1' : (‖u k ω‖ ^ 2) ^ 2 ≤ (P + G * β k ^ 2) ^ 2 := h1
+      rw [e1] at h1'
+      linarith
+    calc ∫ ω, (‖u k ω‖ ^ 2) ^ 2 ∂μ ≤ ∫ ω, ((1 + t₀ * β k) * (1 - η * β k + κ * β k ^ 2) ^ 2
+          * ‖x k ω‖ ^ 4 + (1 + 1 / (t₀ * β k)) * (c₁ * β k) ^ 2 * ‖z k ω‖ ^ 4
+          + (2 * G * β k ^ 2 * (1 - η * β k + κ * β k ^ 2) * ‖x k ω‖ ^ 2
+            + 2 * G * β k ^ 2 * (c₁ * β k) * ‖z k ω‖ ^ 2) + G ^ 2 * β k ^ 4) ∂μ :=
+          integral_mono iu4 (((((ix k 4).const_mul _).add ((iz k 4).const_mul _)).add
+            (((ix k 2).const_mul _).add ((iz k 2).const_mul _))).add (integrable_const _)) hpt
+      _ = _ := I4 _ _ _ _ _ _ _ _ _ (ix k 4) (iz k 4) (ix k 2) (iz k 2)
+  -- the fast component
+  have hiv : ∀ᶠ k in atTop, ∫ ω, ‖v k ω‖ ^ 2 ∂μ ≤
+      (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * b k
+        + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * a k + G * γ k ^ 2 := by
+    filter_upwards [hv2] with k hk
+    calc ∫ ω, ‖v k ω‖ ^ 2 ∂μ ≤ ∫ ω, ((1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k))
+          * ‖z k ω‖ ^ 2 + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * ‖x k ω‖ ^ 2 + G * γ k ^ 2) ∂μ :=
+          integral_mono (iv k 2) ((((iz k 2).const_mul _).add ((ix k 2).const_mul _)).add
+            (integrable_const _)) hk
+      _ = _ := I2 _ _ _ _ _ (iz k 2) (ix k 2)
+  have hiv4 : ∀ᶠ k in atTop, ∫ ω, (‖v k ω‖ ^ 2) ^ 2 ∂μ ≤
+      (1 + t₀ * γ k) * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * B k
+        + (1 + 1 / (t₀ * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * A k
+        + (2 * G * γ k ^ 2 * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * b k
+          + 2 * G * γ k ^ 2 * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * a k) + G ^ 2 * γ k ^ 4 := by
+    filter_upwards [hv2] with k hk
+    have hg := hγp k
+    have iv4 : Integrable (fun ω => (‖v k ω‖ ^ 2) ^ 2) μ := by
+      have := iv k 4
+      refine this.congr (Eventually.of_forall fun ω => ?_)
+      simp only; ring
+    have hpt : ∀ ω, (‖v k ω‖ ^ 2) ^ 2 ≤
+        (1 + t₀ * γ k) * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * ‖z k ω‖ ^ 4
+        + (1 + 1 / (t₀ * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * ‖x k ω‖ ^ 4
+        + (2 * G * γ k ^ 2 * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * ‖z k ω‖ ^ 2
+          + 2 * G * γ k ^ 2 * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * ‖x k ω‖ ^ 2)
+        + G ^ 2 * γ k ^ 4 := fun ω => by
+      set P := (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * ‖z k ω‖ ^ 2
+        + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * ‖x k ω‖ ^ 2 with hP
+      have h1 := pow_le_pow_left₀ (sq_nonneg _) (hk ω) 2
+      have h2 := young_sq (p := (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * ‖z k ω‖ ^ 2)
+        (q := c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * ‖x k ω‖ ^ 2) (mul_pos ht₀0 hg)
+      have e1 : (P + G * γ k ^ 2) ^ 2 = P ^ 2 + 2 * G * γ k ^ 2 * P + G ^ 2 * γ k ^ 4 := by ring
+      have e2 : (1 + t₀ * γ k) * ((1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * ‖z k ω‖ ^ 2) ^ 2
+          + (1 + 1 / (t₀ * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * ‖x k ω‖ ^ 2) ^ 2 =
+          (1 + t₀ * γ k) * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * ‖z k ω‖ ^ 4
+          + (1 + 1 / (t₀ * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * ‖x k ω‖ ^ 4 := by ring
+      have e3 : 2 * G * γ k ^ 2 * P =
+          2 * G * γ k ^ 2 * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * ‖z k ω‖ ^ 2
+          + 2 * G * γ k ^ 2 * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * ‖x k ω‖ ^ 2 := by
+        simp only [hP]; ring
+      have h1' : (‖v k ω‖ ^ 2) ^ 2 ≤ (P + G * γ k ^ 2) ^ 2 := h1
+      rw [e1] at h1'
+      linarith
+    calc ∫ ω, (‖v k ω‖ ^ 2) ^ 2 ∂μ ≤ ∫ ω, ((1 + t₀ * γ k)
+          * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * ‖z k ω‖ ^ 4
+          + (1 + 1 / (t₀ * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * ‖x k ω‖ ^ 4
+          + (2 * G * γ k ^ 2 * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * ‖z k ω‖ ^ 2
+            + 2 * G * γ k ^ 2 * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * ‖x k ω‖ ^ 2)
+          + G ^ 2 * γ k ^ 4) ∂μ :=
+          integral_mono iv4 (((((iz k 4).const_mul _).add ((ix k 4).const_mul _)).add
+            (((iz k 2).const_mul _).add ((ix k 2).const_mul _))).add (integrable_const _)) hpt
+      _ = _ := I4 _ _ _ _ _ _ _ _ _ (iz k 4) (ix k 4) (iz k 2) (ix k 2)
+  -- the raw recursions
+  have Ra : ∀ k, a (k + 1) ≤ (1 - η * β k + κ * β k ^ 2) * a k + c₁ * β k * b k
+      + (CM ^ 2 + 2 * G) * β k ^ 2 := fun k => by
+    have h1 := integral_sq_step (μ := μ) ℱ k (hum k) (hubd k) (hMm k) (hMb k) (hMmart k) (hxs k)
+    have h2 := hiu k
+    have h3 : 0 ≤ G * β k ^ 2 := by positivity
+    simp only [ha]; linarith
+  have Rb : ∀ᶠ k in atTop, b (k + 1) ≤ (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * b k
+      + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * a k + (CN ^ 2 + 2 * G) * γ k ^ 2 := by
+    filter_upwards [hiv] with k hk
+    have h1 := integral_sq_step (μ := μ) ℱ k (hvm k) (hvbd k) (hNm k) (hNb k) (hNmart k) (hzs k)
+    have h3 : 0 ≤ G * γ k ^ 2 := by positivity
+    simp only [hb']; linarith
+  have RA : ∀ k, A (k + 1) ≤ (1 + (η - c₀) / 4 * β k) * (1 - η * β k + κ * β k ^ 2) ^ 2
+        * A k + (1 + 1 / ((η - c₀) / 4 * β k)) * (c₁ * β k) ^ 2 * B k
+      + 8 * β k ^ 2 * (CM ^ 2 + 2 * G) * ((1 - η * β k + κ * β k ^ 2) * a k + c₁ * β k * b k)
+      + 3 * β k ^ 4 * (CM ^ 2 + 2 * G) ^ 2 := fun k => by
+    have hb := hβp k
+    have h1 := integral_four_step (μ := μ) ℱ k (hum k) (hubd k) (hMm k) (hMb k) (hMmart k)
+      (hxs k)
+    have h2 := hiu4 k
+    have h3 := mul_le_mul_of_nonneg_left (hiu k) (by positivity : 0 ≤ 8 * β k ^ 2 * CM ^ 2)
+    have hX : 0 ≤ (1 - η * β k + κ * β k ^ 2) * a k + c₁ * β k * b k :=
+      add_nonneg (mul_nonneg (hq k) (ha0 k)) (by have := hb0 k; positivity)
+    have h4 : 0 ≤ G * β k ^ 2 * ((1 - η * β k + κ * β k ^ 2) * a k + c₁ * β k * b k) := by
+      positivity
+    have h5 : 0 ≤ (4 * CM ^ 2 * G + 11 * G ^ 2) * β k ^ 4 := by positivity
+    simp only [hA, ← ht₀] at h1 h2 ⊢
+    linarith
+  have RB : ∀ᶠ k in atTop, B (k + 1) ≤ (1 + (η - c₀) / 4 * γ k)
+        * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * B k
+      + (1 + 1 / ((η - c₀) / 4 * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * A k
+      + 8 * γ k ^ 2 * (CN ^ 2 + 2 * G) * ((1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * b k
+        + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * a k) + 3 * γ k ^ 4 * (CN ^ 2 + 2 * G) ^ 2 := by
+    filter_upwards [hiv, hiv4, hηγ] with k hk hk4 hkη
+    have hg := hγp k
+    have h1 := integral_four_step (μ := μ) ℱ k (hvm k) (hvbd k) (hNm k) (hNb k) (hNmart k)
+      (hzs k)
+    have h3 := mul_le_mul_of_nonneg_left hk (by positivity : 0 ≤ 8 * γ k ^ 2 * CN ^ 2)
+    have hτ : 0 ≤ c₂ * (γ k ^ 2 + β k ^ 2 / γ k) := by have := hβp k; positivity
+    have hX : 0 ≤ (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * b k
+        + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * a k :=
+      add_nonneg (mul_nonneg (by linarith) (hb0 k)) (mul_nonneg hτ (ha0 k))
+    have h4 : 0 ≤ G * γ k ^ 2 * ((1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * b k
+        + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * a k) := by positivity
+    have h5 : 0 ≤ (4 * CN ^ 2 * G + 11 * G ^ 2) * γ k ^ 4 := by positivity
+    simp only [hB, ← ht₀] at h1 hk4 ⊢
+    linarith
+  exact tts_moments_scalar (β := β) (γ := γ) (a := a) (b := b) (A := A) (B := B)
+    (κ := κ) (c₁ := c₁) (c₂ := c₂) (CM := CM ^ 2 + 2 * G) (CN := CN ^ 2 + 2 * G) hβp hγp
+    hβ0 hγ0 hβγ hc₀ hc₀η hratio hc₁ hc₂ (by positivity) (by positivity) ha0 hb0
+    (fun k => integral_nonneg fun _ => by positivity) (fun k => integral_nonneg fun _ => by positivity)
+    Ra Rb RA RB
+
+set_option maxHeartbeats 8000000 in
 /-- **Fourth moments for two time scales.** Let
 `x_{k+1} = x_k + β_k (F₁(x_k, y_k) + M₁_{k+1})` and `y_{k+1} = y_k + γ_k (F₂(x_k, y_k) + M₂_{k+1})`,
 and write `z = y + D x`. Suppose:
@@ -1038,9 +1277,21 @@ theorem moment_bounds_tts {β γ : ℕ → ℝ} {βbar : ℝ} (hβ : StepSizeRat
       (norm_nonneg _) hK (by positivity) (hF₂in _ _) (by simpa [add_comm] using hf₂b k ω)
       (by simpa [add_comm] using hDf₁b k ω)
     simpa only [hv, hc₂] using h
-  -- the moments
-  set a : ℕ → ℝ := fun k => ∫ ω, ‖x k ω‖ ^ 2 ∂μ with ha
-  set b : ℕ → ℝ := fun k => ∫ ω, ‖z k ω‖ ^ 2 ∂μ with hb'
+  -- the moment engine
+  have hq : ∀ k, 0 ≤ 1 - η * β k + (2 * K ^ 2 + η ^ 2 / 4) * β k ^ 2 := fun k => by
+    nlinarith [sq_nonneg (1 - η * β k / 2), sq_nonneg (K * β k)]
+  have hu2' : ∀ k ω, ‖u k ω‖ ^ 2 ≤ (1 - η * β k + (2 * K ^ 2 + η ^ 2 / 4) * β k ^ 2)
+      * ‖x k ω‖ ^ 2 + c₁ * β k * ‖z k ω‖ ^ 2 + 0 * β k ^ 2 := fun k ω => by
+    have := hu2 k ω
+    nlinarith [sq_nonneg (η * β k * ‖x k ω‖)]
+  have hv2' : ∀ᶠ k in atTop, ∀ ω, ‖v k ω‖ ^ 2 ≤
+      (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * ‖z k ω‖ ^ 2
+        + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * ‖x k ω‖ ^ 2 + 0 * γ k ^ 2 := by
+    filter_upwards [hηγ] with k hk ω
+    simpa using hv2 k hk ω
+  obtain ⟨W, hW⟩ := tts_moments_of_steps (μ := μ) (κ := 2 * K ^ 2 + η ^ 2 / 4) (G := 0)
+    hβ.pos hγ.pos hβ.tendsto_zero hγ.tendsto_zero hβγ hc₀ hc₀η hratio hc₁0 hc₂0 le_rfl hq ℱ
+    hxm hzm hum hvm hbd hubd hvbd hM₁ hM₁b' hmart₁ hMtm hMtb hMtmart hxstep hzstep hu2' hv2'
   set A : ℕ → ℝ := fun k => ∫ ω, ‖x k ω‖ ^ 4 ∂μ with hA
   set B : ℕ → ℝ := fun k => ∫ ω, ‖z k ω‖ ^ 4 ∂μ with hB
   have hbI : ∀ (k : ℕ) (g : Ω → ℝ), AEStronglyMeasurable g μ → (∃ C, ∀ ω, |g ω| ≤ C) →
@@ -1050,14 +1301,6 @@ theorem moment_bounds_tts {β γ : ℕ → ℝ} {βbar : ℝ} (hβ : StepSizeRat
     ((hxm k).mono (ℱ.le k)).aestronglyMeasurable
   have hza : ∀ k, AEStronglyMeasurable (z k) μ := fun k =>
     ((hzm k).mono (ℱ.le k)).aestronglyMeasurable
-  have ix2 : ∀ k, Integrable (fun ω => ‖x k ω‖ ^ 2) μ := fun k => by
-    obtain ⟨C, hC0, hC⟩ := hbd k
-    exact hbI k _ ((hxa k).norm.pow 2) ⟨C ^ 2, fun ω => by
-      rw [abs_of_nonneg (by positivity)]; exact pow_le_pow_left₀ (norm_nonneg _) (hC ω).1 2⟩
-  have iz2 : ∀ k, Integrable (fun ω => ‖z k ω‖ ^ 2) μ := fun k => by
-    obtain ⟨C, hC0, hC⟩ := hbd k
-    exact hbI k _ ((hza k).norm.pow 2) ⟨C ^ 2, fun ω => by
-      rw [abs_of_nonneg (by positivity)]; exact pow_le_pow_left₀ (norm_nonneg _) (hC ω).2 2⟩
   have ix4 : ∀ k, Integrable (fun ω => ‖x k ω‖ ^ 4) μ := fun k => by
     obtain ⟨C, hC0, hC⟩ := hbd k
     exact hbI k _ ((hxa k).norm.pow 4) ⟨C ^ 4, fun ω => by
@@ -1066,131 +1309,6 @@ theorem moment_bounds_tts {β γ : ℕ → ℝ} {βbar : ℝ} (hβ : StepSizeRat
     obtain ⟨C, hC0, hC⟩ := hbd k
     exact hbI k _ ((hza k).norm.pow 4) ⟨C ^ 4, fun ω => by
       rw [abs_of_nonneg (by positivity)]; exact pow_le_pow_left₀ (norm_nonneg _) (hC ω).2 4⟩
-  -- integrated drift bounds
-  have hiu : ∀ k, ∫ ω, ‖u k ω‖ ^ 2 ∂μ ≤ (1 - η * β k + 2 * K ^ 2 * β k ^ 2) * a k
-      + c₁ * β k * b k := fun k => by
-    obtain ⟨C, hC⟩ := hubd k
-    have iu : Integrable (fun ω => ‖u k ω‖ ^ 2) μ :=
-      hbI k _ (((hum k).mono (ℱ.le k)).aestronglyMeasurable.norm.pow 2) ⟨C ^ 2, fun ω => by
-        rw [abs_of_nonneg (by positivity)]
-        exact pow_le_pow_left₀ (norm_nonneg _) (hC ω) 2⟩
-    calc ∫ ω, ‖u k ω‖ ^ 2 ∂μ ≤ ∫ ω, ((1 - η * β k + 2 * K ^ 2 * β k ^ 2) * ‖x k ω‖ ^ 2
-          + c₁ * β k * ‖z k ω‖ ^ 2) ∂μ :=
-          integral_mono iu (((ix2 k).const_mul _).add ((iz2 k).const_mul _)) (hu2 k)
-      _ = _ := by rw [integral_add ((ix2 k).const_mul _) ((iz2 k).const_mul _),
-          integral_const_mul, integral_const_mul]
-  have hiv : ∀ k, η * γ k ≤ 1 → ∫ ω, ‖v k ω‖ ^ 2 ∂μ ≤
-      (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * b k
-        + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * a k := fun k hk => by
-    obtain ⟨C, hC⟩ := hvbd k
-    have iv : Integrable (fun ω => ‖v k ω‖ ^ 2) μ :=
-      hbI k _ (((hvm k).mono (ℱ.le k)).aestronglyMeasurable.norm.pow 2) ⟨C ^ 2, fun ω => by
-        rw [abs_of_nonneg (by positivity)]
-        exact pow_le_pow_left₀ (norm_nonneg _) (hC ω) 2⟩
-    calc ∫ ω, ‖v k ω‖ ^ 2 ∂μ ≤ ∫ ω, ((1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k))
-          * ‖z k ω‖ ^ 2 + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * ‖x k ω‖ ^ 2) ∂μ :=
-          integral_mono iv (((iz2 k).const_mul _).add ((ix2 k).const_mul _)) (hv2 k hk)
-      _ = _ := by rw [integral_add ((iz2 k).const_mul _) ((ix2 k).const_mul _),
-          integral_const_mul, integral_const_mul]
-  set t₀ := (η - c₀) / 4 with ht₀
-  have ht₀0 : 0 < t₀ := by simp only [ht₀]; linarith
-  have hiu4 : ∀ k, ∫ ω, (‖u k ω‖ ^ 2) ^ 2 ∂μ ≤
-      (1 + t₀ * β k) * (1 - η * β k + 2 * K ^ 2 * β k ^ 2) ^ 2 * A k
-        + (1 + 1 / (t₀ * β k)) * (c₁ * β k) ^ 2 * B k := fun k => by
-    obtain ⟨C, hC⟩ := hubd k
-    have hb := hβ.pos k
-    have iu : Integrable (fun ω => (‖u k ω‖ ^ 2) ^ 2) μ :=
-      hbI k _ ((((hum k).mono (ℱ.le k)).aestronglyMeasurable.norm.pow 2).pow 2)
-        ⟨(C ^ 2) ^ 2, fun ω => by
-          rw [abs_of_nonneg (by positivity)]
-          exact pow_le_pow_left₀ (by positivity) (pow_le_pow_left₀ (norm_nonneg _) (hC ω) 2) 2⟩
-    have hpt : ∀ ω, (‖u k ω‖ ^ 2) ^ 2 ≤ (1 + t₀ * β k) * (1 - η * β k + 2 * K ^ 2 * β k ^ 2) ^ 2
-        * ‖x k ω‖ ^ 4 + (1 + 1 / (t₀ * β k)) * (c₁ * β k) ^ 2 * ‖z k ω‖ ^ 4 := fun ω => by
-      have h1 := pow_le_pow_left₀ (by positivity) (hu2 k ω) 2
-      have h2 := young_sq (p := (1 - η * β k + 2 * K ^ 2 * β k ^ 2) * ‖x k ω‖ ^ 2)
-        (q := c₁ * β k * ‖z k ω‖ ^ 2) (mul_pos ht₀0 hb)
-      have e : (1 + t₀ * β k) * ((1 - η * β k + 2 * K ^ 2 * β k ^ 2) * ‖x k ω‖ ^ 2) ^ 2
-          + (1 + 1 / (t₀ * β k)) * (c₁ * β k * ‖z k ω‖ ^ 2) ^ 2 =
-          (1 + t₀ * β k) * (1 - η * β k + 2 * K ^ 2 * β k ^ 2) ^ 2 * ‖x k ω‖ ^ 4
-          + (1 + 1 / (t₀ * β k)) * (c₁ * β k) ^ 2 * ‖z k ω‖ ^ 4 := by ring
-      linarith
-    calc ∫ ω, (‖u k ω‖ ^ 2) ^ 2 ∂μ ≤ ∫ ω, ((1 + t₀ * β k) * (1 - η * β k + 2 * K ^ 2 * β k ^ 2) ^ 2
-          * ‖x k ω‖ ^ 4 + (1 + 1 / (t₀ * β k)) * (c₁ * β k) ^ 2 * ‖z k ω‖ ^ 4) ∂μ :=
-          integral_mono iu (((ix4 k).const_mul _).add ((iz4 k).const_mul _)) hpt
-      _ = _ := by rw [integral_add ((ix4 k).const_mul _) ((iz4 k).const_mul _),
-          integral_const_mul, integral_const_mul]
-  have hiv4 : ∀ k, η * γ k ≤ 1 → ∫ ω, (‖v k ω‖ ^ 2) ^ 2 ∂μ ≤
-      (1 + t₀ * γ k) * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * B k
-        + (1 + 1 / (t₀ * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * A k := fun k hk => by
-    obtain ⟨C, hC⟩ := hvbd k
-    have hg := hγ.pos k
-    have iv : Integrable (fun ω => (‖v k ω‖ ^ 2) ^ 2) μ :=
-      hbI k _ ((((hvm k).mono (ℱ.le k)).aestronglyMeasurable.norm.pow 2).pow 2)
-        ⟨(C ^ 2) ^ 2, fun ω => by
-          rw [abs_of_nonneg (by positivity)]
-          exact pow_le_pow_left₀ (by positivity) (pow_le_pow_left₀ (norm_nonneg _) (hC ω) 2) 2⟩
-    have hpt : ∀ ω, (‖v k ω‖ ^ 2) ^ 2 ≤ (1 + t₀ * γ k)
-        * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * ‖z k ω‖ ^ 4
-        + (1 + 1 / (t₀ * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * ‖x k ω‖ ^ 4 := fun ω => by
-      have h1 := pow_le_pow_left₀ (by positivity) (hv2 k hk ω) 2
-      have h2 := young_sq (p := (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * ‖z k ω‖ ^ 2)
-        (q := c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * ‖x k ω‖ ^ 2) (mul_pos ht₀0 hg)
-      have e : (1 + t₀ * γ k) * ((1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * ‖z k ω‖ ^ 2) ^ 2
-          + (1 + 1 / (t₀ * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * ‖x k ω‖ ^ 2) ^ 2 =
-          (1 + t₀ * γ k) * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * ‖z k ω‖ ^ 4
-          + (1 + 1 / (t₀ * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * ‖x k ω‖ ^ 4 := by ring
-      linarith
-    calc ∫ ω, (‖v k ω‖ ^ 2) ^ 2 ∂μ ≤ ∫ ω, ((1 + t₀ * γ k)
-          * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * ‖z k ω‖ ^ 4
-          + (1 + 1 / (t₀ * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * ‖x k ω‖ ^ 4) ∂μ :=
-          integral_mono iv (((iz4 k).const_mul _).add ((ix4 k).const_mul _)) hpt
-      _ = _ := by rw [integral_add ((iz4 k).const_mul _) ((ix4 k).const_mul _),
-          integral_const_mul, integral_const_mul]
-  -- the raw recursions
-  have Ra : ∀ k, a (k + 1) ≤ (1 - η * β k + 2 * K ^ 2 * β k ^ 2) * a k + c₁ * β k * b k
-      + CM₀ ^ 2 * β k ^ 2 := fun k => by
-    have := integral_sq_step (μ := μ) ℱ k (hum k) (hubd k) (hM₁ k) (hM₁b' k) (hmart₁ k)
-      (hxstep k)
-    have := hiu k
-    simp only [ha]; nlinarith
-  have Rb : ∀ᶠ k in atTop, b (k + 1) ≤ (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * b k
-      + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * a k + CMt ^ 2 * γ k ^ 2 := by
-    filter_upwards [hηγ] with k hk
-    have := integral_sq_step (μ := μ) ℱ k (hvm k) (hvbd k) (hMtm k) (hMtb k) (hMtmart k)
-      (hzstep k)
-    have := hiv k hk
-    simp only [hb']; nlinarith
-  have RA : ∀ k, A (k + 1) ≤ (1 + (η - c₀) / 4 * β k) * (1 - η * β k + 2 * K ^ 2 * β k ^ 2) ^ 2
-        * A k + (1 + 1 / ((η - c₀) / 4 * β k)) * (c₁ * β k) ^ 2 * B k
-      + 8 * β k ^ 2 * CM₀ ^ 2 * ((1 - η * β k + 2 * K ^ 2 * β k ^ 2) * a k + c₁ * β k * b k)
-      + 3 * β k ^ 4 * (CM₀ ^ 2) ^ 2 := fun k => by
-    have h1 := integral_four_step (μ := μ) ℱ k (hum k) (hubd k) (hM₁ k) (hM₁b' k) (hmart₁ k)
-      (hxstep k)
-    have h2 := hiu4 k
-    have h3 := mul_le_mul_of_nonneg_left (hiu k) (by positivity : 0 ≤ 8 * β k ^ 2 * CM₀ ^ 2)
-    have e : 3 * β k ^ 4 * CM₀ ^ 4 = 3 * β k ^ 4 * (CM₀ ^ 2) ^ 2 := by ring
-    simp only [hA, ← ht₀] at h2 ⊢
-    linarith
-  have RB : ∀ᶠ k in atTop, B (k + 1) ≤ (1 + (η - c₀) / 4 * γ k)
-        * (1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * B k
-      + (1 + 1 / ((η - c₀) / 4 * γ k)) * (c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) ^ 2 * A k
-      + 8 * γ k ^ 2 * CMt ^ 2 * ((1 - η * γ k + c₂ * (γ k ^ 2 + β k ^ 2 / γ k)) * b k
-        + c₂ * (γ k ^ 2 + β k ^ 2 / γ k) * a k) + 3 * γ k ^ 4 * (CMt ^ 2) ^ 2 := by
-    filter_upwards [hηγ] with k hk
-    have h1 := integral_four_step (μ := μ) ℱ k (hvm k) (hvbd k) (hMtm k) (hMtb k) (hMtmart k)
-      (hzstep k)
-    have h2 := hiv4 k hk
-    have h3 := mul_le_mul_of_nonneg_left (hiv k hk) (by positivity : 0 ≤ 8 * γ k ^ 2 * CMt ^ 2)
-    have e : 3 * γ k ^ 4 * CMt ^ 4 = 3 * γ k ^ 4 * (CMt ^ 2) ^ 2 := by ring
-    simp only [hB, ← ht₀] at h2 ⊢
-    linarith
-  -- the scalar core
-  obtain ⟨W, hW⟩ := tts_moments_scalar (β := β) (γ := γ) (a := a) (b := b) (A := A) (B := B)
-    (κ := 2 * K ^ 2) (c₁ := c₁) (c₂ := c₂) (CM := CM₀ ^ 2) (CN := CMt ^ 2) hβ.pos hγ.pos
-    hβ.tendsto_zero hγ.tendsto_zero hβγ hc₀ hc₀η hratio hc₁0 hc₂0 (sq_nonneg _) (sq_nonneg _)
-    (fun k => integral_nonneg fun _ => by positivity) (fun k => integral_nonneg fun _ => by positivity)
-    (fun k => integral_nonneg fun _ => by positivity) (fun k => integral_nonneg fun _ => by positivity)
-    Ra Rb RA RB
   -- back to `y = z - D x`
   refine ⟨fun k => ?_, (8 + 8 * nD ^ 4) * max W 0, fun k => ⟨?_, ?_⟩⟩
   · obtain ⟨C, hC0, hC⟩ := hbd k

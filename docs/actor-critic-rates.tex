@@ -311,10 +311,57 @@ step-size condition keeps the normalization of the slow moment by $\gamma$ contr
   and bounded martingale noise has the asymptotic covariances of its linearization.
 \end{itemize}
 
+\begin{theorem}[Fourth moments for two time scales, Markov noise]\label{thm:ttsmarkov}
+In Theorem~\ref{thm:lintts}, let the Poisson shifts $h, g$ be bounded and known at step $k$, let
+$\|r^1_k\| \le C\beta_k$ and $\|r^2_k\| \le C\gamma_k$ be known at step $k$, and let the noise and
+the start be bounded. Suppose the hypotheses of Theorem~\ref{thm:ttsmoments} hold, the drifts are
+Lipschitz, and $\gamma_k^2/\beta_k \to 0$. Then $\E\|x_k\|^4 = O(\gamma_k^2)$ and
+$\E\|y_k\|^4 = O(\gamma_k^2)$, so Theorem~\ref{thm:lintts} applies.
+\end{theorem}
+\begin{proof}
+\emph{The shift.} Set $e_k = x_k + \beta_{k-1}h_k$, $\hat y_k = y_k + \gamma_{k-1}g_k$ and
+$w_k = \hat y_k + De_k$. Then $e_{k+1} = u_k + \beta_kM^1_{k+1}$ and
+$w_{k+1} = v_k + \gamma_k\tilde M_{k+1}$, where
+\[
+  u_k = e_k + \beta_kF_1(e_k, \hat y_k) + \varepsilon^1_k,\qquad
+  v_k = w_k + \gamma_kF_2(e_k, \hat y_k) + \beta_kDF_1(e_k, \hat y_k) + \varepsilon^2_k
+\]
+are known at step $k$. The errors collect the step differences $(\beta_k - \beta_{k-1})h_k$ and
+$(\gamma_k - \gamma_{k-1})g_k$, which are $O(\beta^2)$ and $O(\gamma^2)$, the remainders $r$, and the
+change of the drifts between $(x_k, y_k)$ and $(e_k, \hat y_k)$, which is $O(\gamma)$ by the
+Lipschitz bound. So $\|\varepsilon^1_k\| = O(\beta_k\gamma_k)$ and $\|\varepsilon^2_k\| = O(\gamma_k^2)$.
+
+\emph{The perturbed steps.} The steps of Theorem~\ref{thm:ttsmoments} apply at $(e_k, \hat y_k)$.
+Expanding $\|p + \varepsilon\|^2 \le \|p\|^2 + 2\|p\|\|\varepsilon\| + \|\varepsilon\|^2$ and
+using Young's inequality with weight $\theta\beta_k$ (slow) or $\theta\gamma_k$ (fast), with
+$\theta = (\eta - c_0)/2$, gives
+\[
+  \|u_k\|^2 \le (1 - (\eta - \theta)\beta_k + \kappa\beta_k^2)\|e_k\|^2 + c_1\beta_k\|w_k\|^2 + G\beta_k^2,
+\]
+\[
+  \|v_k\|^2 \le (1 - (\eta - \theta)\gamma_k + c_2\tau_k)\|w_k\|^2 + c_2\tau_k\|e_k\|^2 + G\gamma_k^2 .
+\]
+The slow cross term costs $\varepsilon^2/\beta = O(\beta\gamma^2)$, which is $O(\beta^2)$ because
+$\gamma^2 = O(\beta)$.
+
+\emph{The recursions.} The additive terms $G\beta^2$ and $G\gamma^2$ have the order of the noise, so
+the recursions of Theorem~\ref{thm:ttsmoments} hold with rate $\eta - \theta > c_0$ and larger noise
+constants. Hence $\E\|e_k\|^4, \E\|w_k\|^4 = O(\gamma_k^2)$. Since $x_k - e_k$ and $y_k - \hat y_k$ are
+$O(\gamma_k)$ and $y = w - De + (y - \hat y)$, the same holds for $x_k$ and $y_k$.
+\end{proof}
+\noindent\emph{Lean:}
+\begin{itemize}
+\item \texttt{moment\_bounds\_tts\_markov}, through \texttt{slow\_perturb\_scalar} and
+  \texttt{fast\_perturb\_scalar};
+\item the moment engine \texttt{tts\_moments\_of\_steps}: abstract steps $u + \beta M$, $v + \gamma N$ with
+  additive $G$ terms. \texttt{moment\_bounds\_tts} uses it too, with $G = 0$;
+\item end to end, \texttt{tendsto\_tts\_dissipative\_markov}: the two-time-scale iteration with dissipative
+  Lipschitz drifts, Poisson shifts and sampling remainders has the asymptotic covariances of its
+  linearization.
+\end{itemize}
+
 Not formalized:
 \begin{itemize}
-\item two-time-scale moment bounds with Poisson shifts and sampling remainders. The single-time-scale
-  shift trick of Theorem~\ref{thm:linmarkov} should carry over;
 \item the derivation of the decomposition $M + h - h' + r$, with $r = O(\beta)$, from a parameter-dependent
   finite chain;
 \item global dissipativity, which is a strong assumption, would be replaced in a local theory by a
@@ -795,8 +842,9 @@ the predicted covariances to about 5\%, supporting Assumption~\ref{ass:lin} in t
   At the root of the mean direction this holds by definition.
 \item Lemma~\ref{lem:delta}: formalized (\texttt{hasFDerivAt\_implicit}). Assumption~\ref{ass:lin}:
   proved for one time scale with a dissipative drift, Markov noise and state-dependent sampling
-  (Theorems~\ref{thm:linearize} and~\ref{thm:linmarkov}), and for two time scales with dissipative drifts and
-  martingale noise (Theorems~\ref{thm:lintts} and~\ref{thm:ttsmoments}).
+  (Theorems~\ref{thm:linearize} and~\ref{thm:linmarkov}), and for two time scales with dissipative drifts,
+  with martingale noise (Theorems~\ref{thm:lintts} and~\ref{thm:ttsmoments}) and with Markov
+  noise (Theorem~\ref{thm:ttsmarkov}).
 \end{itemize}
 
 \begin{thebibliography}{9}
