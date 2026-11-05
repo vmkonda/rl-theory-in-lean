@@ -153,6 +153,51 @@ theorem tendsto_affine_transfer {Q : S → S → ℝ} {c : S → ℝ} {ρ : ℝ}
   rw [Real.norm_eq_abs]
   exact single_le_sum (f := fun y => |x k y - xl y|) (fun _ _ => abs_nonneg _) (mem_univ y)
 
+/-- **Fixed points of a row contraction.** If `Σ_{y'} Q y y' |c y'| ≤ ρ < 1`, the equation
+`U y = B y + Σ_{y'} Q y y' c y' U y'` has a solution in any finite-dimensional normed space.
+This gives the solutions `U` of Lemma 4.4. -/
+lemma exists_row_fixed {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X]
+    [FiniteDimensional ℝ X] {Q : S → S → ℝ} {c : S → ℝ} {ρ : ℝ} (hQ : ∀ y y', 0 ≤ Q y y')
+    (hρ : ∀ y, ∑ y', Q y y' * |c y'| ≤ ρ) (hρ1 : ρ < 1) (B : S → X) :
+    ∃ U : S → X, ∀ y, U y = B y + ∑ y', (Q y y' * c y') • U y' := by
+  let L : (S → X) →ₗ[ℝ] (S → X) :=
+    { toFun := fun U y => U y - ∑ y', (Q y y' * c y') • U y'
+      map_add' := fun U V => by
+        funext y; simp only [Pi.add_apply, smul_add, sum_add_distrib]; abel
+      map_smul' := fun r U => by
+        funext y
+        simp only [Pi.smul_apply, RingHom.id_apply, smul_sub, smul_sum, smul_comm r] }
+  have hinj : Function.Injective L := by
+    rw [← LinearMap.ker_eq_bot, LinearMap.ker_eq_bot']
+    intro U hU
+    have hfix : ∀ y, U y = ∑ y', (Q y y' * c y') • U y' := fun y => by
+      have := congrFun hU y
+      simp only [L, LinearMap.coe_mk, AddHom.coe_mk, Pi.zero_apply] at this
+      exact sub_eq_zero.mp this
+    rcases isEmpty_or_nonempty S with hS | hS
+    · funext y; exact (IsEmpty.false y).elim
+    obtain ⟨y0, -, hy0⟩ := exists_max_image univ (fun y => ‖U y‖) univ_nonempty
+    have hle : ‖U y0‖ ≤ ρ * ‖U y0‖ := by
+      calc ‖U y0‖ = ‖∑ y', (Q y0 y' * c y') • U y'‖ := by rw [← hfix y0]
+        _ ≤ ∑ y', ‖(Q y0 y' * c y') • U y'‖ := norm_sum_le _ _
+        _ ≤ ∑ y', Q y0 y' * |c y'| * ‖U y0‖ := sum_le_sum fun y' _ => by
+            rw [norm_smul, Real.norm_eq_abs, abs_mul, abs_of_nonneg (hQ y0 y')]
+            exact mul_le_mul_of_nonneg_left (hy0 y' (mem_univ _))
+              (mul_nonneg (hQ y0 y') (abs_nonneg _))
+        _ = (∑ y', Q y0 y' * |c y'|) * ‖U y0‖ := by rw [sum_mul]
+        _ ≤ ρ * ‖U y0‖ := mul_le_mul_of_nonneg_right (hρ y0) (norm_nonneg _)
+    have h0 : ‖U y0‖ = 0 := by
+      have := norm_nonneg (U y0)
+      nlinarith
+    funext y
+    exact norm_le_zero_iff.mp ((hy0 y (mem_univ _)).trans h0.le)
+  obtain ⟨U, hU⟩ := LinearMap.injective_iff_surjective.mp hinj B
+  refine ⟨U, fun y => ?_⟩
+  have := congrFun hU y
+  simp only [L, LinearMap.coe_mk, AddHom.coe_mk] at this
+  rw [← this]
+  abel
+
 end Contraction
 
 /-! ### Moments along the chain -/

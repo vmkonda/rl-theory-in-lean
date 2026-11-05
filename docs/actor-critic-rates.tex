@@ -497,7 +497,19 @@ the predicted covariances to about 5\%, supporting Assumption~\ref{ass:lin} in t
 \item The noise covariance $\tilde\Gamma$ of Theorem~\ref{thm:cov}, for trace-driven noise, is the limit
   computed from the stationary first and second trace moments
   (\texttt{tendsto\_secondMoment\_of\_trace\_noise\_stationary}, in the companion note). It is no
-  longer a hypothesis. This includes the unbounded REINFORCE trace.
+  longer a hypothesis. This includes the unbounded REINFORCE trace. For the restart chain the
+  whole statement rests on the model, in
+  \texttt{ScoreChain.tendsto\_secondMoment\_of\_restart\_noise\_centered}:
+  \begin{itemize}
+  \item the stationary law exists;
+  \item the Poisson solution $U$ exists, as the fixed point of a row contraction by $|\lambda|\gamma$
+    (\texttt{exists\_poisson\_U});
+  \item the Poisson solution $\hat h$ exists whenever the noise is centered under $\nu$
+    (\texttt{exists\_poisson\_h}).
+  \end{itemize}
+  The centering condition is the stationary mean of the noise,
+  $\sum_{y,y'}Q(y,y')(F(y,y')m(y) + \nu(y)e(y,y')) = 0$ (\texttt{centering\_eq\_noise\_mean}).
+  At the root of the mean direction this holds by definition.
 \item Assumption~\ref{ass:lin} is a hypothesis, and Lemma~\ref{lem:delta} (an implicit-function
   computation) is not formalized.
 \end{itemize}

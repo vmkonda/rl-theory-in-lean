@@ -384,7 +384,15 @@ A large critic with rarely visited states and a small critic step lengthens the 
 
 - Theorems [4.1](#thm:td1), [4.2](#thm:compat), [4.4](#thm:value) and the stationary identities of Theorem [4.5](#thm:td0): formalized in `CriticTheorems.lean` for a finite model of the sampling chain, `ScoreChain`: a chain on (restart flag, state, action) whose next action is drawn from the policy given the next state. This covers the restart chain and any other such chain. Two facts carry all the proofs: a function with mean zero over actions has $`\mathbb{E}[c(Y_{k+1})F(Y_{k+1})\mid Y_k] = 0`$ (`sum_Q_c_eq_zero`), and its correlation with the trace is its correlation with the current features (`sum_mul_trace_eq`). The stationary trace moments $`m(y) = \mathbb{E}[z_k1\{Y_k = y\}]`$ enter through the recursion that characterizes them, $`m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)`$. `ScoreChain.tendsto_traceMoment` derives this recursion from the process. Along the chain, the moments of the trace converge to a solution whenever the law of $`Y_k`$ converges and $`\sum_{y'}Q(y,y')|\lambda c(y')| < 1`$. For the restart chain this condition holds with bound $`|\lambda|\gamma`$ (`ScoreChain.restart_contraction`). The law converges too: restarts draw from a fixed distribution with probability at least $`1 - \gamma`$, so the law satisfies $`P_{k+1} = LP_k + b`$, with $`L`$ an $`\ell^1`$ contraction by $`\gamma`$. Its limit is a stationary $`\nu`$ (`ScoreChain.tendsto_law_restart`). Hence `ScoreChain.tendsto_traceMoment_of_restart` rests on the model alone, for every $`|\lambda| \le 1`$.
 
-- The noise covariance $`\tilde\Gamma`$ of Theorem [3.1](#thm:cov), for trace-driven noise, is the limit computed from the stationary first and second trace moments (`tendsto_secondMoment_of_trace_noise_stationary`, in the companion note). It is no longer a hypothesis. This includes the unbounded REINFORCE trace.
+- The noise covariance $`\tilde\Gamma`$ of Theorem [3.1](#thm:cov), for trace-driven noise, is the limit computed from the stationary first and second trace moments (`tendsto_secondMoment_of_trace_noise_stationary`, in the companion note). It is no longer a hypothesis. This includes the unbounded REINFORCE trace. For the restart chain the whole statement rests on the model, in `ScoreChain.tendsto_secondMoment_of_restart_noise_centered`:
+
+  - the stationary law exists;
+
+  - the Poisson solution $`U`$ exists, as the fixed point of a row contraction by $`|\lambda|\gamma`$ (`exists_poisson_U`);
+
+  - the Poisson solution $`\hat h`$ exists whenever the noise is centered under $`\nu`$ (`exists_poisson_h`).
+
+  The centering condition is the stationary mean of the noise, $`\sum_{y,y'}Q(y,y')(F(y,y')m(y) + \nu(y)e(y,y')) = 0`$ (`centering_eq_noise_mean`). At the root of the mean direction this holds by definition.
 
 - Assumption [2.2](#ass:lin) is a hypothesis, and Lemma [2.1](#lem:delta) (an implicit-function computation) is not formalized.
 

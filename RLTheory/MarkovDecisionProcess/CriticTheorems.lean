@@ -20,6 +20,10 @@ formalizes those identities in a finite model.
 * `restart_contraction`, `tendsto_law_restart`, `tendsto_traceMoment_of_restart`: for the restart
   chain the contraction holds, the law converges to a stationary `ν`, and the trace moments
   converge, from the model alone.
+* `exists_poisson_U`, `exists_poisson_h`, `centering_eq_noise_mean`,
+  `tendsto_secondMoment_of_restart_noise_centered`: the Poisson solutions of Lemma 4.4 exist
+  for the restart chain (the second when the noise is centered), so the trace-noise covariance
+  theorem holds along the restart chain with no hypothesis beyond the model and centering.
 * `ScoreChain.sum_Q_c_eq_zero`, `ScoreChain.sum_mul_trace_eq`: the two facts behind all proofs,
   both consequences of the score having mean zero over actions.
 * `compatible_critic_direction`, `compatible_critic_noise`: Theorem 4.2.
@@ -626,6 +630,232 @@ theorem tendsto_traceMoment_of_restart [MeasurableSpace (Bool × S × Ac)]
   obtain ⟨ν, hν, hνm, hlaw⟩ := M.tendsto_law_restart hY hkap hpol0 hpol hrest hγ0 hγ1 hγ
   exact ⟨ν, hν, hνm, M.tendsto_traceMoment_restart hY hkap hpol0 hpol hc0 hc1 hγ0 hγ1 hγ hlam hz
     hzB hzrec hlaw⟩
+
+omit [Fintype S] [Fintype Ac] in
+lemma abs_lam_cY_le (hc0 : ∀ s, M.c true s = 0) (hc1 : ∀ s, |M.c false s| ≤ 1) {lam : ℝ}
+    (hlam : |lam| ≤ 1) (y : Bool × S × Ac) : |lam * M.cY y| ≤ 1 := by
+  obtain ⟨f, s, a⟩ := y
+  rw [abs_mul]
+  cases f
+  · exact mul_le_one₀ hlam (abs_nonneg _) (hc1 s)
+  · simp [cY, hc0]
+
+/-- **Corollary 4.5 for the restart chain.** Linear stochastic approximation driven by trace
+noise `F(Y_k, Y_{k+1}) z_k + e(Y_k, Y_{k+1})` along the restart chain, with the trace
+`z (k+1) = λ c(Y (k+1)) z k + φ(Y (k+1))`, `|λ| ≤ 1`, and a bounded initial trace, satisfies
+Theorem 2.1: `β_k⁻¹ E[θ_k θ_kᵀ]` converges to the solution of the Lyapunov equation with
+`Γ = traceGamma`. The stationary law `ν` and the trace moments are those of the chain; the only
+data assumed besides the model are the Poisson solutions `U`, `ĥ` of Lemma 4.4. -/
+theorem tendsto_secondMoment_of_restart_noise [MeasurableSpace (Bool × S × Ac)]
+    [DiscreteMeasurableSpace (Bool × S × Ac)] [DecidableEq S] [DecidableEq Ac] {Ω : Type*}
+    {m0 : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {ℱ : MeasureTheory.Filtration ℕ m0} {Y : ℕ → Ω → Bool × S × Ac} (hY : FiniteMarkov μ ℱ Y M.Q)
+    (hkap : ∀ y f s, 0 ≤ M.kap y f s) (hpol0 : ∀ s a, 0 ≤ M.pol s a)
+    (hpol : ∀ s, ∑ a, M.pol s a = 1) (hrest : ∀ y₁ y₂ s, M.kap y₁ true s = M.kap y₂ true s)
+    (hc0 : ∀ s, M.c true s = 0) (hc1 : ∀ s, |M.c false s| ≤ 1)
+    {γ : ℝ} (hγ0 : 0 ≤ γ) (hγ1 : γ < 1) (hγ : ∀ y, ∑ s', M.kap y false s' ≤ γ) {lam : ℝ}
+    (hlam : |lam| ≤ 1) {p d : ℕ} {φ : Bool × S × Ac → E p} {z : ℕ → Ω → E p}
+    (hz : ∀ k, StronglyMeasurable[ℱ k] (z k)) (hz0 : ∃ C, ∀ ω, ‖z 0 ω‖ ≤ C)
+    (hzrec : ∀ k ω, z (k + 1) ω = (lam * M.cY (Y (k + 1) ω)) • z k ω + φ (Y (k + 1) ω))
+    (Fm : Bool × S × Ac → Bool × S × Ac → E p →L[ℝ] E d) (e : Bool × S × Ac → Bool × S × Ac → E d)
+    (U : Bool × S × Ac → E p →L[ℝ] E d) (hh : Bool × S × Ac → E d)
+    (hU : ∀ y, U y = ∑ y', M.Q y y' • (Fm y y' + (lam * M.cY y') • U y'))
+    (hhh : ∀ y, hh y = ∑ y', M.Q y y' • (e y y' + U y' (φ y') + hh y'))
+    {β : ℕ → ℝ} {βbar : ℝ} (hβ : StepSizeRate β βbar) (A : Matrix (Fin d) (Fin d) ℝ) {η : ℝ}
+    (hη : 0 < η) (hA : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A - (βbar / 2) • 1) *ᵥ x))
+    {θ : ℕ → Ω → E d}
+    (hθ : ∀ k ω, θ (k + 1) ω = θ k ω - β k • matCLM A (θ k ω) + β k • traceNoise Fm e Y z k ω)
+    (hθ0 : StronglyMeasurable[ℱ 0] (θ 0)) (hθ0L : MemLp (θ 0) 2 μ) :
+    ∃ ν : Bool × S × Ac → ℝ, (∀ y', ∑ y, ν y * M.Q y y' = ν y') ∧ ∑ y, ν y = 1 ∧
+      ∃ (m₁ : Fin p → Bool × S × Ac → ℝ) (m₂ : Fin p → Fin p → Bool × S × Ac → ℝ),
+        (∀ a y', m₁ a y' = transfer M.Q (fun y => lam * M.cY y) (m₁ a) y' + φ y' a * ν y') ∧
+        (∀ a b y', m₂ a b y' = transfer M.Q (fun y => (lam * M.cY y) ^ 2) (m₂ a b) y'
+          + φ y' b * transfer M.Q (fun y => lam * M.cY y) (m₁ a) y'
+          + φ y' a * transfer M.Q (fun y => lam * M.cY y) (m₁ b) y' + φ y' a * φ y' b * ν y') ∧
+        ∃ Sig, lyapOp (A - (βbar / 2) • 1) Sig =
+            traceGamma M.Q (fun y y' => Fm y y' + (lam * M.cY y') • U y' - U y)
+              (fun y y' => e y y' + U y' (φ y') + hh y' - hh y) ν m₁ m₂ ∧
+          Tendsto (fun k => (β k)⁻¹ • secondMoment μ (θ k)) atTop (𝓝 Sig) := by
+  obtain ⟨ν, hν, hνm, hlaw⟩ := M.tendsto_law_restart hY hkap hpol0 hpol hrest hγ0 hγ1 hγ
+  refine ⟨ν, hν, hνm, ?_⟩
+  exact tendsto_secondMoment_of_trace_noise_stationary (c := fun y => lam * M.cY y) hβ A hη hA hY
+    (M.Q_nonneg hkap hpol0) (M.restart_contraction hkap hpol hc0 hc1 hγ lam)
+    (mul_nonneg (abs_nonneg _) hγ0) (lt_of_le_of_lt (mul_le_of_le_one_left hγ0 hlam) hγ1)
+    (M.abs_lam_cY_le hc0 hc1 hlam) hlaw hz hz0 hzrec Fm e U hh hU hhh hθ hθ0 hθ0L
+
+/-! ### The Poisson solutions of Lemma 4.4 for the restart chain -/
+
+/-- `U = Σ_{y'} Q(·, y') (F(·, y') + λ c(y') U(y'))` has a solution: the map is a row
+contraction by `|λ| γ`. -/
+theorem exists_poisson_U (hkap : ∀ y f s, 0 ≤ M.kap y f s) (hpol0 : ∀ s a, 0 ≤ M.pol s a)
+    (hpol : ∀ s, ∑ a, M.pol s a = 1) (hc0 : ∀ s, M.c true s = 0) (hc1 : ∀ s, |M.c false s| ≤ 1)
+    {γ : ℝ} (hγ0 : 0 ≤ γ) (hγ1 : γ < 1) (hγ : ∀ y, ∑ s', M.kap y false s' ≤ γ) {lam : ℝ}
+    (hlam : |lam| ≤ 1) {p d : ℕ} (Fm : Bool × S × Ac → Bool × S × Ac → E p →L[ℝ] E d) :
+    ∃ U : Bool × S × Ac → E p →L[ℝ] E d,
+      ∀ y, U y = ∑ y', M.Q y y' • (Fm y y' + (lam * M.cY y') • U y') := by
+  obtain ⟨U, hU⟩ := exists_row_fixed (M.Q_nonneg hkap hpol0)
+    (M.restart_contraction hkap hpol hc0 hc1 hγ lam)
+    (lt_of_le_of_lt (mul_le_of_le_one_left hγ0 hlam) hγ1) (fun y => ∑ y', M.Q y y' • Fm y y')
+  refine ⟨U, fun y => ?_⟩
+  rw [hU y]
+  simp only [smul_add, sum_add_distrib, smul_smul]
+
+omit [Fintype S] [Fintype Ac] in
+lemma Q_restart_row (hrest : ∀ y₁ y₂ s, M.kap y₁ true s = M.kap y₂ true s)
+    (y : Bool × S × Ac) (s : S) (a : Ac) : M.Q y (true, s, a) = M.Q (true, s, a) (true, s, a) := by
+  simp only [Q, hrest y (true, s, a) s]
+
+lemma continuation_le (hpol : ∀ s, ∑ a, M.pol s a = 1) {γ : ℝ}
+    (hγ : ∀ y, ∑ s', M.kap y false s' ≤ γ) (y : Bool × S × Ac) :
+    ∑ y', M.Q y y' * |(fun y : Bool × S × Ac => if y.1 then (0 : ℝ) else 1) y'| ≤ γ := by
+  rw [sum_prod3, Fintype.sum_bool]
+  simp only [if_true, abs_zero, mul_zero, sum_const_zero, zero_add, Bool.false_eq_true,
+    if_false, abs_one, mul_one, Q]
+  refine le_trans (le_of_eq ?_) (hγ y)
+  exact sum_congr rfl fun s _ => by rw [← mul_sum, hpol, mul_one]
+
+/-- **The Poisson equation of the restart chain.** If the forcing
+`w y = Σ_{y'} Q y y' (e(y, y') + U(y') φ(y'))` has mean zero under the stationary law `ν`, then
+`ĥ = Σ_{y'} Q(·, y') (e(·, y') + U(y') φ(y') + ĥ(y'))` has a solution. The proof solves the
+continuation part, a contraction by `γ`, and shows that the restart part contributes the
+constant `Σ_ν w = 0`. -/
+theorem exists_poisson_h (hkap : ∀ y f s, 0 ≤ M.kap y f s) (hpol0 : ∀ s a, 0 ≤ M.pol s a)
+    (hpol : ∀ s, ∑ a, M.pol s a = 1) (hrest : ∀ y₁ y₂ s, M.kap y₁ true s = M.kap y₂ true s)
+    {γ : ℝ} (hγ1 : γ < 1) (hγ : ∀ y, ∑ s', M.kap y false s' ≤ γ) {ν : Bool × S × Ac → ℝ}
+    (hν : ∀ y', ∑ y, ν y * M.Q y y' = ν y') (hνm : ∑ y, ν y = 1) {p d : ℕ}
+    (φ : Bool × S × Ac → E p) (e : Bool × S × Ac → Bool × S × Ac → E d)
+    (U : Bool × S × Ac → E p →L[ℝ] E d)
+    (hcent : ∑ y, ν y • ∑ y', M.Q y y' • (e y y' + U y' (φ y')) = 0) :
+    ∃ hh : Bool × S × Ac → E d,
+      ∀ y, hh y = ∑ y', M.Q y y' • (e y y' + U y' (φ y') + hh y') := by
+  set cc : Bool × S × Ac → ℝ := fun y => if y.1 then 0 else 1 with hcc
+  set w : Bool × S × Ac → E d := fun y => ∑ y', M.Q y y' • (e y y' + U y' (φ y')) with hw
+  obtain ⟨hk, hhk⟩ := exists_row_fixed (M.Q_nonneg hkap hpol0) (M.continuation_le hpol hγ) hγ1 w
+  set κ : E d := ∑ y', (if y'.1 then M.Q y' y' else 0) • hk y' with hκ
+  have hsplit : ∀ y, ∑ y', M.Q y y' • hk y' = ∑ y', (M.Q y y' * cc y') • hk y' + κ := fun y => by
+    rw [hκ, ← sum_add_distrib]
+    refine sum_congr rfl fun y' _ => ?_
+    obtain ⟨f, s, a⟩ := y'
+    cases f
+    · simp [hcc]
+    · simp [hcc, M.Q_restart_row hrest y s a]
+  have hk2 : ∀ y, hk y = w y + ∑ y', M.Q y y' • hk y' - κ := fun y => by
+    rw [hsplit y, hhk y]; abel
+  have hκ0 : κ = 0 := by
+    have h1 : ∑ y, ν y • hk y = ∑ y, ν y • w y + ∑ y, ν y • ∑ y', M.Q y y' • hk y'
+        - (∑ y, ν y) • κ := by
+      rw [sum_smul, ← sum_add_distrib, ← sum_sub_distrib]
+      exact sum_congr rfl fun y _ => by rw [hk2 y]; simp only [smul_sub, smul_add]
+    have h2 : ∑ y, ν y • ∑ y', M.Q y y' • hk y' = ∑ y', ν y' • hk y' := by
+      simp only [smul_sum, smul_smul]
+      rw [sum_comm]
+      exact sum_congr rfl fun y' _ => by rw [← sum_smul, hν y']
+    rw [h2, hνm, one_smul] at h1
+    have h3 : ∑ y, ν y • w y = 0 := hcent
+    rw [h3, zero_add] at h1
+    have := congrArg (· - ∑ y', ν y' • hk y') h1
+    simp only [sub_self] at this
+    rw [show ∑ y', ν y' • hk y' - κ - ∑ y', ν y' • hk y' = -κ by abel] at this
+    exact neg_eq_zero.mp this.symm
+  refine ⟨hk, fun y => ?_⟩
+  rw [hk2 y, hκ0, sub_zero, hw]
+  simp only [smul_add, sum_add_distrib]
+
+omit [Fintype S] [Fintype Ac] in
+/-- **The centering condition is the mean of the noise.** With `m` the stationary trace moments
+and `U` the Poisson solution, `Σ_y ν y Σ_{y'} Q y y' (e + U(y') φ(y'))` equals the stationary mean
+`Σ_{y,y'} Q y y' (F(y, y') m(y) + ν(y) e(y, y'))` of the noise `F(Y_k, Y_{k+1}) z_k + e(Y_k, Y_{k+1})`.
+So `tendsto_secondMoment_of_restart_noise_centered` needs exactly centered noise. -/
+lemma centering_eq_noise_mean [Fintype S] [Fintype Ac] {ν : Bool × S × Ac → ℝ}
+    (hν : ∀ y', ∑ y, ν y * M.Q y y' = ν y') {lam : ℝ} {p d : ℕ} {φ m : Bool × S × Ac → E p}
+    (hm : M.TraceMoment ν lam φ m) (Fm : Bool × S × Ac → Bool × S × Ac → E p →L[ℝ] E d)
+    (e : Bool × S × Ac → Bool × S × Ac → E d) (U : Bool × S × Ac → E p →L[ℝ] E d)
+    (hU : ∀ y, U y = ∑ y', M.Q y y' • (Fm y y' + (lam * M.cY y') • U y')) :
+    ∑ y, ν y • ∑ y', M.Q y y' • (e y y' + U y' (φ y')) =
+      ∑ y, ∑ y', M.Q y y' • (Fm y y' (m y) + ν y • e y y') := by
+  -- the `U φ` part, by stationarity
+  have hA : ∑ y, ν y • ∑ y', M.Q y y' • U y' (φ y') = ∑ y', U y' (ν y' • φ y') := by
+    simp only [smul_sum, smul_smul]
+    rw [sum_comm]
+    exact sum_congr rfl fun y' _ => by rw [← sum_smul, hν y', map_smul]
+  -- the trace-moment recursion
+  have hB : ∀ y', U y' (ν y' • φ y') =
+      U y' (m y') - ∑ y, (M.Q y y' * (lam * M.cY y')) • U y' (m y) := fun y' => by
+    have := hm y'
+    rw [show ν y' • φ y' = m y' - (lam * M.cY y') • ∑ y, M.Q y y' • m y by rw [this]; abel,
+      map_sub, map_smul, map_sum, smul_sum]
+    congr 1
+    exact sum_congr rfl fun y _ => by rw [map_smul, smul_smul, mul_comm]
+  -- the equation for `U`
+  have hC : ∀ y, U y (m y) = ∑ y', M.Q y y' • Fm y y' (m y)
+      + ∑ y', (M.Q y y' * (lam * M.cY y')) • U y' (m y) := fun y => by
+    conv_lhs => rw [hU y]
+    simp only [ContinuousLinearMap.sum_apply, ContinuousLinearMap.smul_apply,
+      ContinuousLinearMap.add_apply, smul_add, sum_add_distrib, smul_smul]
+  have hD : ∑ y', U y' (m y') = ∑ y, ∑ y', M.Q y y' • Fm y y' (m y)
+      + ∑ y', ∑ y, (M.Q y y' * (lam * M.cY y')) • U y' (m y) := by
+    simp only [hC, sum_add_distrib]
+    rw [sum_comm (s := univ) (t := univ) (f := fun y y' => (M.Q y y' * (lam * M.cY y')) • U y' (m y))]
+  have hE : ∑ y, ν y • ∑ y', M.Q y y' • e y y' = ∑ y, ∑ y', M.Q y y' • (ν y • e y y') := by
+    simp only [smul_sum]
+    exact sum_congr rfl fun y _ => sum_congr rfl fun y' _ => smul_comm _ _ _
+  calc ∑ y, ν y • ∑ y', M.Q y y' • (e y y' + U y' (φ y'))
+      = ∑ y, ν y • ∑ y', M.Q y y' • e y y' + ∑ y, ν y • ∑ y', M.Q y y' • U y' (φ y') := by
+        simp only [smul_add, sum_add_distrib]
+    _ = ∑ y, ∑ y', M.Q y y' • (ν y • e y y') + ∑ y, ∑ y', M.Q y y' • Fm y y' (m y) := by
+        rw [hE, hA]
+        simp only [hB, sum_sub_distrib, hD]
+        abel
+    _ = _ := by
+        rw [add_comm, ← sum_add_distrib]
+        exact sum_congr rfl fun y _ => by rw [← sum_add_distrib]; simp only [smul_add]
+
+/-- **Corollary 4.5 for the restart chain, from the model.** For trace-driven linear stochastic
+approximation along the restart chain (`|λ| ≤ 1`, bounded initial trace), the stationary law
+`ν` and the Poisson solution `U` exist, and if the noise is centered under `ν` the Poisson
+solution `ĥ` exists and `β_k⁻¹ E[θ_k θ_kᵀ]` converges to the solution of the Lyapunov equation
+with `Γ = traceGamma`, computed from the stationary trace moments. -/
+theorem tendsto_secondMoment_of_restart_noise_centered [MeasurableSpace (Bool × S × Ac)]
+    [DiscreteMeasurableSpace (Bool × S × Ac)] [DecidableEq S] [DecidableEq Ac] {Ω : Type*}
+    {m0 : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {ℱ : MeasureTheory.Filtration ℕ m0} {Y : ℕ → Ω → Bool × S × Ac} (hY : FiniteMarkov μ ℱ Y M.Q)
+    (hkap : ∀ y f s, 0 ≤ M.kap y f s) (hpol0 : ∀ s a, 0 ≤ M.pol s a)
+    (hpol : ∀ s, ∑ a, M.pol s a = 1) (hrest : ∀ y₁ y₂ s, M.kap y₁ true s = M.kap y₂ true s)
+    (hc0 : ∀ s, M.c true s = 0) (hc1 : ∀ s, |M.c false s| ≤ 1)
+    {γ : ℝ} (hγ0 : 0 ≤ γ) (hγ1 : γ < 1) (hγ : ∀ y, ∑ s', M.kap y false s' ≤ γ) {lam : ℝ}
+    (hlam : |lam| ≤ 1) {p d : ℕ} {φ : Bool × S × Ac → E p} {z : ℕ → Ω → E p}
+    (hz : ∀ k, StronglyMeasurable[ℱ k] (z k)) (hz0 : ∃ C, ∀ ω, ‖z 0 ω‖ ≤ C)
+    (hzrec : ∀ k ω, z (k + 1) ω = (lam * M.cY (Y (k + 1) ω)) • z k ω + φ (Y (k + 1) ω))
+    (Fm : Bool × S × Ac → Bool × S × Ac → E p →L[ℝ] E d) (e : Bool × S × Ac → Bool × S × Ac → E d)
+    {β : ℕ → ℝ} {βbar : ℝ} (hβ : StepSizeRate β βbar) (A : Matrix (Fin d) (Fin d) ℝ) {η : ℝ}
+    (hη : 0 < η) (hA : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A - (βbar / 2) • 1) *ᵥ x))
+    {θ : ℕ → Ω → E d}
+    (hθ : ∀ k ω, θ (k + 1) ω = θ k ω - β k • matCLM A (θ k ω) + β k • traceNoise Fm e Y z k ω)
+    (hθ0 : StronglyMeasurable[ℱ 0] (θ 0)) (hθ0L : MemLp (θ 0) 2 μ) :
+    ∃ ν : Bool × S × Ac → ℝ, (∀ y', ∑ y, ν y * M.Q y y' = ν y') ∧ ∑ y, ν y = 1 ∧
+      ∃ U : Bool × S × Ac → E p →L[ℝ] E d,
+        (∀ y, U y = ∑ y', M.Q y y' • (Fm y y' + (lam * M.cY y') • U y')) ∧
+        (∑ y, ν y • ∑ y', M.Q y y' • (e y y' + U y' (φ y')) = 0 →
+          ∃ hh : Bool × S × Ac → E d,
+            (∀ y, hh y = ∑ y', M.Q y y' • (e y y' + U y' (φ y') + hh y')) ∧
+            ∃ (m₁ : Fin p → Bool × S × Ac → ℝ) (m₂ : Fin p → Fin p → Bool × S × Ac → ℝ),
+              (∀ a y', m₁ a y' = transfer M.Q (fun y => lam * M.cY y) (m₁ a) y' + φ y' a * ν y') ∧
+              (∀ a b y', m₂ a b y' = transfer M.Q (fun y => (lam * M.cY y) ^ 2) (m₂ a b) y'
+                + φ y' b * transfer M.Q (fun y => lam * M.cY y) (m₁ a) y'
+                + φ y' a * transfer M.Q (fun y => lam * M.cY y) (m₁ b) y'
+                + φ y' a * φ y' b * ν y') ∧
+              ∃ Sig, lyapOp (A - (βbar / 2) • 1) Sig =
+                  traceGamma M.Q (fun y y' => Fm y y' + (lam * M.cY y') • U y' - U y)
+                    (fun y y' => e y y' + U y' (φ y') + hh y' - hh y) ν m₁ m₂ ∧
+                Tendsto (fun k => (β k)⁻¹ • secondMoment μ (θ k)) atTop (𝓝 Sig)) := by
+  obtain ⟨ν, hν, hνm, hlaw⟩ := M.tendsto_law_restart hY hkap hpol0 hpol hrest hγ0 hγ1 hγ
+  obtain ⟨U, hU⟩ := M.exists_poisson_U hkap hpol0 hpol hc0 hc1 hγ0 hγ1 hγ hlam Fm
+  refine ⟨ν, hν, hνm, U, hU, fun hcent => ?_⟩
+  obtain ⟨hh, hhh⟩ := M.exists_poisson_h hkap hpol0 hpol hrest hγ1 hγ hν hνm φ e U hcent
+  exact ⟨hh, hhh, tendsto_secondMoment_of_trace_noise_stationary (c := fun y => lam * M.cY y) hβ
+    A hη hA hY (M.Q_nonneg hkap hpol0) (M.restart_contraction hkap hpol hc0 hc1 hγ lam)
+    (mul_nonneg (abs_nonneg _) hγ0) (lt_of_le_of_lt (mul_le_of_le_one_left hγ0 hlam) hγ1)
+    (M.abs_lam_cY_le hc0 hc1 hlam) hlaw hz hz0 hzrec Fm e U hh hU hhh hθ hθ0 hθ0L⟩
 
 end ScoreChain
 
