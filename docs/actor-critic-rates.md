@@ -87,7 +87,71 @@ The first-order terms of the noise, $`(\partial F(\xi) - \partial\bar F)\cdot(x,
 
 </div>
 
-This is the standard step from the ODE method to rates (Benveniste, Métivier and Priouret 1990; Konda 2002, Section 7.6). It hides two things: the $`O(\|\cdot\|^2)`$ terms of the drift, and the fact that the chain is generated under $`\pi_{\theta_k}`$ rather than $`\pi_{\hat\theta}`$, an effect of order $`\|\theta_k - \hat\theta\|`$ that is part of $`A_{11}`$ and $`A_{21}`$ through the derivative of the stationary law. We take this step as a hypothesis; everything after it is proved.
+This is the standard step from the ODE method to rates (Benveniste, Métivier and Priouret 1990; Konda 2002, Section 7.6). It hides two things: the $`O(\|\cdot\|^2)`$ terms of the drift, and the fact that the chain is generated under $`\pi_{\theta_k}`$ rather than $`\pi_{\hat\theta}`$, an effect of order $`\|\theta_k - \hat\theta\|`$ that is part of $`A_{11}`$ and $`A_{21}`$ through the derivative of the stationary law. The next theorem proves the first part for a single time scale with martingale noise.
+
+<div id="thm:linearize" class="theorem">
+
+**Theorem 2.3** (Linearization, one time scale). *Let $`\theta_{k+1} = \theta_k + \beta_k(f(\theta_k) + M_{k+1})`$, where:*
+
+- *$`M`$ is a martingale difference with $`\|M_{k+1}\| \le C_M`$ and $`\mathbb{E}[M_{k+1}M_{k+1}^\top] \to \Gamma`$;*
+
+- *$`\theta_0`$ is bounded;*
+
+- *$`f`$ is continuous, with $`\langle\theta - \hat\theta, f(\theta)\rangle \le -\eta\|\theta - \hat\theta\|^2`$ and $`\|f(\theta)\| \le K\|\theta - \hat\theta\|`$, where $`2\eta > \bar\beta`$;*
+
+- *$`f(\theta) = -A(\theta - \hat\theta) + \rho(\theta)`$ with $`\|\rho(\theta)\| \le L\|\theta - \hat\theta\|^2`$;*
+
+- *$`A - \frac{\bar\beta}{2}I`$ is stable.*
+
+Then
+``` math
+\mathbb{E}\|\theta_k - \hat\theta\|^2 = O(\beta_k),\qquad \mathbb{E}\|\theta_k - \hat\theta\|^4 = O(\beta_k^2),
+```
+and $`\beta_k^{-1}\mathbb{E}[(\theta_k - \hat\theta)(\theta_k - \hat\theta)^\top]`$ converges to the solution of the Lyapunov equation of the linearization $`x_{k+1} = x_k - \beta_kAx_k + \beta_kM_{k+1}`$.
+
+</div>
+
+<div class="proof">
+
+*Proof.* Write $`e_k = \theta_k - \hat\theta`$ and $`u_k = e_k + \beta_kf(\theta_k)`$, so $`e_{k+1} = u_k + \beta_kM_{k+1}`$.
+
+*Moments.* Dissipativity and linear growth give $`\|u_k\|^2 \le q_k\|e_k\|^2`$ with $`q_k = 1 - 2\eta\beta_k + K^2\beta_k^2`$. Expand $`\|e_{k+1}\|^2`$ and $`\|e_{k+1}\|^4`$. The cross terms $`\mathbb{E}\langle u_k, M_{k+1}\rangle`$ and $`\mathbb{E}[\|u_k\|^2\langle u_k, M_{k+1}\rangle]`$ vanish by the martingale property, and the rest is bounded using $`|\langle u, M\rangle| \le \|u\|\|M\| \le C_M\|u\|`$. This gives
+``` math
+s_{k+1} \le q_ks_k + C_M^2\beta_k^2,\qquad
+  v_{k+1} \le q_k^2v_k + 8C_M^2\beta_k^2q_ks_k + 3C_M^4\beta_k^4
+```
+for $`s_k = \mathbb{E}\|e_k\|^2`$ and $`v_k = \mathbb{E}\|e_k\|^4`$. Since $`\beta_k/\beta_{k+1} = 1 + \bar\beta\beta_k + o(\beta_k)`$, the normalized factor satisfies $`(\beta_k/\beta_{k+1})^pq_k^p \le 1 - \frac{2\eta - \bar\beta}{2}\beta_k`$ eventually. So $`s_k/\beta_k`$ and $`v_k/\beta_k^2`$ are bounded.
+
+*Covariance.* The second moments $`P_k = \mathbb{E}[e_ke_k^\top]`$ follow the linear recursion of the single-time-scale note plus the contribution of $`\beta_k\rho(\theta_k)`$. By Cauchy–Schwarz this contribution is at most
+``` math
+C\beta_k\sqrt{\mathbb{E}\|e_k\|^2}\sqrt{\mathbb{E}\|\rho\|^2} \le C\beta_k\sqrt{d\|P_k\|}\cdot L\sqrt{\mathbb{E}\|e_k\|^4}
+  = O(\beta_k^2\sqrt{\|P_k\|}),
+```
+and the other terms are $`O(\beta_k^3)`$. The deterministic part of Theorem 2.1 of that note allows remainders of size $`\beta_k^2(\sqrt{\|P_k\|} + \|P_k\| + \beta_k)`$. ◻
+
+</div>
+
+*Lean:*
+
+- `tendsto_secondMoment_of_dissipative` is the theorem.
+
+- `moment_bounds_of_dissipative` gives the moments.
+
+- `tendsto_secondMoment_of_nonlinear` gives the covariance from the fourth-moment bound.
+
+- `bdd_of_moment_recursion` normalizes the scalar recursions.
+
+- Lemma [2.1](#lem:delta) is `hasFDerivAt_implicit`, in the form of continuous linear maps: if $`\bar G(\theta, r^*(\theta)) = 0`$ and $`r^*`$ is differentiable, then $`\partial_\theta r^* = -A_{22}^{-1}A_{21}`$ and $`f'(\hat\theta) = -(A_{11} - A_{12}A_{22}^{-1}A_{21})`$.
+
+What remains of Assumption [2.2](#ass:lin) is not formalized:
+
+- Markov noise, through its Poisson decomposition, in the nonlinear iteration;
+
+- the dependence of the sampling law on $`\theta_k`$;
+
+- the two-time-scale coupling with the critic.
+
+The first two add remainder terms of the same order, $`O(\|\theta_k - \hat\theta\|^2)`$ in the drift and $`O(\beta_k\|\theta_k - \hat\theta\|)`$ in the noise, and should yield to the same moment argument.
 
 ## 3 The loss in expected reward
 
@@ -481,7 +545,7 @@ A large critic with rarely visited states and a small critic step lengthens the 
 
   The centering condition is the stationary mean of the noise, $`\sum_{y,y'}Q(y,y')(F(y,y')m(y) + \nu(y)e(y,y')) = 0`$ (`centering_eq_noise_mean`). At the root of the mean direction this holds by definition.
 
-- Assumption [2.2](#ass:lin) is a hypothesis, and Lemma [2.1](#lem:delta) (an implicit-function computation) is not formalized.
+- Lemma [2.1](#lem:delta): formalized (`hasFDerivAt_implicit`). Assumption [2.2](#ass:lin): proved for one time scale with bounded martingale noise and a dissipative drift (Theorem [2.3](#thm:linearize)); with Markov noise, $`\theta`$-dependent sampling and two time scales it remains a hypothesis.
 
 # References
 
