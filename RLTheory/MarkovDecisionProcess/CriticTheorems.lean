@@ -21,6 +21,8 @@ formalizes those identities in a finite model.
 * `compatible_critic_direction`, `compatible_critic_noise`: Theorem 4.2.
 * `value_critic_fixed_point`, `value_critic_direction`: Theorem 4.4.
 * `td1_critic_direction`, `td1_selector`, `td1_noise_coboundary`: Theorem 4.1.
+* `td0_gain`, `sum_carry_centered`, `td0_noise_split`: the stationary identities behind
+  Theorem 4.5 (TD(0) with a tabular critic has smaller noise covariance than REINFORCE).
 * `tendsto_secondMoment_of_coboundary`: noises that differ by a coboundary give the same
   asymptotic covariance.
 -/
@@ -339,7 +341,135 @@ theorem td1_selector (hQ : ∀ y, ∑ y', M.Q y y' = 1) {n : ℕ} {ν : Bool × 
   rw [this, ← sum_neg_distrib]
   exact sum_congr rfl fun y _ => by rw [smul_smul, ← neg_smul]; congr 1; ring
 
+/-! ### Theorem 4.5: the TD(0) critic with tabular state features -/
+
+/-- The moment of the carried trace `B_k = c_k Z_{k-1}`: `E[B_k 1{Y_k = y}] = m y - ν y φ y`. -/
+noncomputable def carry {p : ℕ} (ν : Bool × S × Ac → ℝ) (φ m : Bool × S × Ac → E p) (y : Bool × S × Ac) : E p :=
+  m y - ν y • φ y
+
+/-- The state marginal `Σ_{f,a} F (f, s, a)`. -/
+def stateSum {X : Type*} [AddCommMonoid X] (F : Bool × S × Ac → X) (s : S) : X :=
+  ∑ f, ∑ a, F (f, s, a)
+
+/-- The conditional mean of the carried trace given the state, `b s = E[B_k | s_k = s]`. -/
+noncomputable def carryMean {p : ℕ} (ν : Bool × S × Ac → ℝ) (φ m : Bool × S × Ac → E p) (s : S) :
+    E p :=
+  (stateSum ν s)⁻¹ • stateSum (carry ν φ m) s
+
+/-- The weight of a continuing step into the state `s'`: `E[c_{k+1} 1{s_{k+1} = s'} | Y_k = y]`. -/
+def into (y : Bool × S × Ac) (s' : S) : ℝ := ∑ f', ∑ a', M.Q y (f', s', a') * M.cY (f', s', a')
+
+omit [Fintype S] [Fintype Ac] in
+lemma carry_eq {p : ℕ} [Fintype S] [Fintype Ac] {ν : Bool × S × Ac → ℝ}
+    {φ m : Bool × S × Ac → E p} (hm : M.TraceMoment ν 1 φ m) (y' : Bool × S × Ac) :
+    carry ν φ m y' = M.cY y' • ∑ y, M.Q y y' • m y := by
+  unfold carry
+  rw [hm y', one_mul, add_sub_cancel_left]
+
+/-- The carried trace does not see the current action: its moment factors through the policy. -/
+lemma carry_factor {p : ℕ} {ν : Bool × S × Ac → ℝ} {φ m : Bool × S × Ac → E p}
+    (hm : M.TraceMoment ν 1 φ m) (f : Bool) (s : S) (a : Ac) :
+    carry ν φ m (f, s, a) = M.pol s a • (M.c f s • ∑ y, M.kap y f s • m y) := by
+  rw [M.carry_eq hm, smul_sum, smul_sum, smul_sum]
+  refine sum_congr rfl fun y _ => ?_
+  simp only [Q, cY, smul_smul]
+  congr 1
+  ring
+
+/-- **The centering fact.** The carried trace minus its conditional mean given the state is
+uncorrelated with every function of the state and the action:
+`E[w(s_k, a_k) (B_k - b(s_k))] = 0`. -/
+lemma sum_carry_centered {p : ℕ} {ν : Bool × S × Ac → ℝ} (hν : ∀ y', ∑ y, ν y * M.Q y y' = ν y')
+    {φ m : Bool × S × Ac → E p} (hm : M.TraceMoment ν 1 φ m) (hpol : ∀ s, ∑ a, M.pol s a = 1)
+    (hνS : ∀ s, stateSum ν s ≠ 0) (w : Bool × S × Ac → ℝ)
+    (hw : ∀ f₁ f₂ s a, w (f₁, s, a) = w (f₂, s, a)) :
+    ∑ y, w y • (carry ν φ m y - ν y • carryMean ν φ m y.2.1) = 0 := by
+  set β : Bool → S → E p := fun f s => M.c f s • ∑ y, M.kap y f s • m y with hβ
+  set α : Bool → S → ℝ := fun f s => ∑ y, ν y * M.kap y f s with hα
+  have hc : ∀ f s a, carry ν φ m (f, s, a) = M.pol s a • β f s := fun f s a => M.carry_factor hm f s a
+  have hn : ∀ f s a, ν (f, s, a) = α f s * M.pol s a := fun f s a => M.stationary_factor hν f s a
+  have hmS : ∀ s, stateSum (carry ν φ m) s = ∑ f, β f s := fun s => by
+    unfold stateSum
+    refine sum_congr rfl fun f _ => ?_
+    simp only [hc, ← sum_smul, hpol, one_smul]
+  have hνs : ∀ s, stateSum ν s = ∑ f, α f s := fun s => by
+    unfold stateSum
+    refine sum_congr rfl fun f _ => ?_
+    simp only [hn, ← mul_sum, hpol, mul_one]
+  have h0 : ∀ s, ∑ f, (β f s - α f s • carryMean ν φ m s) = 0 := fun s => by
+    rw [sum_sub_distrib, ← sum_smul, ← hνs, ← hmS, carryMean, smul_smul,
+      mul_inv_cancel₀ (hνS s), one_smul, sub_self]
+  rw [sum_prod3, sum_comm]
+  refine sum_eq_zero fun s _ => ?_
+  have e : ∀ f a, w (f, s, a) • (carry ν φ m (f, s, a) - ν (f, s, a) • carryMean ν φ m s) =
+      (w (false, s, a) * M.pol s a) • (β f s - α f s • carryMean ν φ m s) := fun f a => by
+    rw [hc, hn, hw f false]
+    simp only [smul_sub, smul_smul]
+    congr 2
+    ring
+  simp only [e]
+  rw [sum_comm]
+  refine sum_eq_zero fun a _ => ?_
+  rw [← smul_sum, h0 s, smul_zero]
+
+/-- **Theorem 4.5 (the gain).** For the TD(0) critic with features `(ψ, e_s)` at `r̂ = (0, V)`,
+`-C A_c⁻¹ = (I, -K)` with `K = X T⁻¹`, where `T s s' = E[1{s_k = s}(c_{k+1} 1{s_{k+1} = s'} -
+1{s_k = s'})]` and `X s' = E[ψ_k c_{k+1} 1{s_{k+1} = s'}]` (the term `E[ψ_k 1{s_k = s'}]`
+vanishes when `ψ` has mean zero over actions). The columns of `K` are minus the conditional means of the REINFORCE carried trace:
+`Σ_s T s s' b s = -X s'`, that is `K e_s = -E[c_k Z_{k-1} | s_k = s]`. This needs the step law
+to depend on the pair only through the state and the action. -/
+theorem td0_gain [DecidableEq S] {n : ℕ} {ν : Bool × S × Ac → ℝ} (hν : ∀ y', ∑ y, ν y * M.Q y y' = ν y')
+    {ψ m : Bool × S × Ac → E n} (hm : M.TraceMoment ν 1 ψ m)
+    (hpol : ∀ s, ∑ a, M.pol s a = 1) (hνS : ∀ s, stateSum ν s ≠ 0)
+    (hkap : ∀ f₁ f₂ s a, M.kap (f₁, s, a) = M.kap (f₂, s, a)) (s' : S) :
+    ∑ s, ((∑ f, ∑ a, ν (f, s, a) * M.into (f, s, a) s')
+        - if s = s' then stateSum ν s else 0) • carryMean ν ψ m s
+      = -∑ y, (ν y * M.into y s') • ψ y := by
+  have hw : ∀ f₁ f₂ s a, M.into (f₁, s, a) s' = M.into (f₂, s, a) s' := fun f₁ f₂ s a => by
+    simp only [into, Q, hkap f₁ f₂ s a]
+  have hB := M.sum_carry_centered hν hm hpol hνS (fun y => M.into y s') hw
+  simp only [sub_smul, sum_sub_distrib, ite_smul, zero_smul, sum_ite_eq', mem_univ, if_true]
+  have hb : stateSum ν s' • carryMean ν ψ m s' = stateSum (carry ν ψ m) s' := by
+    rw [carryMean, smul_smul, mul_inv_cancel₀ (hνS s'), one_smul]
+  have hmy : ∀ y, ν y • ψ y + carry ν ψ m y = m y := fun y => by
+    simp only [carry, add_sub_cancel]
+  have hmS : stateSum (carry ν ψ m) s' = ∑ y, M.into y s' • (ν y • ψ y + carry ν ψ m y) := by
+    simp only [hmy]
+    unfold stateSum
+    simp only [M.carry_eq hm, into, sum_smul, smul_sum, smul_smul]
+    conv_rhs => rw [sum_comm]
+    refine sum_congr rfl fun f' _ => ?_
+    rw [sum_comm]
+    exact sum_congr rfl fun a' _ => sum_congr rfl fun y _ => by rw [mul_comm]
+  have hL : ∑ s, (∑ f, ∑ a, ν (f, s, a) * M.into (f, s, a) s') • carryMean ν ψ m s =
+      ∑ y, (ν y * M.into y s') • carryMean ν ψ m y.2.1 := by
+    rw [sum_prod3, sum_comm]
+    refine sum_congr rfl fun s _ => ?_
+    rw [sum_smul]
+    exact sum_congr rfl fun f _ => by rw [sum_smul]
+  rw [hb, hmS, hL]
+  have e : ∀ y, (ν y * M.into y s') • carryMean ν ψ m y.2.1
+      - M.into y s' • (ν y • ψ y + carry ν ψ m y) =
+      -((ν y * M.into y s') • ψ y)
+        - M.into y s' • (carry ν ψ m y - ν y • carryMean ν ψ m y.2.1) := by
+    intro y
+    simp only [smul_add, smul_sub, smul_smul]
+    rw [mul_comm (M.into y s')]
+    abel
+  rw [← sum_sub_distrib, sum_congr rfl fun y _ => e y, sum_sub_distrib, hB, sub_zero,
+    sum_neg_distrib]
+
 end ScoreChain
+
+/-- **Theorem 4.5, pathwise.** With the REINFORCE trace `z' = c' z + ψ'` and the TD error
+`δ = g + c' v' - v` of the value function, the actor-only noise `g z` splits as the TD(0)
+actor-critic noise `v ψ + δ (ψ + b)` (with `K e_s = -b`, `td0_gain`), plus `δ (z - ψ - b)`,
+minus the coboundary `H' - H` with `H = v (z - ψ)`. -/
+theorem td0_noise_split {n : ℕ} (z z' ψ ψ' b : E n) (g v v' c' : ℝ) (hz : z' = c' • z + ψ') :
+    g • z = (v • ψ + (g + c' * v' - v) • (ψ + b)) + (g + c' * v' - v) • (z - ψ - b)
+      - (v' • (z' - ψ') - v • (z - ψ)) := by
+  rw [hz]
+  module
 
 /-- **Theorem 4.1 (noise), pathwise.** With the TD(1) trace `z' = c' z + ψ'`, the actor-critic
 effective noise at the root, `v ψ + d z` with `d = g + c' v' - v`, equals the actor-only noise

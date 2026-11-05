@@ -239,9 +239,39 @@ which is the partial sum of the actor-only noise $`g(Y_k)Z_k - f`$. The incomple
 
 *Lean:* `ScoreChain.value_critic_fixed_point` and `ScoreChain.value_critic_direction`.
 
+<div id="thm:td0" class="theorem">
+
+**Theorem 4.5** (TD(0) with a tabular critic beats REINFORCE). Let the critic use TD(0) with features $`\phi = (\psi, e_s)`$, and let the step law of the chain depend on $`Y_k`$ only through $`(s_k, a_k)`$ (true for the restart chain). At $`\theta^*`$, with $`B_k = c_kZ_{k-1}`$ the part of the REINFORCE trace carried over from the past, $`b(s) =
+\mathbb{E}[B_k\mid s_k = s]`$ and $`\delta_k`$ the TD error of $`V^\pi`$,
+``` math
+\tilde\Gamma_{\text{AO}} - \tilde\Gamma_{\text{AC}}
+  = \mathbb{E}\big[\delta_k^2\,(B_k - b(s_k))(B_k - b(s_k))^\top\big]
+  = \sum_s\nu(s)\,\mathbb{E}[\delta_k^2\mid s_k = s]\,\mathrm{Cov}(B_k\mid s_k = s) \succeq 0 .
+```
+Hence $`\ell^*_{\text{AC}} \le \ell^*_{\text{AO}}`$ by Proposition [3.6](#prop:compare).
+
+</div>
+
+<div class="proof">
+
+*Proof.* Write $`\mathcal G_k`$ for the history up to $`Y_{k-1}`$ together with $`(f_k, s_k)`$, before the action $`a_k`$ is drawn. Given $`\mathcal G_k`$, the law of $`(a_k, Y_{k+1})`$ depends only on $`s_k`$, while $`B_k`$ is $`\mathcal G_k`$-measurable.
+
+*The gain.* By Theorem [4.4](#thm:value), $`\hat r = (0, V)`$. The TD(0) matrix is $`A_c = \begin{pmatrix}-\Psi & X\\ 0 & T\end{pmatrix}`$ with $`X = \mathbb{E}[\psi_k(c_{k+1}e_{s_{k+1}} - e_{s_k})^\top]`$ and $`T = \mathbb{E}[e_{s_k}(c_{k+1}e_{s_{k+1}} - e_{s_k})^\top]`$ (the lower-left block vanishes because the score has mean zero over $`a_{k+1}`$ and over $`a_k`$). So $`-CA_c^{-1} = (I\;\, -K)`$ with $`K = XT^{-1}`$. Let $`M = \mathbb{E}[B_ke_{s_k}^\top]`$, whose columns are $`\nu(s)b(s)`$, and $`P_c(s,s') = \mathbb{E}[c_{k+1}1\{s_{k+1} = s'\}\mid s_k = s]`$. From $`B_{k+1} = c_{k+1}(\psi_k + B_k)`$ and the conditional independence, $`M = X + MP_c`$, while $`T = D_\nu(P_c - I)`$. Hence $`K = M(I - P_c)(P_c - I)^{-1}D_\nu^{-1}`$, that is $`Ke_s = -b(s)`$.
+
+*The two noises.* The actor-critic noise at $`\theta^*`$ is $`N^{\text{AC}}_k = V(s_k)\psi_k + \delta_k(\psi_k - Ke_{s_k}) = V(s_k)\psi_k + \delta_k(\psi_k + b(s_k))`$. The actor-only noise $`g(Y_k)Z_k`$ equals $`V(s_k)\psi_k + \delta_kZ_k`$ up to a coboundary, as in Theorem [4.1](#thm:td1). Since $`Z_k = \psi_k + B_k`$,
+``` math
+N^{\text{AO}}_k \simeq N^{\text{AC}}_k + D_k,\qquad D_k = \delta_k(B_k - b(s_k)).
+```
+
+*Orthogonality.* $`\mathbb{E}[D_k\mid\mathcal G_k] = (B_k - b(s_k))\,\mathbb{E}[\delta_k\mid\mathcal G_k] = 0`$, because $`\mathbb{E}[\delta_k\mid\mathcal G_k] = \mathbb{E}_a[A(s_k, a)] = 0`$; so $`D`$ is a martingale difference sequence for $`(\mathcal G_k)`$. Take $`N^{\text{AC}}_j`$ and $`D_k`$. If $`k > j`$, then $`N^{\text{AC}}_j`$ is $`\mathcal G_k`$-measurable, so $`\mathbb{E}[N^{\text{AC}}_jD_k^\top] = 0`$. If $`k \le j`$, then $`\mathbb{E}[N^{\text{AC}}_j\mid\mathcal G_{k+1}]\,\delta_k`$ has a conditional mean given $`(\mathcal G_k, a_k)`$ that is a function $`h(s_k, a_k)`$. This holds because $`\mathbb{E}[N^{\text{AC}}_j\mid\mathcal G_j]`$ depends only on $`s_j`$ when $`j > k`$. So $`\mathbb{E}[N^{\text{AC}}_jD_k^\top] = \mathbb{E}[h(s_k, a_k)(B_k - b(s_k))^\top] = 0`$, since given $`s_k`$ the action $`a_k`$ is independent of $`B_k`$, and $`B_k - b(s_k)`$ has conditional mean zero. Every cross-covariance therefore vanishes, and the long-run covariances add: $`\tilde\Gamma_{\text{AO}} = \tilde\Gamma_{\text{AC}} + \mathbb{E}[D_kD_k^\top]`$. The factored form of $`\mathbb{E}[D_kD_k^\top]`$ uses the same conditional independence, since $`\delta_k^2`$ depends only on $`(s_k, a_k, Y_{k+1})`$. ◻
+
+</div>
+
+*Lean:* `ScoreChain.td0_gain` ($`Ke_s = -b(s)`$, in the form $`\sum_sT_{ss'}b(s) = -X_{s'}`$), `ScoreChain.sum_carry_centered` (the orthogonality: $`\mathbb{E}[w(s_k,a_k)(B_k - b(s_k))] = 0`$) and `td0_noise_split` (the pathwise splitting $`g z = N^{\text{AC}} + \delta(Z - \psi - b) - (H' - H)`$). The step from these stationary identities to the long-run covariances, the martingale argument above, is not formalized.
+
 <div id="obs:tab" class="observation">
 
-**Observation 4.5** (Variance of the value-function critic). By Theorem [4.4](#thm:value) and Proposition [3.6](#prop:compare), with tabular state features the comparison with actor-only is between noise covariances alone. In every instance computed, the loss decreases as $`\lambda`$ decreases, and at $`\lambda = 0`$ it is a fraction of the actor-only loss: 0.29–0.54 in the seven two-parameter instances of the table below and 0.18–0.57 (median 0.29) in seventeen one-parameter instances. We have no proof that $`\tilde\Gamma \preceq \tilde\Gamma_{\text{AO}}`$ in general. With random extra features (which do not represent $`V^\pi`$) and $`\lambda < 1`$ the critic is biased, with a gap $`J^* - J(\hat\theta)`$ of about $`2\times10^{-2}`$; whether it pays depends on the horizon through gap$`{}+\ell^*/k`$.
+**Observation 4.6** (Intermediate $`\lambda`$). By Theorems [4.1](#thm:td1) and [4.5](#thm:td0), the tabular critic ties REINFORCE at $`\lambda = 1`$ and beats it at $`\lambda = 0`$. In between, $`N^{\text{AO}} - N^{\text{AC}}`$ is no longer orthogonal to $`N^{\text{AC}}`$: at $`\lambda = 0.5`$ the regression coefficient of $`N^{\text{AO}}`$ on $`N^{\text{AC}}`$ is 1.05–1.11, not 1 (`experiments/check_projection.py`). Even so, in every instance computed, $`\tilde\Gamma_{\text{AC}}(\lambda)`$ is increasing in $`\lambda`$ in the Loewner order (69 of 69 instances, `experiments/explore_value_critic.py`), with $`\mathrm{tr}\,\tilde\Gamma_{\text{AC}}(0)/\mathrm{tr}\,\tilde\Gamma_{\text{AO}}`$ between 0.10 and 0.91 (median 0.45). The optimal-gain loss relative to REINFORCE is 0.29–0.54 at $`\lambda = 0`$ in the seven two-parameter instances of the table below. Monotonicity in $`\lambda`$ is not proved. With random extra features (which do not represent $`V^\pi`$) and $`\lambda < 1`$ the critic is biased, with a gap $`J^* - J(\hat\theta)`$ of about $`2\times10^{-2}`$; whether it pays depends on the horizon through gap$`{}+\ell^*/k`$.
 
 </div>
 
@@ -322,7 +352,7 @@ which is the partial sum of the actor-only noise $`g(Y_k)Z_k - f`$. The incomple
 
 <div class="remark">
 
-**Remark 4.6** (Numerical checks). `experiments/rates_chapter.py` checks Theorems [4.1](#thm:td1) and [4.2](#thm:compat) on the same instances: the directions, Jacobians $`H`$, noise covariances $`\tilde\Gamma`$ and losses agree to relative error $`7\times10^{-9}`$ and $`2\times10^{-9}`$ (the accuracy of the finite-difference Jacobian). It checks Theorem [4.4](#thm:value) to $`10^{-14}`$: the critic’s fixed point is $`(w, V^\pi)`$ and the direction is $`(1-\gamma)\nabla J`$, at $`\theta^*`$ and away from it, for $`\lambda \in \{0, 0.4, 0.8, 1\}`$. Earlier simulations of the actual two-time-scale algorithm (`experiments/sim_ac_tuned.py`) matched the predicted covariances to about 5%, supporting Assumption [2.2](#ass:lin) in these instances.
+**Remark 4.7** (Numerical checks). `experiments/rates_chapter.py` checks Theorems [4.1](#thm:td1) and [4.2](#thm:compat) on the same instances: the directions, Jacobians $`H`$, noise covariances $`\tilde\Gamma`$ and losses agree to relative error $`7\times10^{-9}`$ and $`2\times10^{-9}`$ (the accuracy of the finite-difference Jacobian). It checks Theorem [4.4](#thm:value) to $`10^{-14}`$: the critic’s fixed point is $`(w, V^\pi)`$ and the direction is $`(1-\gamma)\nabla J`$, at $`\theta^*`$ and away from it, for $`\lambda \in \{0, 0.4, 0.8, 1\}`$. `experiments/check_projection_exact.py` and `experiments/check_td0_gap.py` check Theorem [4.5](#thm:td0) exactly (from the stationary moments of the chain) on 30 instances, to relative error $`2\times10^{-14}`$ and $`6\times10^{-15}`$. Earlier simulations of the actual two-time-scale algorithm (`experiments/sim_ac_tuned.py`) matched the predicted covariances to about 5%, supporting Assumption [2.2](#ass:lin) in these instances.
 
 </div>
 
@@ -332,7 +362,7 @@ which is the partial sum of the actor-only noise $`g(Y_k)Z_k - f`$. The incomple
 
 - Propositions [3.3](#prop:loss), [3.5](#prop:dual) and [3.6](#prop:compare): formalized.
 
-- Theorems [4.1](#thm:td1), [4.2](#thm:compat) and [4.4](#thm:value): formalized in `CriticTheorems.lean` for a finite model of the sampling chain, `ScoreChain`: a chain on (restart flag, state, action) whose next action is drawn from the policy given the next state. This covers the restart chain and any other such chain. Two facts carry all the proofs: a function with mean zero over actions has $`\mathbb{E}[c(Y_{k+1})F(Y_{k+1})\mid Y_k] = 0`$ (`sum_Q_c_eq_zero`), and its correlation with the trace is its correlation with the current features (`sum_mul_trace_eq`). The stationary trace moments $`m(y) = \mathbb{E}[z_k1\{Y_k = y\}]`$ enter through the recursion that characterizes them, $`m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)`$.
+- Theorems [4.1](#thm:td1), [4.2](#thm:compat), [4.4](#thm:value) and the stationary identities of Theorem [4.5](#thm:td0): formalized in `CriticTheorems.lean` for a finite model of the sampling chain, `ScoreChain`: a chain on (restart flag, state, action) whose next action is drawn from the policy given the next state. This covers the restart chain and any other such chain. Two facts carry all the proofs: a function with mean zero over actions has $`\mathbb{E}[c(Y_{k+1})F(Y_{k+1})\mid Y_k] = 0`$ (`sum_Q_c_eq_zero`), and its correlation with the trace is its correlation with the current features (`sum_mul_trace_eq`). The stationary trace moments $`m(y) = \mathbb{E}[z_k1\{Y_k = y\}]`$ enter through the recursion that characterizes them, $`m(y') = \nu(y')\phi(y') + \lambda c(y')\sum_yQ(y,y')m(y)`$.
 
 - Assumption [2.2](#ass:lin) is a hypothesis, and Lemma [2.1](#lem:delta) (an implicit-function computation) is not formalized.
 

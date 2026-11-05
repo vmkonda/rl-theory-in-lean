@@ -22,3 +22,6 @@ uv venv .venv && uv pip install --python .venv/bin/python numpy matplotlib
 | `check_poisson.py` | Poisson-equation identities and the Markov-noise covariance theorem |
 | `check_two_time_scale.py` | Two-time-scale covariance with Markov noise: simulation vs Corollary 2.2 |
 | `rates_chapter.py` | Numbers for `docs/actor-critic-rates.tex`: Theorems 4.1–4.2 and the loss table |
+| `explore_value_critic.py` | Tabular-critic noise covariance across λ vs REINFORCE (Observation 4.6) |
+| `check_projection.py` | Monte Carlo regression of the REINFORCE noise on the actor-critic noise |
+| `check_projection_exact.py`, `check_td0_gap.py` | Exact checks of Theorem 4.5 (orthogonality and the gap formula) |
