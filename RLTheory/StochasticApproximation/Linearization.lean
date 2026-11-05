@@ -243,6 +243,302 @@ theorem tendsto_secondMoment_of_nonlinear (hβ : StepSizeRate β βbar)
     linarith
   exact tendsto_normalized_second_moment hβ A hη hA hSig hΓ ⟨_, by positivity, hRb⟩ hrec
 
+/-- **A linear iteration with a small perturbation.** If
+`e_{k+1} = e_k - β_k A e_k + β_k M_{k+1} + c_k` with `M` a martingale difference whose covariance
+converges to `Γ`, and `E‖c_k‖² ≤ C β_k⁴`, then `β_k⁻¹ E[e_k e_kᵀ]` converges to the solution of the
+Lyapunov equation, as without the perturbation. -/
+theorem tendsto_secondMoment_of_small_perturbation (hβ : StepSizeRate β βbar)
+    (A : Matrix (Fin d) (Fin d) ℝ) {η : ℝ} (hη : 0 < η)
+    (hA : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A - (βbar / 2) • 1) *ᵥ x))
+    (ℱ : MeasureTheory.Filtration ℕ m0) {e M c : ℕ → Ω → E d} {Γ : Mat d}
+    (hrec : ∀ k ω, e (k + 1) ω = e k ω - β k • matCLM A (e k ω) + β k • M (k + 1) ω + c k ω)
+    (hem : ∀ k, StronglyMeasurable[ℱ k] (e k)) (heL : ∀ k, MemLp (e k) 2 μ)
+    (hcL : ∀ k, MemLp (c k) 2 μ) (hcB : ∃ Cc, ∀ k, ∫ ω, ‖c k ω‖ ^ 2 ∂μ ≤ Cc * β k ^ 4)
+    (hML : ∀ k, MemLp (M (k + 1)) 2 μ) (hMB : ∃ CM, ∀ k, ∫ ω, ‖M (k + 1) ω‖ ^ 2 ∂μ ≤ CM)
+    (hmart : ∀ k j, μ[fun ω => M (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
+    (hΓ : Tendsto (fun k => secondMoment μ (M (k + 1))) atTop (𝓝 Γ)) :
+    ∃ Sig, lyapOp (A - (βbar / 2) • 1) Sig = Γ ∧
+      Tendsto (fun k => (β k)⁻¹ • secondMoment μ (e k)) atTop (𝓝 Sig) := by
+  obtain ⟨Sig, hSig⟩ := exists_solution_of_coercive _ (by positivity : (0 : ℝ) < 2 * η)
+    (lyapOp_coercive _ hA) Γ
+  refine ⟨Sig, hSig, ?_⟩
+  obtain ⟨Cc, hCc⟩ := hcB
+  obtain ⟨CM, hCM⟩ := hMB
+  obtain ⟨B, hB⟩ := hβ.tendsto_zero.bddAbove_range
+  have hβB : ∀ k, β k ≤ B := fun k => hB ⟨k, rfl⟩
+  have hB0 : 0 ≤ B := (hβ.pos 0).le.trans (hβB 0)
+  have hCc0 : 0 ≤ Cc := by
+    have h0 := (integral_norm_sq_nonneg (μ := μ) (c 0)).trans (hCc 0)
+    have hb := hβ.pos 0
+    by_contra hneg; push_neg at hneg
+    nlinarith [pow_pos hb 4]
+  have hCM0 : 0 ≤ CM := (integral_norm_sq_nonneg (μ := μ) (M 1)).trans (hCM 0)
+  set P : ℕ → Mat d := fun k => secondMoment μ (e k) with hP
+  set R : ℕ → Mat d := fun k => P (k + 1) - (P k - β k • lyapOp A (P k)
+    + β k ^ 2 • sandwich A (P k) + β k ^ 2 • secondMoment μ (M (k + 1))) with hR
+  have hrec' : ∀ k, P (k + 1) = P k - β k • lyapOp A (P k) + β k ^ 2 • sandwich A (P k)
+      + β k ^ 2 • secondMoment μ (M (k + 1)) + R k := fun k => by
+    simp only [hR]; abel
+  have hRb : ∀ k, ‖R k‖ ≤ (2 * (1 + B * ‖matCLM A‖) * √d * √Cc + 2 * √CM * √Cc + Cc * B)
+      * β k ^ 2 * (√‖P k‖ + ‖P k‖ + β k) := fun k => by
+    have hb := hβ.pos k
+    have hstep := secondMoment_step (μ := μ) (ℱ.le k) A hb.le (hem k) (heL k) (hML k) (hcL k)
+      (hmart k)
+    have hsm : secondMoment μ (fun ω => e k ω - β k • matCLM A (e k ω) + β k • M (k + 1) ω
+        + c k ω) = P (k + 1) := by
+      have : (fun ω => e k ω - β k • matCLM A (e k ω) + β k • M (k + 1) ω + c k ω) = e (k + 1) :=
+        funext fun ω => (hrec k ω).symm
+      rw [this]
+    rw [hsm] at hstep
+    have hsc : √(∫ ω, ‖c k ω‖ ^ 2 ∂μ) ≤ β k ^ 2 * √Cc := by
+      calc √(∫ ω, ‖c k ω‖ ^ 2 ∂μ) ≤ √(Cc * β k ^ 4) := Real.sqrt_le_sqrt (hCc k)
+        _ = β k ^ 2 * √Cc := by
+            rw [show Cc * β k ^ 4 = (β k ^ 2) ^ 2 * Cc by ring, Real.sqrt_mul (sq_nonneg _),
+              Real.sqrt_sq (by positivity)]
+    have hsu : √(∫ ω, ‖e k ω‖ ^ 2 ∂μ) ≤ √d * √‖P k‖ := by
+      rw [← Real.sqrt_mul (Nat.cast_nonneg d)]
+      exact Real.sqrt_le_sqrt (integral_norm_sq_le (heL k))
+    have hsm' : √(∫ ω, ‖M (k + 1) ω‖ ^ 2 ∂μ) ≤ √CM := Real.sqrt_le_sqrt (hCM k)
+    have hc2 : ∫ ω, ‖c k ω‖ ^ 2 ∂μ ≤ Cc * B * (β k ^ 2 * β k) := by
+      refine (hCc k).trans ?_
+      have : β k ^ 4 = β k * (β k ^ 2 * β k) := by ring
+      rw [this, ← mul_assoc]
+      exact mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_left (hβB k) hCc0) (by positivity)
+    have hA0 : 0 ≤ 1 + β k * ‖matCLM A‖ := by positivity
+    have t1 : 2 * ((1 + β k * ‖matCLM A‖) * √(∫ ω, ‖e k ω‖ ^ 2 ∂μ)
+        * √(∫ ω, ‖c k ω‖ ^ 2 ∂μ)) ≤
+        2 * (1 + B * ‖matCLM A‖) * √d * √Cc * β k ^ 2 * √‖P k‖ := by
+      have h1 : (1 + β k * ‖matCLM A‖) ≤ 1 + B * ‖matCLM A‖ := by gcongr; exact hβB k
+      calc 2 * ((1 + β k * ‖matCLM A‖) * √(∫ ω, ‖e k ω‖ ^ 2 ∂μ) * √(∫ ω, ‖c k ω‖ ^ 2 ∂μ))
+          ≤ 2 * ((1 + B * ‖matCLM A‖) * (√d * √‖P k‖) * (β k ^ 2 * √Cc)) := by gcongr
+        _ = _ := by ring
+    have t2 : 2 * (β k * √(∫ ω, ‖M (k + 1) ω‖ ^ 2 ∂μ) * √(∫ ω, ‖c k ω‖ ^ 2 ∂μ)) ≤
+        2 * √CM * √Cc * β k ^ 2 * β k := by
+      calc 2 * (β k * √(∫ ω, ‖M (k + 1) ω‖ ^ 2 ∂μ) * √(∫ ω, ‖c k ω‖ ^ 2 ∂μ))
+          ≤ 2 * (β k * √CM * (β k ^ 2 * √Cc)) := by gcongr
+        _ = _ := by ring
+    have hRk : ‖R k‖ ≤ 2 * (1 + B * ‖matCLM A‖) * √d * √Cc * β k ^ 2 * √‖P k‖
+        + 2 * √CM * √Cc * β k ^ 2 * β k + Cc * B * (β k ^ 2 * β k) := by
+      have : R k = P (k + 1) - (P k - β k • lyapOp A (P k) + β k ^ 2 • sandwich A (P k)
+          + β k ^ 2 • secondMoment μ (M (k + 1))) := rfl
+      rw [this]
+      exact hstep.trans (by linarith)
+    refine hRk.trans ?_
+    set a₁ := 2 * (1 + B * ‖matCLM A‖) * √d * √Cc
+    set a₂ := 2 * √CM * √Cc
+    set a₃ := Cc * B
+    have key : (a₁ + a₂ + a₃) * β k ^ 2 * (√‖P k‖ + ‖P k‖ + β k)
+        - (a₁ * β k ^ 2 * √‖P k‖ + a₂ * β k ^ 2 * β k + a₃ * (β k ^ 2 * β k)) =
+        a₁ * β k ^ 2 * (‖P k‖ + β k) + a₂ * β k ^ 2 * (√‖P k‖ + ‖P k‖)
+          + a₃ * β k ^ 2 * (√‖P k‖ + ‖P k‖) := by ring
+    have nn : 0 ≤ a₁ * β k ^ 2 * (‖P k‖ + β k) + a₂ * β k ^ 2 * (√‖P k‖ + ‖P k‖)
+        + a₃ * β k ^ 2 * (√‖P k‖ + ‖P k‖) := by positivity
+    linarith
+  exact tendsto_normalized_second_moment hβ A hη hA hSig hΓ ⟨_, by positivity, hRb⟩ hrec'
+
+/-- `β_k⁻¹ E[e eᵀ]` and `β_k⁻¹ E[e' e'ᵀ]` have the same limit when `e = e' + g` with
+`‖g_k‖ ≤ C β_k` and `β_k⁻¹ E[e' e'ᵀ]` converges. -/
+lemma tendsto_secondMoment_of_shift (hβ : StepSizeRate β βbar) {e e' g : ℕ → Ω → E d}
+    {Sig : Mat d} (he : ∀ k ω, e k ω = e' k ω + g k ω) (he'L : ∀ k, MemLp (e' k) 2 μ)
+    (hgL : ∀ k, MemLp (g k) 2 μ) {Cg : ℝ} (hgb : ∀ k ω, ‖g k ω‖ ≤ Cg * β k)
+    (hlim : Tendsto (fun k => (β k)⁻¹ • secondMoment μ (e' k)) atTop (𝓝 Sig)) :
+    Tendsto (fun k => (β k)⁻¹ • secondMoment μ (e k)) atTop (𝓝 Sig) := by
+  set C := max Cg 0 with hC
+  have hC0 : 0 ≤ C := le_max_right _ _
+  have hgb' : ∀ k ω, ‖g k ω‖ ≤ C * β k := fun k ω =>
+    (hgb k ω).trans (mul_le_mul_of_nonneg_right (le_max_left _ _) (hβ.pos k).le)
+  set P : ℕ → Mat d := fun k => secondMoment μ (e' k) with hP
+  have hP0 : Tendsto (fun k => ‖P k‖) atTop (𝓝 0) := by
+    have h := (hβ.tendsto_zero.mul hlim.norm)
+    rw [zero_mul] at h
+    refine h.congr fun k => ?_
+    rw [norm_smul, Real.norm_eq_abs, abs_inv, abs_of_pos (hβ.pos k), ← mul_assoc,
+      mul_inv_cancel₀ (hβ.pos k).ne', one_mul]
+  -- the difference
+  have hEg : ∀ k, √(∫ ω, ‖g k ω‖ ^ 2 ∂μ) ≤ C * β k := fun k => by
+    have hb := hβ.pos k
+    have : ∫ ω, ‖g k ω‖ ^ 2 ∂μ ≤ (C * β k) ^ 2 := by
+      calc ∫ ω, ‖g k ω‖ ^ 2 ∂μ ≤ ∫ _ω, (C * β k) ^ 2 ∂μ :=
+            integral_mono (memLp_sq_integrable (hgL k)) (integrable_const _) fun ω =>
+              pow_le_pow_left₀ (norm_nonneg _) (hgb' k ω) 2
+        _ = (C * β k) ^ 2 := by simp
+    calc √(∫ ω, ‖g k ω‖ ^ 2 ∂μ) ≤ √((C * β k) ^ 2) := Real.sqrt_le_sqrt this
+      _ = C * β k := Real.sqrt_sq (by positivity)
+  have hdiff : ∀ k, ‖(β k)⁻¹ • secondMoment μ (e k) - (β k)⁻¹ • P k‖ ≤
+      2 * (√(d * ‖P k‖) * C) + β k * C ^ 2 := fun k => by
+    have hb := hβ.pos k
+    have hfun : e k = fun ω => e' k ω + g k ω := funext (he k)
+    have hS : MemLp (fun ω => e' k ω + g k ω) 2 μ := (he'L k).add (hgL k)
+    have hexp : secondMoment μ (e k) = P k + crossMoment μ (e' k) (g k)
+        + (crossMoment μ (g k) (e' k) + crossMoment μ (g k) (g k)) := by
+      rw [hfun, secondMoment, crossMoment_add_left (he'L k) (hgL k) hS,
+        crossMoment_add_right (he'L k) (he'L k) (hgL k),
+        crossMoment_add_right (hgL k) (he'L k) (hgL k)]
+      rfl
+    have hsθ : √(∫ ω, ‖e' k ω‖ ^ 2 ∂μ) ≤ √(d * ‖P k‖) :=
+      Real.sqrt_le_sqrt (integral_norm_sq_le (he'L k))
+    have n1 := norm_crossMoment_le (μ := μ) (he'L k) (hgL k)
+    have n2 := norm_crossMoment_le (μ := μ) (hgL k) (he'L k)
+    have n3 := norm_crossMoment_le (μ := μ) (hgL k) (hgL k)
+    have sg0 := Real.sqrt_nonneg (∫ ω, ‖g k ω‖ ^ 2 ∂μ)
+    have m1 : √(∫ ω, ‖e' k ω‖ ^ 2 ∂μ) * √(∫ ω, ‖g k ω‖ ^ 2 ∂μ) ≤ √(d * ‖P k‖) * (C * β k) :=
+      mul_le_mul hsθ (hEg k) sg0 (Real.sqrt_nonneg _)
+    have m3 : √(∫ ω, ‖g k ω‖ ^ 2 ∂μ) * √(∫ ω, ‖g k ω‖ ^ 2 ∂μ) ≤ (C * β k) * (C * β k) :=
+      mul_le_mul (hEg k) (hEg k) sg0 (by positivity)
+    have hnorm : ‖secondMoment μ (e k) - P k‖ ≤ 2 * (√(d * ‖P k‖) * (C * β k)) + (C * β k) ^ 2 := by
+      have : secondMoment μ (e k) - P k = crossMoment μ (e' k) (g k) + crossMoment μ (g k) (e' k)
+          + crossMoment μ (g k) (g k) := by rw [hexp]; abel
+      rw [this]
+      have t1 := norm_add_le (crossMoment μ (e' k) (g k) + crossMoment μ (g k) (e' k))
+        (crossMoment μ (g k) (g k))
+      have t2 := norm_add_le (crossMoment μ (e' k) (g k)) (crossMoment μ (g k) (e' k))
+      nlinarith
+    rw [← smul_sub, norm_smul, Real.norm_eq_abs, abs_inv, abs_of_pos hb]
+    calc (β k)⁻¹ * ‖secondMoment μ (e k) - P k‖
+        ≤ (β k)⁻¹ * (2 * (√(d * ‖P k‖) * (C * β k)) + (C * β k) ^ 2) :=
+          mul_le_mul_of_nonneg_left hnorm (by positivity)
+      _ = 2 * (√(d * ‖P k‖) * C) + β k * C ^ 2 := by field_simp; ring
+  have hd0 : Tendsto (fun k => 2 * (√(d * ‖P k‖) * C) + β k * C ^ 2) atTop (𝓝 0) := by
+    have hs : Tendsto (fun k => √(d * ‖P k‖)) atTop (𝓝 0) := by
+      have h1 := hP0.const_mul (d : ℝ)
+      rw [mul_zero] at h1
+      have := (Real.continuous_sqrt.tendsto 0).comp h1
+      rwa [Real.sqrt_zero] at this
+    have := ((hs.mul_const C).const_mul 2).add (hβ.tendsto_zero.mul_const (C ^ 2))
+    simpa using this
+  have hdn : Tendsto (fun k => (β k)⁻¹ • secondMoment μ (e k) - (β k)⁻¹ • P k) atTop (𝓝 0) :=
+    squeeze_zero_norm hdiff hd0
+  have := hdn.add hlim
+  rw [zero_add] at this
+  exact this.congr fun k => by simp only [hP]; abel
+
+set_option maxHeartbeats 1000000 in
+/-- **Linearization with Markov noise and state-dependent sampling.** Let
+`θ_{k+1} = θ_k + β_k (f(θ_k) + M_{k+1} + h_k - h_{k+1} + r_k)`. Here `M` is a martingale
+difference with covariance converging to `Γ`; `h_k` is a bounded `ℱ_k`-measurable Poisson shift
+(for a chain sampled under `π_{θ_k}`, the Poisson solution at the current parameter); and `r_k` is
+the remainder of the telescoping, with `‖r_k‖ ≤ C_r β_k`, which is the case when the Poisson
+solution is Lipschitz in `θ` and the steps are bounded. If `f(θ) = -A(θ - θ̂) + O(‖θ - θ̂‖²)` and
+`E‖θ_k - θ̂‖⁴ ≤ C β_k²`, then `β_k⁻¹ E[(θ_k - θ̂)(θ_k - θ̂)ᵀ]` has the limit of the linearized
+iteration `x_{k+1} = x_k - β_k A x_k + β_k M_{k+1}`. -/
+theorem tendsto_secondMoment_of_nonlinear_markov (hβ : StepSizeRate β βbar)
+    (A : Matrix (Fin d) (Fin d) ℝ) {η : ℝ} (hη : 0 < η)
+    (hA : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A - (βbar / 2) • 1) *ᵥ x))
+    (ℱ : MeasureTheory.Filtration ℕ m0) {θ M h r : ℕ → Ω → E d} {θh : E d} {f : E d → E d}
+    {L Ch Cr : ℝ} (hL : 0 ≤ L) (hf : ∀ x, ‖f x + matCLM A (x - θh)‖ ≤ L * ‖x - θh‖ ^ 2)
+    (hfc : Continuous f) {Γ : Mat d}
+    (hθ : ∀ k ω, θ (k + 1) ω = θ k ω + β k • (f (θ k ω) + M (k + 1) ω + h k ω - h (k + 1) ω
+      + r k ω))
+    (hθm : ∀ k, StronglyMeasurable[ℱ k] (θ k)) (hθL : ∀ k, MemLp (θ k) 2 μ)
+    (hhm : ∀ k, StronglyMeasurable[ℱ k] (h k)) (hhb : ∀ k ω, ‖h k ω‖ ≤ Ch)
+    (hrm : ∀ k, AEStronglyMeasurable (r k) μ) (hrb : ∀ k ω, ‖r k ω‖ ≤ Cr * β k)
+    (h4i : ∀ k, Integrable (fun ω => ‖θ k ω - θh‖ ^ 4) μ)
+    (h4 : ∃ C₄, ∀ k, ∫ ω, ‖θ k ω - θh‖ ^ 4 ∂μ ≤ C₄ * β k ^ 2)
+    (hML : ∀ k, MemLp (M (k + 1)) 2 μ) (hMB : ∃ CM, ∀ k, ∫ ω, ‖M (k + 1) ω‖ ^ 2 ∂μ ≤ CM)
+    (hmart : ∀ k j, μ[fun ω => M (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
+    (hΓ : Tendsto (fun k => secondMoment μ (M (k + 1))) atTop (𝓝 Γ)) :
+    ∃ Sig, lyapOp (A - (βbar / 2) • 1) Sig = Γ ∧
+      Tendsto (fun k => (β k)⁻¹ • secondMoment μ (fun ω => θ k ω - θh)) atTop (𝓝 Sig) := by
+  obtain ⟨C₄, hC₄⟩ := h4
+  obtain ⟨CΔ, hCΔ0, hCΔ⟩ := hβ.abs_sub_le
+  obtain ⟨B, hB⟩ := hβ.tendsto_zero.bddAbove_range
+  have hβB : ∀ k, β k ≤ B := fun k => hB ⟨k, rfl⟩
+  have hB0 : 0 ≤ B := (hβ.pos 0).le.trans (hβB 0)
+  set Ch₀ := max Ch 0
+  set Cr₀ := max Cr 0
+  have hCh₀ : 0 ≤ Ch₀ := le_max_right _ _
+  have hCr₀ : 0 ≤ Cr₀ := le_max_right _ _
+  have hhb' : ∀ k ω, ‖h k ω‖ ≤ Ch₀ := fun k ω => (hhb k ω).trans (le_max_left _ _)
+  have hrb' : ∀ k ω, ‖r k ω‖ ≤ Cr₀ * β k := fun k ω =>
+    (hrb k ω).trans (mul_le_mul_of_nonneg_right (le_max_left _ _) (hβ.pos k).le)
+  set C' := ‖matCLM A‖ * Ch₀ + Cr₀ + CΔ * Ch₀ with hC'
+  have hC'0 : 0 ≤ C' := by positivity
+  set e' : ℕ → Ω → E d := fun k ω => (θ k ω - θh) + β k • h k ω with he'
+  set ρ : ℕ → Ω → E d := fun k ω => f (θ k ω) + matCLM A (θ k ω - θh) with hρ
+  set c : ℕ → Ω → E d := fun k ω => β k • (ρ k ω + β k • matCLM A (h k ω) + r k ω)
+    - (β k - β (k + 1)) • h (k + 1) ω with hc
+  have hrec : ∀ k ω, e' (k + 1) ω = e' k ω - β k • matCLM A (e' k ω) + β k • M (k + 1) ω
+      + c k ω := fun k ω => by
+    simp only [he', hc, hρ, hθ k ω, map_add, map_smul]
+    module
+  have hhL : ∀ k, MemLp (h k) 2 μ := fun k =>
+    MemLp.of_bound ((hhm k).mono (ℱ.le k)).aestronglyMeasurable Ch₀ (Eventually.of_forall (hhb' k))
+  have he'm : ∀ k, StronglyMeasurable[ℱ k] (e' k) := fun k =>
+    ((hθm k).sub stronglyMeasurable_const).add ((hhm k).const_smul (β k))
+  have he'L : ∀ k, MemLp (e' k) 2 μ := fun k =>
+    ((hθL k).sub (memLp_const θh)).add ((hhL k).const_smul (β k))
+  -- the size of the perturbation
+  have hcb : ∀ k ω, ‖c k ω‖ ≤ β k * L * ‖θ k ω - θh‖ ^ 2 + C' * β k ^ 2 := fun k ω => by
+    have hb := hβ.pos k
+    have h1 : ‖β k • (ρ k ω + β k • matCLM A (h k ω) + r k ω)‖ ≤
+        β k * (L * ‖θ k ω - θh‖ ^ 2 + β k * (‖matCLM A‖ * Ch₀) + Cr₀ * β k) := by
+      rw [norm_smul, Real.norm_eq_abs, abs_of_pos hb]
+      refine mul_le_mul_of_nonneg_left ((norm_add_le _ _).trans (add_le_add
+        ((norm_add_le _ _).trans (add_le_add (hf _) ?_)) (hrb' k ω))) hb.le
+      rw [norm_smul, Real.norm_eq_abs, abs_of_pos hb]
+      exact mul_le_mul_of_nonneg_left (((matCLM A).le_opNorm _).trans
+        (mul_le_mul_of_nonneg_left (hhb' k ω) (norm_nonneg _))) hb.le
+    have h2 : ‖(β k - β (k + 1)) • h (k + 1) ω‖ ≤ CΔ * β k ^ 2 * Ch₀ := by
+      rw [norm_smul, Real.norm_eq_abs, abs_sub_comm]
+      exact mul_le_mul (hCΔ k) (hhb' _ ω) (norm_nonneg _) (by positivity)
+    have e3 : β k * (L * ‖θ k ω - θh‖ ^ 2 + β k * (‖matCLM A‖ * Ch₀) + Cr₀ * β k)
+        + CΔ * β k ^ 2 * Ch₀ = β k * L * ‖θ k ω - θh‖ ^ 2 + C' * β k ^ 2 := by
+      simp only [hC']; ring
+    calc ‖c k ω‖ ≤ ‖β k • (ρ k ω + β k • matCLM A (h k ω) + r k ω)‖
+          + ‖(β k - β (k + 1)) • h (k + 1) ω‖ := norm_sub_le _ _
+      _ ≤ _ := by linarith
+  have hcsq : ∀ k ω, ‖c k ω‖ ^ 2 ≤ 2 * (β k ^ 2 * L ^ 2) * ‖θ k ω - θh‖ ^ 4
+      + 2 * C' ^ 2 * β k ^ 4 := fun k ω => by
+    have h0 := norm_nonneg (c k ω)
+    have hb := hβ.pos k
+    have hx : 0 ≤ β k * L * ‖θ k ω - θh‖ ^ 2 := by positivity
+    calc ‖c k ω‖ ^ 2 ≤ (β k * L * ‖θ k ω - θh‖ ^ 2 + C' * β k ^ 2) ^ 2 :=
+          pow_le_pow_left₀ h0 (hcb k ω) 2
+      _ ≤ 2 * (β k * L * ‖θ k ω - θh‖ ^ 2) ^ 2 + 2 * (C' * β k ^ 2) ^ 2 := by
+          nlinarith [sq_nonneg (β k * L * ‖θ k ω - θh‖ ^ 2 - C' * β k ^ 2)]
+      _ = _ := by ring
+  have hcm : ∀ k, AEStronglyMeasurable (c k) μ := fun k => by
+    have hθa : AEStronglyMeasurable (θ k) μ := ((hθm k).mono (ℱ.le k)).aestronglyMeasurable
+    have hfa : AEStronglyMeasurable (fun ω => f (θ k ω)) μ :=
+      (hfc.comp_stronglyMeasurable ((hθm k).mono (ℱ.le k))).aestronglyMeasurable
+    have hha : AEStronglyMeasurable (h k) μ := ((hhm k).mono (ℱ.le k)).aestronglyMeasurable
+    have hh1 : AEStronglyMeasurable (h (k + 1)) μ :=
+      ((hhm (k + 1)).mono (ℱ.le (k + 1))).aestronglyMeasurable
+    have hAθ : AEStronglyMeasurable (fun ω => matCLM A (θ k ω - θh)) μ :=
+      (matCLM A).continuous.comp_aestronglyMeasurable
+        (hθa.sub (aestronglyMeasurable_const (b := θh)))
+    have hAh : AEStronglyMeasurable (fun ω => matCLM A (h k ω)) μ :=
+      (matCLM A).continuous.comp_aestronglyMeasurable hha
+    have hcs : AEStronglyMeasurable (fun ω => (β k - β (k + 1)) • h (k + 1) ω) μ :=
+      hh1.const_smul (β k - β (k + 1))
+    exact (((hfa.add hAθ).add (hAh.const_smul (β k))).add (hrm k)).const_smul (β k) |>.sub hcs
+  have hint4 : ∀ k, Integrable (fun ω => 2 * (β k ^ 2 * L ^ 2) * ‖θ k ω - θh‖ ^ 4
+      + 2 * C' ^ 2 * β k ^ 4) μ := fun k => ((h4i k).const_mul _).add (integrable_const _)
+  have hcL : ∀ k, MemLp (c k) 2 μ := fun k => by
+    rw [memLp_two_iff_integrable_sq_norm (hcm k)]
+    refine (hint4 k).mono' ((hcm k).norm.pow 2) (Eventually.of_forall fun ω => ?_)
+    rw [Real.norm_eq_abs, abs_of_nonneg (by positivity)]
+    exact hcsq k ω
+  have hcB : ∃ Cc, ∀ k, ∫ ω, ‖c k ω‖ ^ 2 ∂μ ≤ Cc * β k ^ 4 := ⟨2 * L ^ 2 * C₄ + 2 * C' ^ 2,
+    fun k => by
+      calc ∫ ω, ‖c k ω‖ ^ 2 ∂μ ≤ ∫ ω, (2 * (β k ^ 2 * L ^ 2) * ‖θ k ω - θh‖ ^ 4
+            + 2 * C' ^ 2 * β k ^ 4) ∂μ :=
+            integral_mono (memLp_sq_integrable (hcL k)) (hint4 k) (hcsq k)
+        _ = 2 * (β k ^ 2 * L ^ 2) * ∫ ω, ‖θ k ω - θh‖ ^ 4 ∂μ + 2 * C' ^ 2 * β k ^ 4 := by
+            rw [integral_add ((h4i k).const_mul _) (integrable_const _), integral_const_mul]
+            simp
+        _ ≤ 2 * (β k ^ 2 * L ^ 2) * (C₄ * β k ^ 2) + 2 * C' ^ 2 * β k ^ 4 := by
+            gcongr; exact hC₄ k
+        _ = _ := by ring⟩
+  obtain ⟨Sig, hSig, hlim⟩ := tendsto_secondMoment_of_small_perturbation hβ A hη hA ℱ hrec he'm
+    he'L hcL hcB hML hMB hmart hΓ
+  refine ⟨Sig, hSig, ?_⟩
+  exact tendsto_secondMoment_of_shift hβ (e' := e') (g := fun k ω => -(β k • h k ω))
+    (fun k ω => by simp only [he']; abel) he'L (fun k => ((hhL k).const_smul (β k)).neg)
+    (Cg := Ch₀) (fun k ω => by
+      rw [norm_neg, norm_smul, Real.norm_eq_abs, abs_of_pos (hβ.pos k), mul_comm]
+      exact mul_le_mul_of_nonneg_right (hhb' k ω) (hβ.pos k).le) hlim
+
 end Nonlinear
 
 /-! ### Moment bounds for a dissipative iteration -/
