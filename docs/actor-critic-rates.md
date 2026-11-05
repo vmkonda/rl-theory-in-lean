@@ -176,7 +176,7 @@ Suppose that:
 
 - *$`m, m'`$ are martingale differences whose covariances are within $`\delta_k + C(R_k + R_k^2)`$ of $`\Gamma`$, where $`R_k = \operatorname{rms}x_k + \operatorname{rms}y_k`$ and $`\delta_k \to 0`$;*
 
-- *$`\mathbb{E}\|x_k\|^4 = O(\beta_k^2)`$ and $`\mathbb{E}\|y_k\|^4 = O(\gamma_k^2)`$.*
+- *$`\mathbb{E}\|x_k\|^4 = O(\gamma_k^2)`$ and $`\mathbb{E}\|y_k\|^4 = O(\gamma_k^2)`$.*
 
 *Then the conclusions of Theorem 2.1 of the two-time-scale note hold. In particular the slow iterate has the covariance of Corollary 2.2.*
 
@@ -184,7 +184,7 @@ Suppose that:
 
 <div class="proof">
 
-*Proof.* The remainder $`\rho = F + A(x,y) + r`$ has $`\mathbb{E}\|\rho_k\|^2 \le 4L^2(\mathbb{E}\|x_k\|^4 + \mathbb{E}\|y_k\|^4) + 2C_r^2\beta_k^2 = O(\gamma_k^2)`$. The perturbed two-time-scale theorem of that note allows a remainder of this size. Its two structural hypotheses, a one-step bound on $`R_{k+1}`$ and control of $`R_k`$ by the shifted iterates, follow from Minkowski’s inequality. ◻
+*Proof.* The remainder $`\rho = F + A(x,y) + r`$ has $`\mathbb{E}\|\rho_k\|^2 \le 4L^2(\mathbb{E}\|x_k\|^4 + \mathbb{E}\|y_k\|^4) + 2C_r^2\gamma_k^2 = O(\gamma_k^2)`$. The perturbed two-time-scale theorem of that note allows a remainder of this size. Its two structural hypotheses, a one-step bound on $`R_{k+1}`$ and control of $`R_k`$ by the shifted iterates, follow from Minkowski’s inequality. ◻
 
 </div>
 
@@ -196,9 +196,59 @@ Suppose that:
 
 `tendsto_tts_taylor` for Theorem [2.5](#thm:lintts), through `tendsto_tts_nonlinear`.
 
+<div id="thm:ttsmoments" class="theorem">
+
+**Theorem 2.6** (Fourth moments for two time scales). *In Theorem [2.5](#thm:lintts), take martingale noise only ($`h = g = 0`$, $`r = 0`$), bounded noise and a bounded start, and write $`z = y + Dx`$. Suppose:*
+
+- *the slow drift is dissipative up to coupling, $`\langle x, F_1\rangle \le -\eta\|x\|^2 + K\|x\|\|z\|`$;*
+
+- *the fast drift is dissipative in $`z`$, $`\langle z, F_2\rangle \le -\eta\|z\|^2`$;*
+
+- *both drifts grow at most linearly, $`\|F_i\| \le K(\|x\| + \|z\|)`$;*
+
+- *$`\beta_k/\gamma_k \to 0`$, and eventually $`\gamma_k/\gamma_{k+1} \le 1 + c_0\beta_k`$ with $`0 \le c_0 < \eta`$.*
+
+*Then $`\mathbb{E}\|x_k\|^4 = O(\gamma_k^2)`$ and $`\mathbb{E}\|y_k\|^4 = O(\gamma_k^2)`$, so Theorem [2.5](#thm:lintts) applies.*
+
+</div>
+
+For an actor-critic, fast dissipativity says the TD matrix of the critic is uniformly stable. The step-size condition holds for $`\beta_k = b/k`$ and $`\gamma_k = g/k^p`$ when $`p/b < \eta`$.
+
+<div class="proof">
+
+*Proof.* *The steps.* Write $`x_{k+1} = u_k + \beta_kM^1_{k+1}`$ and $`z_{k+1} = v_k + \gamma_k\tilde M_{k+1}`$, where
+``` math
+u_k = x_k + \beta_kF_1,\qquad v_k = z_k + \gamma_kF_2 + \beta_kDF_1,\qquad
+  \tilde M = M^2 + (\beta/\gamma)DM^1
+```
+are all known at step $`k`$, except that $`\tilde M`$ is a bounded martingale difference. Dissipativity and Young’s inequality give
+``` math
+\|u_k\|^2 \le (1 - \eta\beta_k + 2K^2\beta_k^2)\|x_k\|^2 + c_1\beta_k\|z_k\|^2,\qquad
+  \|v_k\|^2 \le (1 - \eta\gamma_k + c_2\tau_k)\|z_k\|^2 + c_2\tau_k\|x_k\|^2,
+```
+with $`\tau = \gamma^2 + \beta^2/\gamma`$. For $`v_k`$ the weight in Young’s inequality is $`\eta\gamma_k`$, so the cross term $`\beta DF_1`$ costs only $`\beta^2/\gamma = o(\gamma)`$.
+
+*The recursions.* The martingale cross terms vanish, and the second and fourth moments obey coupled recursions. The slow one contracts at rate $`\beta`$ and is forced by the fast moment at rate $`\beta`$. The fast one contracts at rate $`\gamma`$ and is forced by the slow moment at rate $`o(\gamma)`$.
+
+*Normalization.* Normalized by $`\gamma_k`$ (second moments) and $`\gamma_k^2`$ (fourth moments), the moments satisfy
+``` math
+u' \le (1 - a\beta)u + c\beta v + E\beta,\qquad v' \le (1 - a\gamma)v + \delta_k\gamma u + C\gamma,\qquad \delta_k \to 0 .
+```
+A box $`[0, sU]\times[0, sV]`$ is then eventually invariant, so both normalized moments are bounded. The step-size condition keeps the normalization of the slow moment by $`\gamma`$ contracting. ◻
+
+</div>
+
+*Lean:*
+
+- `moment_bounds_tts`, through `tts_moments_scalar` and `bdd_of_coupled_box`;
+
+- the steps: `slow_step_bound`, `fast_step_bound`, `integral_sq_step` and `integral_four_step`;
+
+- end to end, `tendsto_tts_dissipative`: the two-time-scale iteration with dissipative drifts and bounded martingale noise has the asymptotic covariances of its linearization.
+
 Not formalized:
 
-- the fourth-moment bounds for two time scales, which Theorem [2.5](#thm:lintts) assumes; they need a coupled version of the moment argument;
+- two-time-scale moment bounds with Poisson shifts and sampling remainders. The single-time-scale shift trick of Theorem [2.4](#thm:linmarkov) should carry over;
 
 - the derivation of the decomposition $`M + h - h' + r`$, with $`r = O(\beta)`$, from a parameter-dependent finite chain;
 
@@ -596,7 +646,7 @@ A large critic with rarely visited states and a small critic step lengthens the 
 
   The centering condition is the stationary mean of the noise, $`\sum_{y,y'}Q(y,y')(F(y,y')m(y) + \nu(y)e(y,y')) = 0`$ (`centering_eq_noise_mean`). At the root of the mean direction this holds by definition.
 
-- Lemma [2.1](#lem:delta): formalized (`hasFDerivAt_implicit`). Assumption [2.2](#ass:lin): proved for one time scale with a dissipative drift, Markov noise and state-dependent sampling (Theorems [2.3](#thm:linearize) and [2.4](#thm:linmarkov)), and for two time scales given fourth-moment bounds (Theorem [2.5](#thm:lintts)).
+- Lemma [2.1](#lem:delta): formalized (`hasFDerivAt_implicit`). Assumption [2.2](#ass:lin): proved for one time scale with a dissipative drift, Markov noise and state-dependent sampling (Theorems [2.3](#thm:linearize) and [2.4](#thm:linmarkov)), and for two time scales with dissipative drifts and martingale noise (Theorems [2.5](#thm:lintts) and [2.6](#thm:ttsmoments)).
 
 # References
 

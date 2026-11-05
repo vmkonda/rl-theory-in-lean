@@ -16,7 +16,7 @@ Assumption 2.2 of `docs/actor-critic-rates.md` for the two-time-scale (actor-cri
   two-time-scale note hold.
 * `tendsto_tts_taylor`: the remainder is a Taylor remainder `O(‖x‖² + ‖y‖²)` of the drift plus a
   remainder of order `β_k` (slow) and `γ_k` (fast), from sampling under the current parameter.
-  It is controlled by fourth moments `E‖x_k‖⁴ = O(β_k²)` and `E‖y_k‖⁴ = O(γ_k²)`.
+  It is controlled by fourth moments `E‖x_k‖⁴ = O(γ_k²)` and `E‖y_k‖⁴ = O(γ_k²)`.
 -/
 
 open Filter Topology Finset Real Matrix MeasureTheory RLTheory
@@ -347,7 +347,7 @@ set_option maxHeartbeats 8000000 in
 `x_{k+1} = x_k + β_k (F₁(x_k, y_k) + m_{k+1} + r₁_k + h_k - h_{k+1})`,
 `y_{k+1} = y_k + γ_k (F₂(x_k, y_k) + m'_{k+1} + r₂_k + g_k - g_{k+1})` (in the deviations from the
 root), with a drift that is linear to first order, `F(x, y) = -A (x, y) + O(‖x‖² + ‖y‖²)`, sampling
-remainders `‖r₁_k‖ ≤ C_r β_k`, `‖r₂_k‖ ≤ C_r γ_k`, and fourth moments `E‖x_k‖⁴ = O(β_k²)`,
+remainders `‖r₁_k‖ ≤ C_r β_k`, `‖r₂_k‖ ≤ C_r γ_k`, and fourth moments `E‖x_k‖⁴ = O(γ_k²)`,
 `E‖y_k‖⁴ = O(γ_k²)`, has the asymptotic covariances of its linearization: the conclusions of the
 linear two-time-scale theorem hold. -/
 theorem tendsto_tts_taylor [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βbar : ℝ}
@@ -380,7 +380,7 @@ theorem tendsto_tts_taylor [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βba
     (hr₂m : ∀ k, StronglyMeasurable[ℱ (k + 1)] (r₂ k)) (hr₂b : ∀ k ω, ‖r₂ k ω‖ ≤ Cr * γ k)
     (h4xi : ∀ k, Integrable (fun ω => ‖x k ω‖ ^ 4) μ)
     (h4yi : ∀ k, Integrable (fun ω => ‖y k ω‖ ^ 4) μ)
-    (h4x : ∀ k, ∫ ω, ‖x k ω‖ ^ 4 ∂μ ≤ C₄ * β k ^ 2) (h4y : ∀ k, ∫ ω, ‖y k ω‖ ^ 4 ∂μ ≤ C₄ * γ k ^ 2)
+    (h4x : ∀ k, ∫ ω, ‖x k ω‖ ^ 4 ∂μ ≤ C₄ * γ k ^ 2) (h4y : ∀ k, ∫ ω, ‖y k ω‖ ^ 4 ∂μ ≤ C₄ * γ k ^ 2)
     (hmart : ∀ k j, μ[fun ω => m (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
     (hmart' : ∀ k j, μ[fun ω => m' (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
     {C : ℝ} (hC : 0 ≤ C) (rh : ∀ k, rms μ (h k) ≤ C) (rg : ∀ k, rms μ (g k) ≤ C)
@@ -406,7 +406,7 @@ theorem tendsto_tts_taylor [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βba
   set Cr' := max Cr 0
   have hC₄' : 0 ≤ C₄' := le_max_right _ _
   have hCr' : 0 ≤ Cr' := le_max_right _ _
-  have h4x' : ∀ k, ∫ ω, ‖x k ω‖ ^ 4 ∂μ ≤ C₄' * β k ^ 2 := fun k =>
+  have h4x' : ∀ k, ∫ ω, ‖x k ω‖ ^ 4 ∂μ ≤ C₄' * γ k ^ 2 := fun k =>
     (h4x k).trans (mul_le_mul_of_nonneg_right (le_max_left _ _) (sq_nonneg _))
   have h4y' : ∀ k, ∫ ω, ‖y k ω‖ ^ 4 ∂μ ≤ C₄' * γ k ^ 2 := fun k =>
     (h4y k).trans (mul_le_mul_of_nonneg_right (le_max_left _ _) (sq_nonneg _))
@@ -464,7 +464,7 @@ theorem tendsto_tts_taylor [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βba
   have hρ₁L : ∀ k, MemLp (ρ₁ k) 2 μ := fun k => hρL k (ρ₁ k) (Cr' * β k) (hρ₁m k) (hb₁ k)
   have hρ₂L : ∀ k, MemLp (ρ₂ k) 2 μ := fun k => hρL k (ρ₂ k) (Cr' * γ k) (hρ₂m k) (hb₂ k)
   -- their sizes
-  set Kρ := 4 * L ^ 2 * C₄' * (Bq ^ 2 + 1) + 2 * Cr' ^ 2 * (Bq ^ 2 + 1) with hKρ
+  set Kρ := 8 * L ^ 2 * C₄' + 2 * Cr' ^ 2 * (Bq ^ 2 + 1) with hKρ
   have hKρ0 : 0 ≤ Kρ := by positivity
   have rρ₁ : ∀ k, rms μ (ρ₁ k) ≤ √Kρ * γ k := fun k => by
     have hg := hγ.pos k
@@ -475,13 +475,12 @@ theorem tendsto_tts_taylor [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βba
     refine Real.sqrt_le_sqrt ?_
     have hb2 : β k ^ 2 ≤ Bq ^ 2 * γ k ^ 2 := by
       have := pow_le_pow_left₀ (hβ.pos k).le (hbq k) 2; rwa [mul_pow] at this
-    have t1 := mul_le_mul_of_nonneg_left hb2 (by positivity : (0 : ℝ) ≤ 4 * L ^ 2 * C₄')
     have t2 := mul_le_mul_of_nonneg_left hb2 (by positivity : (0 : ℝ) ≤ 2 * Cr' ^ 2)
     have t3 : 0 ≤ 2 * Cr' ^ 2 * γ k ^ 2 := by positivity
-    have e1 : 4 * L ^ 2 * C₄' * (β k ^ 2 + γ k ^ 2) + 2 * (Cr' * β k) ^ 2 =
-        4 * L ^ 2 * C₄' * β k ^ 2 + 4 * L ^ 2 * C₄' * γ k ^ 2 + 2 * Cr' ^ 2 * β k ^ 2 := by ring
-    have e2 : Kρ * γ k ^ 2 = 4 * L ^ 2 * C₄' * (Bq ^ 2 * γ k ^ 2) + 4 * L ^ 2 * C₄' * γ k ^ 2
-        + 2 * Cr' ^ 2 * (Bq ^ 2 * γ k ^ 2) + 2 * Cr' ^ 2 * γ k ^ 2 := by simp only [hKρ]; ring
+    have e1 : 4 * L ^ 2 * C₄' * (γ k ^ 2 + γ k ^ 2) + 2 * (Cr' * β k) ^ 2 =
+        8 * L ^ 2 * C₄' * γ k ^ 2 + 2 * Cr' ^ 2 * β k ^ 2 := by ring
+    have e2 : Kρ * γ k ^ 2 = 8 * L ^ 2 * C₄' * γ k ^ 2 + 2 * Cr' ^ 2 * (Bq ^ 2 * γ k ^ 2)
+        + 2 * Cr' ^ 2 * γ k ^ 2 := by simp only [hKρ]; ring
     linarith
   have rρ₂ : ∀ k, rms μ (ρ₂ k) ≤ √Kρ * γ k := fun k => by
     have hg := hγ.pos k
@@ -492,12 +491,11 @@ theorem tendsto_tts_taylor [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βba
     refine Real.sqrt_le_sqrt ?_
     have hb2 : β k ^ 2 ≤ Bq ^ 2 * γ k ^ 2 := by
       have := pow_le_pow_left₀ (hβ.pos k).le (hbq k) 2; rwa [mul_pow] at this
-    have t1 := mul_le_mul_of_nonneg_left hb2 (by positivity : (0 : ℝ) ≤ 4 * L ^ 2 * C₄')
     have t3 : 0 ≤ 2 * Cr' ^ 2 * (Bq ^ 2 * γ k ^ 2) := by positivity
-    have e1 : 4 * L ^ 2 * C₄' * (β k ^ 2 + γ k ^ 2) + 2 * (Cr' * γ k) ^ 2 =
-        4 * L ^ 2 * C₄' * β k ^ 2 + 4 * L ^ 2 * C₄' * γ k ^ 2 + 2 * Cr' ^ 2 * γ k ^ 2 := by ring
-    have e2 : Kρ * γ k ^ 2 = 4 * L ^ 2 * C₄' * (Bq ^ 2 * γ k ^ 2) + 4 * L ^ 2 * C₄' * γ k ^ 2
-        + 2 * Cr' ^ 2 * (Bq ^ 2 * γ k ^ 2) + 2 * Cr' ^ 2 * γ k ^ 2 := by simp only [hKρ]; ring
+    have e1 : 4 * L ^ 2 * C₄' * (γ k ^ 2 + γ k ^ 2) + 2 * (Cr' * γ k) ^ 2 =
+        8 * L ^ 2 * C₄' * γ k ^ 2 + 2 * Cr' ^ 2 * γ k ^ 2 := by ring
+    have e2 : Kρ * γ k ^ 2 = 8 * L ^ 2 * C₄' * γ k ^ 2 + 2 * Cr' ^ 2 * (Bq ^ 2 * γ k ^ 2)
+        + 2 * Cr' ^ 2 * γ k ^ 2 := by simp only [hKρ]; ring
     linarith
   -- apply the reduction
   set C' := C + √Kρ with hC'
