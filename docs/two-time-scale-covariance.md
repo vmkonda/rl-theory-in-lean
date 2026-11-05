@@ -273,9 +273,46 @@ and by [(??eq:s22)](#eq:s22), $`A_{22}^{-1}\Sigma_{22} + \Sigma_{22}A_{22}^{-\to
 
 *Lean:* `effective_lyapunov` (the algebra, using that $`\Sigma_{22}`$ is symmetric, `transCLM_eq_of_lyapOp`) and `tendsto_two_time_scale_slow` (the corollary as a limit statement, with $`A_{22}^{-1}`$ given as a matrix $`G`$ with $`GA_{22} = I`$).
 
-## 4 What remains
+<a id="sec:mult"></a>
 
-- *Multiplicative noise on two time scales.* In actor-critic both $`A_{12}`$ (the critic enters the actor through the features) and $`A_{22}`$ (the TD matrix) are random. Section 3 of the single-time-scale note shows how to absorb such terms; the same shift applies here.
+## 4 Multiplicative noise
+
+In actor-critic algorithms all four blocks of the matrix are random. Consider
+``` math
+\begin{aligned}
+  x_{k+1} &= x_k - \beta_k\big((A_{11} + \tilde A^{11}_k)x_k + (A_{12} + \tilde A^{12}_k)y_k\big) + \beta_kV_k,\\
+  y_{k+1} &= y_k - \gamma_k\big((A_{21} + \tilde A^{21}_k)x_k + (A_{22} + \tilde A^{22}_k)y_k\big) + \gamma_kW_k,
+\end{aligned}
+ \tag{2}
+```
+with $`V_k, W_k`$ as in Assumption [1.3](#ass:noise) and $`\tilde A^{ij}_k = N^{ij}_{k+1} + G^{ij}_k - G^{ij}_{k+1}`$, where $`G^{ij}_k`$ is $`\mathcal{F}_k`$-measurable, $`N^{ij}_{k+1}`$ is $`\mathcal{F}_{k+1}`$-measurable with $`\mathbb{E}[N^{ij}_{k+1}\mid\mathcal{F}_k] = 0`$ entrywise, and all are bounded by a constant almost surely (as in Section 3 of the single-time-scale note).
+
+<div id="thm:mult" class="theorem">
+
+**Theorem 4.1**. *Under Assumptions [1.1](#ass:step)–[1.3](#ass:noise) and the above conditions on the matrix noise, the conclusions of Theorem [2.1](#thm:main) and Corollary [2.2](#cor:eff) hold for [(2)](#eq:mult), with the same $`\Gamma`$: the covariances of the martingale parts $`M_{k+1}, M'_{k+1}`$ of the additive noise.*
+
+</div>
+
+*Lean:* `tendsto_mtts` and `tendsto_mtts_slow`, fully formalized; the matrix noise is the structure `TTSMatrixNoise`.
+
+<div class="proof">
+
+*Proof sketch.* As in Section 3 of the single-time-scale note, write $`\tilde A^{11}_kx_k + \tilde A^{12}_ky_k = N^{11}_{k+1}x_k + N^{12}_{k+1}y_k + (G^{11}_kx_k + G^{12}_ky_k)
+- (G^{11}_{k+1}x_{k+1} + G^{12}_{k+1}y_{k+1}) + \rho_k`$ with $`\rho_k = G^{11}_{k+1}(x_{k+1} - x_k) + G^{12}_{k+1}(y_{k+1} - y_k)`$, and similarly for the fast equation. Then [(2)](#eq:mult) is the additive iteration [(1)](#eq:iter) with
+
+- telescoping parts $`\eta_k = h_k - G^{11}_kx_k - G^{12}_ky_k`$ and $`\zeta_k = g_k - G^{21}_kx_k - G^{22}_ky_k`$, which now depend on the iterates;
+
+- martingale parts $`m_{k+1} = M_{k+1} - N^{11}_{k+1}x_k - N^{12}_{k+1}y_k`$ and $`m'_{k+1}`$, whose covariances differ from $`\Gamma_k`$ by $`O(R_k + R_k^2)`$ with $`R_k = \sqrt{\mathbb{E}\|x_k\|^2} + \sqrt{\mathbb{E}\|y_k\|^2}`$;
+
+- extra remainders $`\rho_k, \rho'_k`$ with $`\sqrt{\mathbb{E}\|\rho_k\|^2} \le C\gamma_k(1 + R_k)`$, because $`y_{k+1} - y_k = O(\gamma_k)`$.
+
+The proof of Theorem [2.1](#thm:main) goes through for such perturbed iterations. All sizes of the martingale parts and of the remainders now grow at most like $`1 + R_k`$, and $`R_k \le C(\sqrt{\mathbb{E}\|\tilde x_k\|^2} + \sqrt{\mathbb{E}\|\tilde y_k\|^2} + \gamma_k) \le C\sqrt{n_k}`$ once $`\gamma_k`$ is small enough to invert the shift. The bounds of Lemma [3.2](#lem:rec) then hold with $`\sqrt{n_k}`$ factors on every size, which does not change their form, and the covariance errors are $`O\big((\sqrt{\beta_k} + \sqrt{\gamma_k})\,n_k\big) = o(n_k)`$. The finitely many initial steps before $`\gamma_k`$ is small are removed by a shift in time. ◻
+
+</div>
+
+*Lean:* the perturbed form is `tendsto_tts_perturbed`, built on `tts_perturbed_step` and the general one-step bound `tts_remainder_step_gen`; the reduction of [(2)](#eq:mult) to it is `tts_of_mtts`, and the inversion of the shift under small steps is `inv_shift_le`.
+
+## 5 What remains
 
 - *Nonlinear algorithms.* The transfer to the actual actor-critic iteration is left as an explicit hypothesis.
 

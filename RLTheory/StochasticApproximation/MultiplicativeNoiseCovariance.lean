@@ -51,20 +51,20 @@ lemma stronglyMeasurable_clm_apply {n : ℕ} {m : MeasurableSpace Ω} {L : Ω �
   StronglyMeasurable[m] fun ω => L ω (x ω) :=
   isBoundedBilinearMap_apply.continuous.comp_stronglyMeasurable (hL.prodMk hx)
 
-lemma memLp_clm_apply {L : Ω → E d →L[ℝ] E d} {x : Ω → E d} {C : ℝ}
+lemma memLp_clm_apply {n : ℕ} {L : Ω → E n →L[ℝ] E d} {x : Ω → E n} {C : ℝ}
   (hL : AEStronglyMeasurable L μ) (hLB : ∀ ω, ‖L ω‖ ≤ C) (hx : MemLp x 2 μ) :
   MemLp (fun ω => L ω (x ω)) 2 μ :=
   hx.of_le_mul (isBoundedBilinearMap_apply.continuous.comp_aestronglyMeasurable (hL.prodMk hx.1))
     (Eventually.of_forall fun ω => (L ω).le_of_opNorm_le (hLB ω) _)
 
-lemma norm_clm_apply_le {L : E d →L[ℝ] E d} {C : ℝ} (hL : ‖L‖ ≤ C) (x : E d) :
+lemma norm_clm_apply_le {n : ℕ} {L : E n →L[ℝ] E d} {C : ℝ} (hL : ‖L‖ ≤ C) (x : E n) :
   ‖L x‖ ≤ C * ‖x‖ :=
   L.le_of_opNorm_le hL x
 
 /-- If the entries of a bounded random linear map `N` have zero conditional expectation,
 then `N x` is a martingale difference for every `ℱ`-measurable square-integrable `x`. -/
 lemma condExp_clm_apply_eq_zero {ℱ : MeasurableSpace Ω} [IsFiniteMeasure μ]
-  {N : Ω → E d →L[ℝ] E d} {x : Ω → E d} {C : ℝ}
+  {n : ℕ} {N : Ω → E n →L[ℝ] E d} {x : Ω → E n} {C : ℝ}
   (hNm : AEStronglyMeasurable[m0] N μ) (hNB : ∀ ω, ‖N ω‖ ≤ C)
   (hx : StronglyMeasurable[ℱ] x) (hxL : MemLp x 2 μ)
   (hN : ∀ i j, μ[fun ω => N ω (EuclideanSpace.single i 1) j | ℱ] =ᵐ[μ] 0) (j : Fin d) :
