@@ -12,3 +12,4 @@ import RLTheory.StochasticApproximation.MarkovNoiseCovariance
 import RLTheory.StochasticApproximation.MultiplicativeNoiseCovariance
 import RLTheory.StochasticApproximation.TwoTimeScaleRecursion
 import RLTheory.StochasticApproximation.TwoTimeScaleCovariance
+import RLTheory.StochasticApproximation.PoissonNoise
