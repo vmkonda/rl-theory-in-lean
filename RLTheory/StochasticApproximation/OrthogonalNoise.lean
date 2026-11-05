@@ -296,6 +296,60 @@ lemma StateDriven.integral_centered_eq (hσ : StateDriven μ ℱ σ ξ P) {d₁ 
   · rw [indicator_eq_of _ h, h]; ring
   · rw [indicator_eq_zero_of _ h]; ring
 
+/-- **The factored covariance of `D`.** For `D_{k+1} = δ(ξ_{k+1}) (B_k - b(σ_k))`,
+`E[D_i D_j] = Σ_s (Σ_x P s x δ(x)²) E[(B_k - b(s))_i (B_k - b(s))_j 1{σ_k = s}]`: the TD error and
+the centered trace are conditionally independent given the state. In stationarity this is
+`Σ_s ν(s) E[δ² | s] Cov(B | s)`, the gap of Theorem 4.5. -/
+lemma StateDriven.integral_sq_centered_eq (hσ : StateDriven μ ℱ σ ξ P) {d₂ : ℕ} {k : ℕ}
+    {B : Ω → E d₂} (hB : StronglyMeasurable[ℱ k] B) (hBB : ∃ C, ∀ ω, ‖B ω‖ ≤ C) (b : S → E d₂)
+    (δ : X → ℝ) (i j : Fin d₂) :
+    ∫ ω, (δ (ξ (k + 1) ω) • (B ω - b (σ k ω))) i * (δ (ξ (k + 1) ω) • (B ω - b (σ k ω))) j ∂μ =
+      ∑ s, (∑ x, P s x * δ x ^ 2) *
+        ∫ ω, {ω | σ k ω = s}.indicator (fun ω => (B ω i - b s i) * (B ω j - b s j)) ω ∂μ := by
+  obtain ⟨C, hC⟩ := hBB
+  have hset : ∀ s, MeasurableSet[ℱ k] {ω | σ k ω = s} := fun s =>
+    hσ.state k (measurableSet_singleton s)
+  have hcoord : ∀ (l : Fin d₂) (s : S), StronglyMeasurable[ℱ k] fun ω => B ω l - b s l := fun l s =>
+    ((EuclideanSpace.proj (𝕜 := ℝ) l).continuous.comp_stronglyMeasurable hB).sub
+      stronglyMeasurable_const
+  have hW : ∀ s, StronglyMeasurable[ℱ k]
+      ({ω | σ k ω = s}.indicator fun ω => (B ω i - b s i) * (B ω j - b s j)) :=
+    fun s => ((hcoord i s).mul (hcoord j s)).indicator (hset s)
+  have hcb : ∀ (l : Fin d₂) (s : S) ω, |B ω l - b s l| ≤ C + ‖b s‖ := fun l s ω => by
+    refine (abs_sub _ _).trans (add_le_add ?_ ?_)
+    · rw [← Real.norm_eq_abs]; exact (PiLp.norm_apply_le _ l).trans (hC ω)
+    · rw [← Real.norm_eq_abs]; exact PiLp.norm_apply_le _ l
+  have hWB : ∀ s, ∃ C', ∀ ω,
+      |({ω | σ k ω = s}.indicator fun ω => (B ω i - b s i) * (B ω j - b s j)) ω| ≤ C' :=
+    fun s => ⟨(C + ‖b s‖) * (C + ‖b s‖), fun ω => by
+      have h0 : 0 ≤ C + ‖b s‖ := (abs_nonneg _).trans (hcb i s ω)
+      by_cases h : σ k ω = s
+      · rw [indicator_eq_of _ h, abs_mul]
+        exact mul_le_mul (hcb i s ω) (hcb j s ω) (abs_nonneg _) h0
+      · rw [indicator_eq_zero_of _ h, abs_zero]; exact mul_nonneg h0 h0⟩
+  have e : ∀ ω, (δ (ξ (k + 1) ω) • (B ω - b (σ k ω))) i * (δ (ξ (k + 1) ω) • (B ω - b (σ k ω))) j
+      = ∑ s, ({ω | σ k ω = s}.indicator fun ω => (B ω i - b s i) * (B ω j - b s j)) ω
+        * (fun x => δ x ^ 2) (ξ (k + 1) ω) := fun ω => by
+    rw [sum_indicator_mul ω (fun s ω => (B ω i - b s i) * (B ω j - b s j))
+      (fun _ => δ (ξ (k + 1) ω) ^ 2)]
+    simp only [PiLp.smul_apply, PiLp.sub_apply, smul_eq_mul]
+    ring
+  rw [integral_congr_ae (Eventually.of_forall e)]
+  rw [integral_finset_sum _ fun s _ => by
+    exact (hσ.integrable_obs (fun x => δ x ^ 2) k).bdd_mul
+      ((hW s).mono (ℱ.le k)).aestronglyMeasurable (by
+        obtain ⟨C', hC'⟩ := hWB s
+        exact ⟨C', fun ω => by rw [Real.norm_eq_abs]; exact hC' ω⟩)]
+  refine sum_congr rfl fun s _ => ?_
+  rw [hσ.integral_mul (hW s) (hWB s) (fun x => δ x ^ 2), ← integral_const_mul]
+  refine integral_congr_ae (Eventually.of_forall fun ω => ?_)
+  show ({ω | σ k ω = s}.indicator fun ω => (B ω i - b s i) * (B ω j - b s j)) ω
+      * ∑ x, P (σ k ω) x * δ x ^ 2 = (∑ x, P s x * δ x ^ 2)
+      * ({ω | σ k ω = s}.indicator fun ω => (B ω i - b s i) * (B ω j - b s j)) ω
+  by_cases h : σ k ω = s
+  · rw [indicator_eq_of _ h, h]; ring
+  · rw [indicator_eq_zero_of _ h]; ring
+
 /-- **Orthogonality.** If `E[(B_k - b(s))_j 1{σ_k = s}] → 0` for every state (for instance
 `b(s) = E[B_k | σ_k = s]` in stationarity), then `E[M_{k+1} D_{k+1}ᵀ] → 0` for every
 `M_{k+1} = Φ(σ_k, ξ_{k+1})`. -/

@@ -403,7 +403,8 @@ $\mathcal G_k \vee \sigma(a_k)$. When the step law does not depend on the flag, 
 $\xi_{k+1} = (s_k, a_k, f_{k+1}, s_{k+1})$ has law $1\{s_0 = s_k\}\pi(a\mid s_k)\kappa((s_k, a), f', s')$ given
 $\mathcal G_k$. The proof composes the two stages by the tower property, using
 \texttt{condExp\_pair\_of\_law}. The condition $\E[\delta\mid\mathcal G_k] = 0$ is then the Bellman equation
-of $V^\pi$. Not formalized: the factored form of $\E[DD^\top]$.
+of $V^\pi$. The factored form of $\E[DD^\top]$ is \texttt{StateDriven.integral\_sq\_centered\_eq}:
+$\E[D_iD_j] = \sum_s\big(\sum_xP(s,x)\delta(x)^2\big)\E[(B_k - b(s))_i(B_k - b(s))_j1\{s_k = s\}]$.
 
 \begin{lemma}[The gain of the tabular TD($\lambda$) critic]\label{lem:gain}
 Under the hypotheses of Theorem~\ref{thm:td0}, for every $\lambda \in [0,1]$ the state block of
