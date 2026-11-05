@@ -20,3 +20,5 @@ uv venv .venv && uv pip install --python .venv/bin/python numpy matplotlib
 | `compare_ac.py`, `check_patterns.py`, `summary_ac.py` | Actor-only vs actor-critic comparisons |
 | `sim_ac.py`, `sim_ac_tuned.py` | Simulation of the actual two-time-scale algorithms vs predictions |
 | `check_poisson.py` | Poisson-equation identities and the Markov-noise covariance theorem |
+| `check_two_time_scale.py` | Two-time-scale covariance with Markov noise: simulation vs Corollary 2.2 |
+| `rates_chapter.py` | Numbers for `docs/actor-critic-rates.tex`: Theorems 4.1–4.2 and the loss table |

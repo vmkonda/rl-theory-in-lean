@@ -1,0 +1,324 @@
+# Rates of Convergence of Actor-Critic and Actor-Only Methods
+
+*Vijaymohan Konda · November 2026*
+
+*Generated from the LaTeX source in this directory; the PDF has the same numbering.*
+
+> **Abstract.**
+>
+> We compare the asymptotic rates of convergence of actor-only and actor-critic methods on finite discounted Markov decision processes, as a function of the critic’s features and of $`\lambda`$ in TD($`\lambda`$). The iterations are linearized around their limit by a first-order Taylor expansion. This gives linear two-time-scale iterations with Markov noise, whose asymptotic covariance is given by the two-time-scale note (including the multiplicative noise that the linearization produces). The figure of merit is the loss in expected total reward, $`\mathbb{E}[J(\theta^*) - J(\theta_k)]`$, which to second order is the variance of the parameter weighted by the Hessian of $`J`$. We prove that a TD(1) critic, whatever its features, gives exactly the rate of actor-only with Monte Carlo returns, and that a critic with only the compatible features gives exactly the rate of actor-only with the same trace parameter. With a tabular critic and $`\lambda < 1`$, the method stays unbiased in every instance we computed and the loss drops to 0.2–0.6 of the actor-only loss, decreasing with $`\lambda`$.
+
+## 1 Setting
+
+##### The MDP and the policies.
+
+A finite MDP with states $`s`$, actions $`a`$, transition probabilities $`P(s'\mid s,a)`$, rewards $`g(s,a)`$, initial law $`p_0`$ and discount $`\gamma \in (0,1)`$. A family of policies $`\pi_\theta(a\mid s)`$, $`\theta \in \mathbb{R}^n`$, smooth in $`\theta`$, with score $`\psi_\theta(s,a) = \nabla_\theta\log\pi_\theta(a\mid s)`$; note that $`\sum_a\pi_\theta(a\mid s)\psi_\theta(s,a) = 0`$ for every $`s`$. The objective is the expected discounted reward $`J(\theta) = \mathbb{E}\big[\sum_t\gamma^tg(s_t,a_t)\big]`$ with $`s_0 \sim p_0`$.
+
+<div id="ass:wp" class="assumption">
+
+**Assumption 1.1** (Well-posedness). $`J`$ has a strict local maximum $`\theta^*`$ in the interior, with $`H_J := -\nabla^2J(\theta^*) \succ 0`$.
+
+</div>
+
+##### Sampling.
+
+Both methods sample the state-action chain with restarts: from $`(s,a)`$, with probability $`\gamma`$ the next pair follows the MDP and the policy, and with probability $`1 - \gamma`$ the process restarts from $`p_0`$. Let $`Y_k`$ be the pair at time $`k`$ together with a flag recording a restart, and $`c_{k+1} = 1`$ if $`Y_{k+1}`$ is not a restart, $`0`$ otherwise. The pieces between restarts are *episodes*. The stationary law $`\nu_\theta`$ of $`Y`$ is the discounted occupancy measure, so $`\mathbb{E}_\nu[\psi\,G] = (1-\gamma)\nabla J(\theta)`$, where $`G_k`$ is the reward-to-go of the episode, the sum of $`g(Y_j)`$ over the rest of the episode from $`k`$ on.
+
+##### Actor-only.
+
+With the trace $`Z_k = \lambda c_kZ_{k-1} + \psi(Y_k)`$,
+``` math
+\theta_{k+1} = \theta_k + \beta_k\,g(Y_k)Z_k .
+```
+For $`\lambda = 1`$ this is REINFORCE in per-step form: summed over an episode, $`\sum_kg(Y_k)Z_k
+= \sum_k\psi(Y_k)G_k`$.
+
+##### Actor-critic.
+
+The critic has features $`\phi_\theta(s,a) = (\psi_\theta(s,a), \bar\phi(s))`$, the compatible features plus extra state features, a trace $`z_k = \lambda c_kz_{k-1} + \phi(Y_k)`$ and the TD error $`d_k = g(Y_k) + c_{k+1}r_k^\top\phi(Y_{k+1}) - r_k^\top\phi(Y_k)`$:
+``` math
+r_{k+1} = r_k + \gamma_k\,d_kz_k,\qquad \theta_{k+1} = \theta_k + \beta_k\,\big(r_k^\top\phi(Y_k)\big)\psi(Y_k),
+```
+with $`\beta_k/\gamma_k \to 0`$ (Konda 2002, Chapter 5). For fixed $`\theta`$ the critic converges to the TD($`\lambda`$) solution $`r^*(\theta)`$ of $`A_c r + b = 0`$, where $`A_c = \mathbb{E}_\nu[z_k(c_{k+1}\phi(Y_{k+1}) - \phi(Y_k))^\top]`$ and $`b = \mathbb{E}_\nu[z_kg(Y_k)]`$, and the actor follows the mean direction $`f(\theta) = C\,r^*(\theta)`$ with $`C = \mathbb{E}_\nu[\psi\phi^\top]`$.
+
+## 2 Linearization
+
+Write either method as
+``` math
+\theta_{k+1} = \theta_k + \beta_kF(\theta_k, r_k, \xi_k),\qquad
+  r_{k+1} = r_k + \gamma_kG(\theta_k, r_k, \xi_k),
+```
+where $`\xi_k = (Y_k, Y_{k+1}, z_k)`$ and the chain $`\xi`$ is generated under $`\pi_{\theta_k}`$ (for actor-only there is no $`r`$). Let $`\bar F(\theta, r)`$ and $`\bar G(\theta, r)`$ be the means under the stationary law of the chain at $`\theta`$, $`r^*(\theta)`$ the root of $`\bar G(\theta, \cdot)`$, and $`\hat\theta`$ a root of $`f(\theta) = \bar F(\theta, r^*(\theta))`$ with $`\hat r = r^*(\hat\theta)`$.
+
+##### Taylor expansion.
+
+To first order around $`(\hat\theta, \hat r)`$,
+``` math
+\bar F(\theta, r) = -A_{11}(\theta - \hat\theta) - A_{12}(r - \hat r) + O(\|\cdot\|^2),\qquad
+  \bar G(\theta, r) = -A_{21}(\theta - \hat\theta) - A_{22}(r - \hat r) + O(\|\cdot\|^2),
+```
+with $`A_{11} = -\partial_\theta\bar F`$, $`A_{12} = -\partial_r\bar F`$, $`A_{21} = -\partial_\theta\bar G`$ and $`A_{22} = -\partial_r\bar G`$ at $`(\hat\theta, \hat r)`$. To zeroth order the noise is $`F(\theta, r, \xi) - \bar F(\theta, r) = V(\xi) + O(\|\cdot\|)`$ with $`V(\xi) = F(\hat\theta, \hat r, \xi)`$, and similarly $`W(\xi) = G(\hat\theta, \hat r, \xi)`$. Dropping the remainders, $`x_k = \theta_k - \hat\theta`$ and $`y_k = r_k - \hat r`$ follow the linear two-time-scale iteration
+``` math
+\begin{aligned}
+  x_{k+1} &= x_k - \beta_k(A_{11}x_k + A_{12}y_k) + \beta_kV_k,\\
+  y_{k+1} &= y_k - \gamma_k(A_{21}x_k + A_{22}y_k) + \gamma_kW_k,
+\end{aligned}
+ \tag{1}
+```
+driven by the chain at $`\hat\theta`$. For actor-only it is the single-time-scale iteration $`x_{k+1} = x_k - \beta_kHx_k + \beta_kV_k`$ with $`H = -f'(\hat\theta)`$.
+
+The first-order terms of the noise, $`(\partial F(\xi) - \partial\bar F)\cdot(x, y)`$, are multiplicative noise. By Theorem 4.1 of the two-time-scale note they do not change the asymptotic covariance, which is why the zeroth-order noise suffices. For actor-critic, $`\partial_rF = \psi\phi^\top`$ and $`\partial_rG = z(c'\phi' - \phi)^\top`$ are affine in the trace and have the Poisson decompositions of Section 4 of the single-time-scale note.
+
+<div id="lem:delta" class="lemma">
+
+**Lemma 2.1**. *$`A_{22} = -A_c`$, $`A_{12} = -C`$, and $`\Delta := A_{11} - A_{12}A_{22}^{-1}A_{21} = -f'(\hat\theta) =: H`$, the Jacobian of the actor’s mean direction with the critic at its fixed point.*
+
+</div>
+
+<div class="proof">
+
+*Proof.* $`\bar G(\theta, r) = A_cr + b`$ and $`\bar F(\theta, r) = Cr`$ at fixed $`\theta`$, which gives the first two identities. Differentiating $`\bar G(\theta, r^*(\theta)) = 0`$ gives $`\partial_\theta r^* = -(\partial_r\bar G)^{-1}\partial_\theta\bar G = -A_{22}^{-1}A_{21}`$, so $`f'(\hat\theta) = \partial_\theta\bar F + \partial_r\bar F\,\partial_\theta r^* = -A_{11} + A_{12}A_{22}^{-1}A_{21}`$. ◻
+
+</div>
+
+<div id="ass:lin" class="assumption">
+
+**Assumption 2.2** (Linearization). The asymptotic covariance of $`\theta_k - \hat\theta`$ for the actual iteration equals that of $`x_k`$ in [(1)](#eq:lin).
+
+</div>
+
+This is the standard step from the ODE method to rates (Benveniste, Métivier and Priouret 1990; Konda 2002, Section 7.6). It hides two things: the $`O(\|\cdot\|^2)`$ terms of the drift, and the fact that the chain is generated under $`\pi_{\theta_k}`$ rather than $`\pi_{\hat\theta}`$, an effect of order $`\|\theta_k - \hat\theta\|`$ that is part of $`A_{11}`$ and $`A_{21}`$ through the derivative of the stationary law. We take this step as a hypothesis; everything after it is proved.
+
+## 3 The loss in expected reward
+
+<div id="thm:cov" class="theorem">
+
+**Theorem 3.1**. Let $`\beta_k, \gamma_k`$ satisfy Assumption 1.1 of the two-time-scale note, let $`H - \frac{\bar\beta}{2}I`$ and $`A_{22}`$ be stable, and let $`\tilde\Gamma`$ be the long-run covariance of the effective noise $`N_k = V_k - A_{12}A_{22}^{-1}W_k = V_k - CA_c^{-1}W_k`$. Under Assumption [2.2](#ass:lin), $`\beta_k^{-1}\mathbb{E}[(\theta_k - \hat\theta)(\theta_k - \hat\theta)^\top] \to \Sigma_{\bar\beta}`$, the solution of
+``` math
+(H - \tfrac{\bar\beta}{2})\Sigma + \Sigma(H - \tfrac{\bar\beta}{2})^\top = \tilde\Gamma .
+```
+For actor-only the same holds with $`\tilde\Gamma`$ the long-run covariance of $`V_k`$.
+
+</div>
+
+<div class="proof">
+
+*Proof.* Lemma [2.1](#lem:delta) and Corollary 2.2 (with Theorem 4.1 for the multiplicative terms) of the two-time-scale note, and Theorem 2.1 of the single-time-scale note for actor-only. ◻
+
+</div>
+
+*Lean:* the linear-iteration statements are `tendsto_two_time_scale_slow`, `tendsto_mtts_slow` and `tendsto_secondMoment_of_markov_noise`.
+
+<div id="def:loss" class="definition">
+
+**Definition 3.2**. The *loss rate* of an unbiased method ($`\hat\theta = \theta^*`$) is $`\ell = \lim_k\beta_k^{-1}\mathbb{E}[J(\theta^*) - J(\theta_k)]`$. To second order, $`J(\theta^*) - J(\theta^* + x) = \frac12x^\top H_Jx + O(\|x\|^3)`$, so under Assumption [2.2](#ass:lin) the loss is that of the quadratic part.
+
+</div>
+
+<div id="prop:loss" class="proposition">
+
+**Proposition 3.3**. *For the linearized iteration, $`\beta_k^{-1}\mathbb{E}\big[\frac12x_k^\top H_Jx_k\big] \to \ell = \frac12\mathop{\mathrm{tr}}(H_J\Sigma_{\bar\beta})`$. The loss is the variance of the parameter measured in the metric of the reward: for instance, if $`\Sigma = \sigma^2 H_J^{-1}`$ then $`\ell = \frac{n}{2}\sigma^2`$.*
+
+</div>
+
+<div class="proof">
+
+*Proof.* $`\mathbb{E}[x^\top H_Jx] = \sum_{ij}(H_J)_{ij}\mathbb{E}[x_ix_j] = \mathop{\mathrm{tr}}(H_J\mathbb{E}[xx^\top])`$, which is linear and continuous in $`\mathbb{E}[xx^\top]`$. ◻
+
+</div>
+
+*Lean:* `tendsto_quadLoss`.
+
+<div class="remark">
+
+**Remark 3.4** (Why not $`\operatorname{Var} J(\theta_k)`$). At a maximum the reward is flat to first order, so $`J(\theta_k) - J(\theta^*) = -\frac12x_k^\top H_Jx_k + \dots`$ and its variance is of order $`\beta_k^2`$ and depends on fourth moments. The expected loss is of order $`\beta_k`$ and depends only on the covariance; it is the natural measure of how far from optimal the policy is, and it is what we compare.
+
+</div>
+
+<div id="prop:dual" class="proposition">
+
+**Proposition 3.5** (Duality). *Let $`B = H - \frac{\bar\beta}{2}I`$ and let $`K`$ solve the adjoint equation $`B^\top K + KB = H_J`$. Then $`\ell = \frac12\mathop{\mathrm{tr}}(K\tilde\Gamma)`$: the loss is a linear functional of the noise covariance.*
+
+</div>
+
+<div class="proof">
+
+*Proof.* $`\mathop{\mathrm{tr}}(H_J\Sigma) = \mathop{\mathrm{tr}}\big((B^\top K + KB)\Sigma\big) = \mathop{\mathrm{tr}}\big(K(B\Sigma + \Sigma B^\top)\big) = \mathop{\mathrm{tr}}(K\tilde\Gamma)`$. ◻
+
+</div>
+
+*Lean:* `loss_duality`.
+
+##### The optimal gain.
+
+The asymptotic covariance depends on the gain. Over matrix gains $`\beta_kG`$, or with Polyak–Ruppert averaging, the least covariance is $`\Sigma^* = H^{-1}\tilde\Gamma H^{-\top}`$ (Konda 2002, Theorem 7.9), which does not depend on rescaling the direction. The corresponding loss is
+``` math
+\ell^* = \tfrac12\mathop{\mathrm{tr}}(H_J\Sigma^*) = \tfrac12\mathop{\mathrm{tr}}(K^*\tilde\Gamma),\qquad K^* = H^{-\top}H_JH^{-1} \succeq 0 .
+```
+For an unbiased method the mean direction is $`(1-\gamma)\nabla J`$ near $`\theta^*`$ (Section 1), so $`H = (1-\gamma)H_J`$ and $`\ell^* = \frac{1}{2(1-\gamma)^2}\mathop{\mathrm{tr}}(H_J^{-1}\tilde\Gamma)`$.
+
+<div id="prop:compare" class="proposition">
+
+**Proposition 3.6** (Comparison principle). *For two methods with the same $`H`$, $`\tilde\Gamma_A \preceq \tilde\Gamma_B`$ implies $`\ell^*_A \le \ell^*_B`$, and $`\tilde\Gamma_A = \tilde\Gamma_B`$ implies equal losses for every gain. Among unbiased methods all have the same $`H`$, so the comparison is between the effective noise covariances alone.*
+
+</div>
+
+<div class="proof">
+
+*Proof.* $`\ell^*_B - \ell^*_A = \frac12\mathop{\mathrm{tr}}\big(K^*(\tilde\Gamma_B - \tilde\Gamma_A)\big) \ge 0`$, a trace of a product of two positive semidefinite matrices. ◻
+
+</div>
+
+*Lean:* `optLoss_mono` and `optLoss_eq_trace`.
+
+## 4 Actor-critic versus actor-only
+
+All expectations are under the stationary law at the given $`\theta`$. We assume $`\mathbb{E}[\phi\phi^\top]`$ and $`\mathbb{E}[\psi\psi^\top]`$ are invertible.
+
+<div id="thm:td1" class="theorem">
+
+**Theorem 4.1** (TD(1) critic). *Let the critic use TD(1) with features $`\phi = (\psi, \bar\phi)`$, for any extra features $`\bar\phi`$. Then for every $`\theta`$ the actor-critic mean direction equals the actor-only direction with $`\lambda = 1`$, $`f(\theta) = (1-\gamma)\nabla J(\theta)`$, and at $`\theta^*`$ the effective noises have the same long-run covariance. Hence actor-critic with a TD(1) critic has exactly the loss of actor-only (REINFORCE), for every gain.*
+
+</div>
+
+<div class="proof">
+
+*Proof.* *The critic.* With $`\lambda = 1`$ the trace is $`z_k = \sum_j\phi(Y_j)`$ over the current episode up to $`k`$. Summed over an episode, the TD updates telescope:
+``` math
+  \sum_kz_k\big(c_{k+1}\phi(Y_{k+1}) - \phi(Y_k)\big)^\top r = -\sum_j\phi(Y_j)\phi(Y_j)^\top r,\qquad
+  \sum_kz_kg(Y_k) = \sum_j\phi(Y_j)G_j .
+ \tag{2}
+```
+Taking stationary expectations (equivalently, using $`z_k = c_kz_{k-1} + \phi_k`$ and stationarity), $`A_c = -\mathbb{E}[\phi\phi^\top]`$ and $`b = \mathbb{E}[\phi G]`$, so $`r^* = \mathbb{E}[\phi\phi^\top]^{-1}\mathbb{E}[\phi G]`$ is the least-squares regression of the returns on the features.
+
+*The direction.* Since $`\psi`$ is the first block of $`\phi`$, $`\mathbb{E}[\psi\phi^\top]`$ is the first block row of $`\mathbb{E}[\phi\phi^\top]`$, so $`-CA_c^{-1} = \mathbb{E}[\psi\phi^\top]\mathbb{E}[\phi\phi^\top]^{-1} = (I\;\,0)`$. Hence $`f = Cr^* = (I\;\,0)\mathbb{E}[\phi G] = \mathbb{E}[\psi G]`$, the actor-only direction, for every $`\theta`$; in particular the two methods have the same root $`\theta^*`$ and the same $`H`$.
+
+*The noise.* The long-run covariance of a stationary sequence is $`\lim_n\frac1n\mathbb{E}[S_nS_n^\top]`$ for its partial sums $`S_n`$, and is unchanged by adding terms bounded in $`L^2`$. At $`\theta^*`$ the effective noise is $`N_k = \psi_k\phi_k^\top\hat r - C\hat r + (I\;\,0)\,d_kz_k`$. By [(2)](#eq:tel), over complete episodes,
+``` math
+\sum_kN_k = \sum_j\psi_j\phi_j^\top\hat r + \sum_j\psi_j(G_j - \phi_j^\top\hat r) - nC\hat r
+  = \sum_j\psi_jG_j - nf(\theta^*),
+```
+which is the partial sum of the actor-only noise $`g(Y_k)Z_k - f`$. The incomplete episodes at the two ends contribute terms bounded in $`L^2`$, because episode lengths are geometric. So the long-run covariances agree. ◻
+
+</div>
+
+<div id="thm:compat" class="theorem">
+
+**Theorem 4.2** (Compatible critic). *Let the critic use only the compatible features, $`\phi = \psi`$, with TD($`\lambda`$) for any $`\lambda`$. Then for every $`\theta`$ the mean direction equals the actor-only direction with trace parameter $`\lambda`$, and at its root the two effective noises coincide. Hence the two methods have the same limit and the same loss, for every gain.*
+
+</div>
+
+<div class="proof">
+
+*Proof.* Given the past, the action $`a_{k+1}`$ is drawn from $`\pi_\theta(\cdot\mid s_{k+1})`$ and the score has zero mean over actions, so $`\mathbb{E}[z_kc_{k+1}\psi_{k+1}^\top] = 0`$ and $`\mathbb{E}[z_k\psi_k^\top] = \mathbb{E}[\psi\psi^\top] + \lambda\mathbb{E}[c_kz_{k-1}\psi_k^\top] = \mathbb{E}[\psi\psi^\top]`$. Hence $`A_c = -\mathbb{E}[\psi\psi^\top] = -C`$, $`r^* = C^{-1}b`$, and $`f = Cr^* = b = \mathbb{E}[g(Y_k)z_k]`$, the actor-only direction with trace $`\lambda`$ (the two traces coincide). At the common root $`b = 0`$, so $`\hat r = 0`$, the actor’s noise $`V_k = \psi_k\psi_k^\top\hat r - C\hat r`$ vanishes, $`W_k = d_kz_k = g(Y_k)z_k`$, and $`-CA_c^{-1} = I`$. So $`N_k = g(Y_k)z_k`$, the actor-only noise at the same point. ◻
+
+</div>
+
+<div class="remark">
+
+**Remark 4.3**. For $`\lambda < 1`$ both methods in Theorem [4.2](#thm:compat) are biased: their common limit is the root of $`\mathbb{E}[gz]`$, not $`\theta^*`$. A critic helps only through features beyond the compatible ones, and only when TD($`\lambda`$) with $`\lambda < 1`$ is used; with $`\lambda = 1`$ it reproduces Monte Carlo (Theorem [4.1](#thm:td1)).
+
+</div>
+
+<div id="obs:tab" class="observation">
+
+**Observation 4.4** (Tabular critic). With tabular extra features ($`\bar\phi(s) = e_s`$) the method is unbiased for every $`\lambda`$ in every instance computed (the gap $`J^* - J(\hat\theta)`$ is below $`10^{-10}`$), so Proposition [3.6](#prop:compare) applies; we have no proof of this unbiasedness. In every instance, the loss decreases as $`\lambda`$ decreases, and at $`\lambda = 0`$ it is a fraction of the actor-only loss: 0.29–0.54 in the seven two-parameter instances of the table below and 0.18–0.57 (median 0.29) in seventeen one-parameter instances. With random extra features and $`\lambda < 1`$ the critic is biased, with a gap $`J^* - J(\hat\theta)`$ of about $`2\times10^{-2}`$; whether it pays depends on the horizon through gap$`{}+\ell^*/k`$.
+
+</div>
+
+<table id="tab:loss">
+<caption>Optimal-gain loss <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>ℓ</mi><mo>*</mo></msup><annotation encoding="application/x-tex">\ell^*</annotation></semantics></math> relative to actor-only with <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lambda = 1</annotation></semantics></math>, on aliased MDPs with 6 states, 2 actions and 2 policy parameters (<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>γ</mi><mo>=</mo><mn>0.9</mn></mrow><annotation encoding="application/x-tex">\gamma = 0.9</annotation></semantics></math>). The column <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lambda = 1</annotation></semantics></math> equals 1 by Theorem <a href="#thm:td1">4.1</a>. A dash: the biased limit is not an interior stable point.</caption>
+<tbody>
+<tr>
+<td style="text-align: right;"></td>
+<td colspan="4" style="text-align: center;">AC, tabular critic, TD(<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>λ</mi><annotation encoding="application/x-tex">\lambda</annotation></semantics></math>)</td>
+<td style="text-align: center;">AC, 2 random features, <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mo>=</mo><mn>0.7</mn></mrow><annotation encoding="application/x-tex">\lambda = 0.7</annotation></semantics></math></td>
+</tr>
+<tr>
+<td style="text-align: right;">seed</td>
+<td style="text-align: center;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>λ</mi><mo>=</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">\lambda = 1</annotation></semantics></math></td>
+<td style="text-align: center;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0.7</mn><annotation encoding="application/x-tex">0.7</annotation></semantics></math></td>
+<td style="text-align: center;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0.3</mn><annotation encoding="application/x-tex">0.3</annotation></semantics></math></td>
+<td style="text-align: center;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mn>0</mn><annotation encoding="application/x-tex">0</annotation></semantics></math></td>
+<td style="text-align: center;">gap, <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>ℓ</mi><mo>*</mo></msup><annotation encoding="application/x-tex">\ell^*</annotation></semantics></math></td>
+</tr>
+<tr>
+<td style="text-align: right;">22</td>
+<td style="text-align: center;">1.000</td>
+<td style="text-align: center;">0.369</td>
+<td style="text-align: center;">0.312</td>
+<td style="text-align: center;">0.304</td>
+<td style="text-align: center;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>3.1</mn><mo>×</mo><msup><mn>10</mn><mrow><mi>−</mi><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">3.1\times10^{-2}</annotation></semantics></math>, 0.299</td>
+</tr>
+<tr>
+<td style="text-align: right;">76</td>
+<td style="text-align: center;">1.000</td>
+<td style="text-align: center;">0.580</td>
+<td style="text-align: center;">0.544</td>
+<td style="text-align: center;">0.539</td>
+<td style="text-align: center;">–</td>
+</tr>
+<tr>
+<td style="text-align: right;">343</td>
+<td style="text-align: center;">1.000</td>
+<td style="text-align: center;">0.562</td>
+<td style="text-align: center;">0.525</td>
+<td style="text-align: center;">0.520</td>
+<td style="text-align: center;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.2</mn><mo>×</mo><msup><mn>10</mn><mrow><mi>−</mi><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.2\times10^{-2}</annotation></semantics></math>, 3.59</td>
+</tr>
+<tr>
+<td style="text-align: right;">644</td>
+<td style="text-align: center;">1.000</td>
+<td style="text-align: center;">0.382</td>
+<td style="text-align: center;">0.330</td>
+<td style="text-align: center;">0.324</td>
+<td style="text-align: center;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>1.9</mn><mo>×</mo><msup><mn>10</mn><mrow><mi>−</mi><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">1.9\times10^{-2}</annotation></semantics></math>, 0.545</td>
+</tr>
+<tr>
+<td style="text-align: right;">1124</td>
+<td style="text-align: center;">1.000</td>
+<td style="text-align: center;">0.501</td>
+<td style="text-align: center;">0.459</td>
+<td style="text-align: center;">0.453</td>
+<td style="text-align: center;">–</td>
+</tr>
+<tr>
+<td style="text-align: right;">1849</td>
+<td style="text-align: center;">1.000</td>
+<td style="text-align: center;">0.350</td>
+<td style="text-align: center;">0.295</td>
+<td style="text-align: center;">0.288</td>
+<td style="text-align: center;"><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mn>2.3</mn><mo>×</mo><msup><mn>10</mn><mrow><mi>−</mi><mn>2</mn></mrow></msup></mrow><annotation encoding="application/x-tex">2.3\times10^{-2}</annotation></semantics></math>, 0.319</td>
+</tr>
+<tr>
+<td style="text-align: right;">1886</td>
+<td style="text-align: center;">1.000</td>
+<td style="text-align: center;">0.527</td>
+<td style="text-align: center;">0.486</td>
+<td style="text-align: center;">0.481</td>
+<td style="text-align: center;">–</td>
+</tr>
+</tbody>
+</table>
+
+<div class="remark">
+
+**Remark 4.5** (Numerical checks). `experiments/rates_chapter.py` checks Theorems [4.1](#thm:td1) and [4.2](#thm:compat) on the same instances: the directions, Jacobians $`H`$, noise covariances $`\tilde\Gamma`$ and losses agree to relative error $`7\times10^{-9}`$ and $`2\times10^{-9}`$ (the accuracy of the finite-difference Jacobian). Earlier simulations of the actual two-time-scale algorithm (`experiments/sim_ac_tuned.py`) matched the predicted covariances to about 5%, supporting Assumption [2.2](#ass:lin) in these instances.
+
+</div>
+
+## 5 What is checked in Lean
+
+- The covariance of the linearized iterations, Theorem [3.1](#thm:cov): fully formalized for the linear iterations (single and two time scales, additive and multiplicative Markov noise), with the noise hypotheses verified for finite-chain and trace-driven noise.
+
+- Propositions [3.3](#prop:loss), [3.5](#prop:dual) and [3.6](#prop:compare): formalized.
+
+- Assumption [2.2](#ass:lin) is a hypothesis. Lemma [2.1](#lem:delta), Theorems [4.1](#thm:td1) and [4.2](#thm:compat) are proved here and checked numerically, but not yet in Lean: they need the restart chain and the traces of a policy family formalized as stochastic processes.
+
+# References
+
+- V. R. Konda. *Actor-Critic Algorithms*. PhD thesis, MIT, 2002.
+
+- V. R. Konda and J. N. Tsitsiklis. Convergence rate of linear two-time-scale stochastic approximation. *Ann. Appl. Probab.*, 14(2):796–819, 2004.
+
+- A. Benveniste, M. Métivier and P. Priouret. *Adaptive Algorithms and Stochastic Approximations*. Springer, 1990.

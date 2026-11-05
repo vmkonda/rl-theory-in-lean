@@ -1,0 +1,367 @@
+% Rates of convergence of actor-critic and actor-only methods on finite discounted MDPs.
+% Numerics: experiments/rates_chapter.py, experiments/summary_ac.py
+% Compile with:  tectonic actor-critic-rates.tex
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{booktabs}
+\usepackage[margin=1.1in]{geometry}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\emergencystretch=3em
+\sloppy
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{definition}[theorem]{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{observation}[theorem]{Observation}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\F}{\mathcal{F}}
+\DeclareMathOperator{\tr}{tr}
+
+\title{Rates of Convergence of Actor-Critic and Actor-Only Methods}
+\author{Vijaymohan Konda}
+\date{November 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We compare the asymptotic rates of convergence of actor-only and actor-critic methods on
+finite discounted Markov decision processes, as a function of the critic's features and of
+$\lambda$ in TD($\lambda$). The iterations are linearized around their limit by a first-order
+Taylor expansion. This gives linear two-time-scale iterations with Markov noise, whose
+asymptotic covariance is given by the two-time-scale note (including the multiplicative noise
+that the linearization produces). The figure of merit is the loss in expected total reward,
+$\E[J(\theta^*) - J(\theta_k)]$, which to second order is the variance of the parameter weighted
+by the Hessian of $J$. We prove that a TD(1) critic, whatever its features, gives exactly the rate
+of actor-only with Monte Carlo returns, and that a critic with only the compatible features gives
+exactly the rate of actor-only with the same trace parameter. With a tabular critic and
+$\lambda < 1$, the method stays unbiased in every instance we computed and the loss drops to
+0.2--0.6 of the actor-only loss, decreasing with $\lambda$.
+\end{abstract}
+
+\tableofcontents
+
+%======================================================================
+\section{Setting}
+%======================================================================
+
+\paragraph{The MDP and the policies.} A finite MDP with states $s$, actions $a$, transition
+probabilities $P(s'\mid s,a)$, rewards $g(s,a)$, initial law $p_0$ and discount $\gamma \in (0,1)$.
+A family of policies $\pi_\theta(a\mid s)$, $\theta \in \R^n$, smooth in $\theta$, with score
+$\psi_\theta(s,a) = \nabla_\theta\log\pi_\theta(a\mid s)$; note that
+$\sum_a\pi_\theta(a\mid s)\psi_\theta(s,a) = 0$ for every $s$. The objective is the expected
+discounted reward $J(\theta) = \E\big[\sum_t\gamma^tg(s_t,a_t)\big]$ with $s_0 \sim p_0$.
+
+\begin{assumption}[Well-posedness]\label{ass:wp}
+$J$ has a strict local maximum $\theta^*$ in the interior, with
+$H_J := -\nabla^2J(\theta^*) \succ 0$.
+\end{assumption}
+
+\paragraph{Sampling.} Both methods sample the state-action chain with restarts: from $(s,a)$,
+with probability $\gamma$ the next pair follows the MDP and the policy, and with probability
+$1 - \gamma$ the process restarts from $p_0$. Let $Y_k$ be the pair at time $k$ together with a flag
+recording a restart, and $c_{k+1} = 1$ if $Y_{k+1}$ is not a restart, $0$ otherwise. The pieces
+between restarts are \emph{episodes}. The stationary law $\nu_\theta$ of $Y$ is the discounted
+occupancy measure, so $\E_\nu[\psi\,G] = (1-\gamma)\nabla J(\theta)$, where $G_k$ is the
+reward-to-go of the episode, the sum of $g(Y_j)$ over the rest of the episode from $k$ on.
+
+\paragraph{Actor-only.} With the trace $Z_k = \lambda c_kZ_{k-1} + \psi(Y_k)$,
+\[
+  \theta_{k+1} = \theta_k + \beta_k\,g(Y_k)Z_k .
+\]
+For $\lambda = 1$ this is REINFORCE in per-step form: summed over an episode, $\sum_kg(Y_k)Z_k
+= \sum_k\psi(Y_k)G_k$.
+
+\paragraph{Actor-critic.} The critic has features $\phi_\theta(s,a) = (\psi_\theta(s,a), \bar\phi(s))$,
+the compatible features plus extra state features, a trace $z_k = \lambda c_kz_{k-1} + \phi(Y_k)$
+and the TD error $d_k = g(Y_k) + c_{k+1}r_k^\top\phi(Y_{k+1}) - r_k^\top\phi(Y_k)$:
+\[
+  r_{k+1} = r_k + \gamma_k\,d_kz_k,\qquad \theta_{k+1} = \theta_k + \beta_k\,\big(r_k^\top\phi(Y_k)\big)\psi(Y_k),
+\]
+with $\beta_k/\gamma_k \to 0$ (Konda 2002, Chapter 5). For fixed $\theta$ the critic converges to the
+TD($\lambda$) solution $r^*(\theta)$ of $A_c r + b = 0$, where
+$A_c = \E_\nu[z_k(c_{k+1}\phi(Y_{k+1}) - \phi(Y_k))^\top]$ and $b = \E_\nu[z_kg(Y_k)]$, and the actor
+follows the mean direction $f(\theta) = C\,r^*(\theta)$ with $C = \E_\nu[\psi\phi^\top]$.
+
+%======================================================================
+\section{Linearization}
+%======================================================================
+
+Write either method as
+\[
+  \theta_{k+1} = \theta_k + \beta_kF(\theta_k, r_k, \xi_k),\qquad
+  r_{k+1} = r_k + \gamma_kG(\theta_k, r_k, \xi_k),
+\]
+where $\xi_k = (Y_k, Y_{k+1}, z_k)$ and the chain $\xi$ is generated under $\pi_{\theta_k}$ (for
+actor-only there is no $r$). Let $\bar F(\theta, r)$ and $\bar G(\theta, r)$ be the means under the
+stationary law of the chain at $\theta$, $r^*(\theta)$ the root of $\bar G(\theta, \cdot)$, and
+$\hat\theta$ a root of $f(\theta) = \bar F(\theta, r^*(\theta))$ with $\hat r = r^*(\hat\theta)$.
+
+\paragraph{Taylor expansion.} To first order around $(\hat\theta, \hat r)$,
+\[
+  \bar F(\theta, r) = -A_{11}(\theta - \hat\theta) - A_{12}(r - \hat r) + O(\|\cdot\|^2),\qquad
+  \bar G(\theta, r) = -A_{21}(\theta - \hat\theta) - A_{22}(r - \hat r) + O(\|\cdot\|^2),
+\]
+with $A_{11} = -\partial_\theta\bar F$, $A_{12} = -\partial_r\bar F$, $A_{21} = -\partial_\theta\bar G$ and
+$A_{22} = -\partial_r\bar G$ at $(\hat\theta, \hat r)$. To zeroth order the noise is
+$F(\theta, r, \xi) - \bar F(\theta, r) = V(\xi) + O(\|\cdot\|)$ with $V(\xi) = F(\hat\theta, \hat r, \xi)$, and
+similarly $W(\xi) = G(\hat\theta, \hat r, \xi)$. Dropping the remainders, $x_k = \theta_k - \hat\theta$ and
+$y_k = r_k - \hat r$ follow the linear two-time-scale iteration
+\begin{equation}\label{eq:lin}
+\begin{aligned}
+  x_{k+1} &= x_k - \beta_k(A_{11}x_k + A_{12}y_k) + \beta_kV_k,\\
+  y_{k+1} &= y_k - \gamma_k(A_{21}x_k + A_{22}y_k) + \gamma_kW_k,
+\end{aligned}
+\end{equation}
+driven by the chain at $\hat\theta$. For actor-only it is the single-time-scale iteration
+$x_{k+1} = x_k - \beta_kHx_k + \beta_kV_k$ with $H = -f'(\hat\theta)$.
+
+The first-order terms of the noise, $(\partial F(\xi) - \partial\bar F)\cdot(x, y)$, are multiplicative
+noise. By Theorem~4.1 of the two-time-scale note they do not change the asymptotic covariance,
+which is why the zeroth-order noise suffices. For actor-critic, $\partial_rF = \psi\phi^\top$ and
+$\partial_rG = z(c'\phi' - \phi)^\top$ are affine in the trace and have the Poisson decompositions of
+Section~4 of the single-time-scale note.
+
+\begin{lemma}\label{lem:delta}
+$A_{22} = -A_c$, $A_{12} = -C$, and
+$\Delta := A_{11} - A_{12}A_{22}^{-1}A_{21} = -f'(\hat\theta) =: H$, the Jacobian of the actor's mean
+direction with the critic at its fixed point.
+\end{lemma}
+\begin{proof}
+$\bar G(\theta, r) = A_cr + b$ and $\bar F(\theta, r) = Cr$ at fixed $\theta$, which gives the first two
+identities. Differentiating $\bar G(\theta, r^*(\theta)) = 0$ gives
+$\partial_\theta r^* = -(\partial_r\bar G)^{-1}\partial_\theta\bar G = -A_{22}^{-1}A_{21}$, so
+$f'(\hat\theta) = \partial_\theta\bar F + \partial_r\bar F\,\partial_\theta r^* = -A_{11} + A_{12}A_{22}^{-1}A_{21}$.
+\end{proof}
+
+\begin{assumption}[Linearization]\label{ass:lin}
+The asymptotic covariance of $\theta_k - \hat\theta$ for the actual iteration equals that of $x_k$ in
+\eqref{eq:lin}.
+\end{assumption}
+
+This is the standard step from the ODE method to rates (Benveniste, M\'etivier and Priouret
+1990; Konda 2002, Section~7.6). It hides two things: the $O(\|\cdot\|^2)$ terms of the drift, and the
+fact that the chain is generated under $\pi_{\theta_k}$ rather than $\pi_{\hat\theta}$, an effect of order
+$\|\theta_k - \hat\theta\|$ that is part of $A_{11}$ and $A_{21}$ through the derivative of the stationary law.
+We take this step as a hypothesis; everything after it is proved.
+
+%======================================================================
+\section{The loss in expected reward}
+%======================================================================
+
+\begin{theorem}\label{thm:cov}
+Let $\beta_k, \gamma_k$ satisfy Assumption~1.1 of the two-time-scale note, let $H - \frac{\bar\beta}{2}I$
+and $A_{22}$ be stable, and let $\tilde\Gamma$ be the long-run covariance of the effective noise
+$N_k = V_k - A_{12}A_{22}^{-1}W_k = V_k - CA_c^{-1}W_k$. Under Assumption~\ref{ass:lin},
+$\beta_k^{-1}\E[(\theta_k - \hat\theta)(\theta_k - \hat\theta)^\top] \to \Sigma_{\bar\beta}$, the solution of
+\[
+  (H - \tfrac{\bar\beta}{2})\Sigma + \Sigma(H - \tfrac{\bar\beta}{2})^\top = \tilde\Gamma .
+\]
+For actor-only the same holds with $\tilde\Gamma$ the long-run covariance of $V_k$.
+\end{theorem}
+\begin{proof}
+Lemma~\ref{lem:delta} and Corollary~2.2 (with Theorem~4.1 for the multiplicative terms) of the
+two-time-scale note, and Theorem~2.1 of the single-time-scale note for actor-only.
+\end{proof}
+
+\noindent\emph{Lean:} the linear-iteration statements are \texttt{tendsto\_two\_time\_scale\_slow},
+\texttt{tendsto\_mtts\_slow} and \texttt{tendsto\_secondMoment\_of\_markov\_noise}.
+
+\begin{definition}\label{def:loss}
+The \emph{loss rate} of an unbiased method ($\hat\theta = \theta^*$) is
+$\ell = \lim_k\beta_k^{-1}\E[J(\theta^*) - J(\theta_k)]$. To second order,
+$J(\theta^*) - J(\theta^* + x) = \frac12x^\top H_Jx + O(\|x\|^3)$, so under Assumption~\ref{ass:lin}
+the loss is that of the quadratic part.
+\end{definition}
+
+\begin{proposition}\label{prop:loss}
+For the linearized iteration,
+$\beta_k^{-1}\E\big[\frac12x_k^\top H_Jx_k\big] \to \ell = \frac12\tr(H_J\Sigma_{\bar\beta})$. The loss is
+the variance of the parameter measured in the metric of the reward: for instance, if
+$\Sigma = \sigma^2 H_J^{-1}$ then $\ell = \frac{n}{2}\sigma^2$.
+\end{proposition}
+\begin{proof}
+$\E[x^\top H_Jx] = \sum_{ij}(H_J)_{ij}\E[x_ix_j] = \tr(H_J\E[xx^\top])$, which is linear and
+continuous in $\E[xx^\top]$.
+\end{proof}
+\noindent\emph{Lean:} \texttt{tendsto\_quadLoss}.
+
+\begin{remark}[Why not $\operatorname{Var} J(\theta_k)$]
+At a maximum the reward is flat to first order, so $J(\theta_k) - J(\theta^*) = -\frac12x_k^\top H_Jx_k + \dots$
+and its variance is of order $\beta_k^2$ and depends on fourth moments. The expected loss is of order
+$\beta_k$ and depends only on the covariance; it is the natural measure of how far from optimal
+the policy is, and it is what we compare.
+\end{remark}
+
+\begin{proposition}[Duality]\label{prop:dual}
+Let $B = H - \frac{\bar\beta}{2}I$ and let $K$ solve the adjoint equation $B^\top K + KB = H_J$. Then
+$\ell = \frac12\tr(K\tilde\Gamma)$: the loss is a linear functional of the noise covariance.
+\end{proposition}
+\begin{proof}
+$\tr(H_J\Sigma) = \tr\big((B^\top K + KB)\Sigma\big) = \tr\big(K(B\Sigma + \Sigma B^\top)\big) = \tr(K\tilde\Gamma)$.
+\end{proof}
+\noindent\emph{Lean:} \texttt{loss\_duality}.
+
+\paragraph{The optimal gain.} The asymptotic covariance depends on the gain. Over matrix gains
+$\beta_kG$, or with Polyak--Ruppert averaging, the least covariance is $\Sigma^* = H^{-1}\tilde\Gamma H^{-\top}$
+(Konda 2002, Theorem~7.9), which does not depend on rescaling the direction. The corresponding
+loss is
+\[
+  \ell^* = \tfrac12\tr(H_J\Sigma^*) = \tfrac12\tr(K^*\tilde\Gamma),\qquad K^* = H^{-\top}H_JH^{-1} \succeq 0 .
+\]
+For an unbiased method the mean direction is $(1-\gamma)\nabla J$ near $\theta^*$ (Section~1), so
+$H = (1-\gamma)H_J$ and $\ell^* = \frac{1}{2(1-\gamma)^2}\tr(H_J^{-1}\tilde\Gamma)$.
+
+\begin{proposition}[Comparison principle]\label{prop:compare}
+For two methods with the same $H$, $\tilde\Gamma_A \preceq \tilde\Gamma_B$ implies $\ell^*_A \le \ell^*_B$, and
+$\tilde\Gamma_A = \tilde\Gamma_B$ implies equal losses for every gain. Among unbiased methods all have
+the same $H$, so the comparison is between the effective noise covariances alone.
+\end{proposition}
+\begin{proof}
+$\ell^*_B - \ell^*_A = \frac12\tr\big(K^*(\tilde\Gamma_B - \tilde\Gamma_A)\big) \ge 0$, a trace of a product of
+two positive semidefinite matrices.
+\end{proof}
+\noindent\emph{Lean:} \texttt{optLoss\_mono} and \texttt{optLoss\_eq\_trace}.
+
+%======================================================================
+\section{Actor-critic versus actor-only}
+%======================================================================
+
+All expectations are under the stationary law at the given $\theta$. We assume $\E[\phi\phi^\top]$ and
+$\E[\psi\psi^\top]$ are invertible.
+
+\begin{theorem}[TD(1) critic]\label{thm:td1}
+Let the critic use TD(1) with features $\phi = (\psi, \bar\phi)$, for any extra features $\bar\phi$.
+Then for every $\theta$ the actor-critic mean direction equals the actor-only direction with
+$\lambda = 1$, $f(\theta) = (1-\gamma)\nabla J(\theta)$, and at $\theta^*$ the effective noises have the same
+long-run covariance. Hence actor-critic with a TD(1) critic has exactly the loss of actor-only
+(REINFORCE), for every gain.
+\end{theorem}
+\begin{proof}
+\emph{The critic.} With $\lambda = 1$ the trace is $z_k = \sum_j\phi(Y_j)$ over the current episode up
+to $k$. Summed over an episode, the TD updates telescope:
+\begin{equation}\label{eq:tel}
+  \sum_kz_k\big(c_{k+1}\phi(Y_{k+1}) - \phi(Y_k)\big)^\top r = -\sum_j\phi(Y_j)\phi(Y_j)^\top r,\qquad
+  \sum_kz_kg(Y_k) = \sum_j\phi(Y_j)G_j .
+\end{equation}
+Taking stationary expectations (equivalently, using $z_k = c_kz_{k-1} + \phi_k$ and
+stationarity), $A_c = -\E[\phi\phi^\top]$ and $b = \E[\phi G]$, so $r^* = \E[\phi\phi^\top]^{-1}\E[\phi G]$ is
+the least-squares regression of the returns on the features.
+
+\emph{The direction.} Since $\psi$ is the first block of $\phi$, $\E[\psi\phi^\top]$ is the first block
+row of $\E[\phi\phi^\top]$, so $-CA_c^{-1} = \E[\psi\phi^\top]\E[\phi\phi^\top]^{-1} = (I\;\,0)$. Hence
+$f = Cr^* = (I\;\,0)\E[\phi G] = \E[\psi G]$, the actor-only direction, for every $\theta$; in particular
+the two methods have the same root $\theta^*$ and the same $H$.
+
+\emph{The noise.} The long-run covariance of a stationary sequence is $\lim_n\frac1n\E[S_nS_n^\top]$
+for its partial sums $S_n$, and is unchanged by adding terms bounded in $L^2$. At $\theta^*$ the effective
+noise is $N_k = \psi_k\phi_k^\top\hat r - C\hat r + (I\;\,0)\,d_kz_k$. By \eqref{eq:tel}, over complete
+episodes,
+\[
+  \sum_kN_k = \sum_j\psi_j\phi_j^\top\hat r + \sum_j\psi_j(G_j - \phi_j^\top\hat r) - nC\hat r
+  = \sum_j\psi_jG_j - nf(\theta^*),
+\]
+which is the partial sum of the actor-only noise $g(Y_k)Z_k - f$. The incomplete episodes at the two
+ends contribute terms bounded in $L^2$, because episode lengths are geometric. So the long-run
+covariances agree.
+\end{proof}
+
+\begin{theorem}[Compatible critic]\label{thm:compat}
+Let the critic use only the compatible features, $\phi = \psi$, with TD($\lambda$) for any $\lambda$.
+Then for every $\theta$ the mean direction equals the actor-only direction with trace parameter
+$\lambda$, and at its root the two effective noises coincide. Hence the two methods have the same
+limit and the same loss, for every gain.
+\end{theorem}
+\begin{proof}
+Given the past, the action $a_{k+1}$ is drawn from $\pi_\theta(\cdot\mid s_{k+1})$ and the score has
+zero mean over actions, so $\E[z_kc_{k+1}\psi_{k+1}^\top] = 0$ and
+$\E[z_k\psi_k^\top] = \E[\psi\psi^\top] + \lambda\E[c_kz_{k-1}\psi_k^\top] = \E[\psi\psi^\top]$. Hence
+$A_c = -\E[\psi\psi^\top] = -C$, $r^* = C^{-1}b$, and $f = Cr^* = b = \E[g(Y_k)z_k]$, the actor-only
+direction with trace $\lambda$ (the two traces coincide). At the common root $b = 0$, so $\hat r = 0$, the
+actor's noise $V_k = \psi_k\psi_k^\top\hat r - C\hat r$ vanishes, $W_k = d_kz_k = g(Y_k)z_k$, and
+$-CA_c^{-1} = I$. So $N_k = g(Y_k)z_k$, the actor-only noise at the same point.
+\end{proof}
+
+\begin{remark}
+For $\lambda < 1$ both methods in Theorem~\ref{thm:compat} are biased: their common limit is the
+root of $\E[gz]$, not $\theta^*$. A critic helps only through features beyond the compatible ones, and
+only when TD($\lambda$) with $\lambda < 1$ is used; with $\lambda = 1$ it reproduces Monte Carlo
+(Theorem~\ref{thm:td1}).
+\end{remark}
+
+\begin{observation}[Tabular critic]\label{obs:tab}
+With tabular extra features ($\bar\phi(s) = e_s$) the method is unbiased for every $\lambda$ in
+every instance computed (the gap $J^* - J(\hat\theta)$ is below $10^{-10}$), so
+Proposition~\ref{prop:compare} applies; we have no proof of this unbiasedness. In every instance,
+the loss decreases as $\lambda$ decreases, and at $\lambda = 0$ it is a fraction of the actor-only loss:
+0.29--0.54 in the seven two-parameter instances of the table below and 0.18--0.57 (median 0.29)
+in seventeen one-parameter instances. With random extra features and $\lambda < 1$ the critic is
+biased, with a gap $J^* - J(\hat\theta)$ of about $2\times10^{-2}$; whether it pays depends on the horizon
+through gap${}+\ell^*/k$.
+\end{observation}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{r cccc c}
+\toprule
+& \multicolumn{4}{c}{AC, tabular critic, TD($\lambda$)} & AC, 2 random features, $\lambda = 0.7$ \\
+seed & $\lambda = 1$ & $0.7$ & $0.3$ & $0$ & gap, $\ell^*$ \\
+\midrule
+22 & 1.000 & 0.369 & 0.312 & 0.304 & $3.1\times10^{-2}$, 0.299 \\
+76 & 1.000 & 0.580 & 0.544 & 0.539 & -- \\
+343 & 1.000 & 0.562 & 0.525 & 0.520 & $2.2\times10^{-2}$, 3.59 \\
+644 & 1.000 & 0.382 & 0.330 & 0.324 & $1.9\times10^{-2}$, 0.545 \\
+1124 & 1.000 & 0.501 & 0.459 & 0.453 & -- \\
+1849 & 1.000 & 0.350 & 0.295 & 0.288 & $2.3\times10^{-2}$, 0.319 \\
+1886 & 1.000 & 0.527 & 0.486 & 0.481 & -- \\
+\bottomrule
+\end{tabular}
+\caption{Optimal-gain loss $\ell^*$ relative to actor-only with $\lambda = 1$, on aliased MDPs with 6 states,
+2 actions and 2 policy parameters ($\gamma = 0.9$). The column $\lambda = 1$ equals 1 by
+Theorem~\ref{thm:td1}. A dash: the biased limit is not an interior stable point.}
+\label{tab:loss}
+\end{table}
+
+\begin{remark}[Numerical checks]
+\texttt{experiments/rates\_chapter.py} checks Theorems~\ref{thm:td1} and~\ref{thm:compat} on the same
+instances: the directions, Jacobians $H$, noise covariances $\tilde\Gamma$ and losses agree to relative
+error $7\times10^{-9}$ and $2\times10^{-9}$ (the accuracy of the finite-difference Jacobian). Earlier
+simulations of the actual two-time-scale algorithm (\texttt{experiments/sim\_ac\_tuned.py}) matched
+the predicted covariances to about 5\%, supporting Assumption~\ref{ass:lin} in these instances.
+\end{remark}
+
+%======================================================================
+\section{What is checked in Lean}
+%======================================================================
+
+\begin{itemize}
+\item The covariance of the linearized iterations, Theorem~\ref{thm:cov}: fully formalized for the
+  linear iterations (single and two time scales, additive and multiplicative Markov noise), with the
+  noise hypotheses verified for finite-chain and trace-driven noise.
+\item Propositions~\ref{prop:loss}, \ref{prop:dual} and~\ref{prop:compare}: formalized.
+\item Assumption~\ref{ass:lin} is a hypothesis. Lemma~\ref{lem:delta}, Theorems~\ref{thm:td1}
+  and~\ref{thm:compat} are proved here and checked numerically, but not yet in Lean: they need the
+  restart chain and the traces of a policy family formalized as stochastic processes.
+\end{itemize}
+
+\begin{thebibliography}{9}
+\bibitem{konda2002} V.~R. Konda. \emph{Actor-Critic Algorithms}. PhD thesis, MIT, 2002.
+\bibitem{kt2004} V.~R. Konda and J.~N. Tsitsiklis. Convergence rate of linear
+  two-time-scale stochastic approximation. \emph{Ann.\ Appl.\ Probab.}, 14(2):796--819, 2004.
+\bibitem{bmp} A.~Benveniste, M.~M\'etivier and P.~Priouret. \emph{Adaptive Algorithms
+  and Stochastic Approximations}. Springer, 1990.
+\end{thebibliography}
+
+\end{document}

@@ -14,3 +14,4 @@ import RLTheory.StochasticApproximation.TwoTimeScaleRecursion
 import RLTheory.StochasticApproximation.TwoTimeScaleCovariance
 import RLTheory.StochasticApproximation.PoissonNoise
 import RLTheory.StochasticApproximation.TwoTimeScaleMultiplicative
+import RLTheory.StochasticApproximation.RateComparison
