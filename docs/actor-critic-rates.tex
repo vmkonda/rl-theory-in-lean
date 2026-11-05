@@ -455,7 +455,7 @@ $\theta$, so $\E[g(\theta_k, \xi_k)] - \E[g(\theta^*, \xi_k)] \to 0$ and $\E[g(\
 \end{proof}
 \noindent\emph{Lean} (\texttt{DoeblinCovariance.lean}):
 \begin{itemize}
-\item \texttt{tendsto\_integral\_norm\_of\_four}, \texttt{tendsto\_law\_moving}, \texttt{abs\_condCov\_sub\_le} and
+\item \texttt{tendsto\_integral\_norm\_of\_four}, \texttt{tendsto\_law\_moving}, \texttt{abs\_condCross\_sub\_le} and
   \texttt{tendsto\_secondMoment\_paramM};
 \item \texttt{tendsto\_secondMoment\_of\_param\_chain\_doeblin}, the general $\theta$-dependent version;
 \item \texttt{tendsto\_secondMoment\_of\_doeblin\_chain\_auto}: Assumption~\ref{ass:lin} for one time scale with
@@ -1033,7 +1033,22 @@ the predicted covariances to about 5\%, supporting Assumption~\ref{ass:lin} in t
   (Theorems~\ref{thm:linearize} and~\ref{thm:linmarkov}), and for two time scales with dissipative drifts,
   with martingale noise (Theorems~\ref{thm:lintts} and~\ref{thm:ttsmoments}) and with Markov
   noise (Theorem~\ref{thm:ttsmarkov}).
+\item $\theta$-dependent sampling: the noise decomposition (Proposition~\ref{prop:paramchain}), Lipschitz
+  Poisson pairs for Doeblin chains (Proposition~\ref{prop:doeblin}), and the noise covariance under a
+  moving Doeblin kernel (Proposition~\ref{prop:doeblincov}). Assumption~\ref{ass:lin} then holds from
+  the model alone, for one time scale (\texttt{tendsto\_secondMoment\_of\_doeblin\_chain\_auto}) and for two
+  time scales (\texttt{tendsto\_tts\_param\_chain\_doeblin}).
+\item Theorem~\ref{thm:mono} end to end for the restart chain, with the loss:
+  \texttt{ScoreChain.restart\_actor\_loss\_mono}. For $\lambda_1 \le \lambda_2$ the actor covariances converge,
+  $\tilde\Gamma(\lambda_1) \preceq \tilde\Gamma(\lambda_2)$, and $\ell^*(\lambda_1) \le \ell^*(\lambda_2)$. The hypotheses are the chain
+  model, the Bellman equation for $\delta$, the stationary mean zero of the TD(0) noise at $\theta^*$, and
+  the stability of $A - (\bar\beta/2)I$.
 \end{itemize}
+
+Not formalized: global dissipativity, which would be replaced by a localization argument; the
+identification of $\Gamma$ with the series of autocovariances; existence of Poisson solutions for a
+general irreducible chain; and the observations and remarks that rest on computation
+(\texttt{experiments/}), such as Remark~\ref{rem:finite}.
 
 \begin{thebibliography}{9}
 \bibitem{konda2002} V.~R. Konda. \emph{Actor-Critic Algorithms}. PhD thesis, MIT, 2002.

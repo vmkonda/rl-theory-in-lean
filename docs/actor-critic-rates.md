@@ -362,7 +362,7 @@ So Theorem [2.4](#thm:linmarkov) applies with no hypothesis on the noise covari
 
 *Lean* (`DoeblinCovariance.lean`):
 
-- `tendsto_integral_norm_of_four`, `tendsto_law_moving`, `abs_condCov_sub_le` and `tendsto_secondMoment_paramM`;
+- `tendsto_integral_norm_of_four`, `tendsto_law_moving`, `abs_condCross_sub_le` and `tendsto_secondMoment_paramM`;
 
 - `tendsto_secondMoment_of_param_chain_doeblin`, the general $`\theta`$-dependent version;
 
@@ -819,6 +819,12 @@ A large critic with rarely visited states and a small critic step lengthens the 
   The centering condition is the stationary mean of the noise, $`\sum_{y,y'}Q(y,y')(F(y,y')m(y) + \nu(y)e(y,y')) = 0`$ (`centering_eq_noise_mean`). At the root of the mean direction this holds by definition.
 
 - Lemma [2.1](#lem:delta): formalized (`hasFDerivAt_implicit`). Assumption [2.2](#ass:lin): proved for one time scale with a dissipative drift, Markov noise and state-dependent sampling (Theorems [2.3](#thm:linearize) and [2.4](#thm:linmarkov)), and for two time scales with dissipative drifts, with martingale noise (Theorems [2.5](#thm:lintts) and [2.6](#thm:ttsmoments)) and with Markov noise (Theorem [2.7](#thm:ttsmarkov)).
+
+- $`\theta`$-dependent sampling: the noise decomposition (Proposition [2.8](#prop:paramchain)), Lipschitz Poisson pairs for Doeblin chains (Proposition [2.9](#prop:doeblin)), and the noise covariance under a moving Doeblin kernel (Proposition [2.11](#prop:doeblincov)). Assumption [2.2](#ass:lin) then holds from the model alone, for one time scale (`tendsto_secondMoment_of_doeblin_chain_auto`) and for two time scales (`tendsto_tts_param_chain_doeblin`).
+
+- Theorem [4.7](#thm:mono) end to end for the restart chain, with the loss: `ScoreChain.restart_actor_loss_mono`. For $`\lambda_1 \le \lambda_2`$ the actor covariances converge, $`\tilde\Gamma(\lambda_1) \preceq \tilde\Gamma(\lambda_2)`$, and $`\ell^*(\lambda_1) \le \ell^*(\lambda_2)`$. The hypotheses are the chain model, the Bellman equation for $`\delta`$, the stationary mean zero of the TD(0) noise at $`\theta^*`$, and the stability of $`A - (\bar\beta/2)I`$.
+
+Not formalized: global dissipativity, which would be replaced by a localization argument; the identification of $`\Gamma`$ with the series of autocovariances; existence of Poisson solutions for a general irreducible chain; and the observations and remarks that rest on computation (`experiments/`), such as Remark [4.9](#rem:finite).
 
 # References
 

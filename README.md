@@ -6,7 +6,7 @@ See [https://lean-lang.org/install/](https://lean-lang.org/install/) for a detai
 Confirm that Lean is set up by ```lake --version```.
 
 ```
-git clone git@github.com:ShangtongZhang/rl-theory-in-lean.git
+git clone git@github.com:vmkonda/rl-theory-in-lean.git   # this fork; upstream: ShangtongZhang/rl-theory-in-lean
 cd rl-theory-in-lean
 lake exe cache get
 lake build
@@ -24,6 +24,49 @@ It is recommended to use this project with the Lean 4 extension of VSCode.
     year={2026}
 }
 ```
+
+## Rates of convergence of actor-critic (this fork)
+
+This fork extends the library toward the convergence-rate theory of actor-critic methods on finite
+discounted MDPs: how fast actor-critic converges, for different critic features and trace parameters
+λ in TD(λ), compared with actor-only (REINFORCE) methods. The mathematics is written up in
+[`docs/`](docs/README.md) as theorem–proof chapters, each with LaTeX source and a GitHub-readable
+Markdown version; every formalized statement there names its Lean counterpart. Everything below
+builds with no `sorry` and depends only on the standard axioms (`propext`, `Classical.choice`,
+`Quot.sound`).
+
+Main results, by chapter:
+
+- **Policy gradients** ([policy-gradient.md](docs/policy-gradient.md))
+  - [PolicyFamily.lean](RLTheory/MarkovDecisionProcess/PolicyFamily.lean), [PolicyGradient.lean](RLTheory/MarkovDecisionProcess/PolicyGradient.lean) — **`PolicyFamily.hasGradientAt_J`**: the discounted policy gradient theorem.
+  - [PolicyGradientLipschitz.lean](RLTheory/MarkovDecisionProcess/PolicyGradientLipschitz.lean) — **`PolicyFamily.Regular.isLip_gradJ`**: the gradient is Lipschitz; **`softmaxFamily_regular`**.
+  - [GradientAscent.lean](RLTheory/StochasticApproximation/GradientAscent.lean) — **`frequently_norm_grad_lt_of_tendsto_bias`**: pathwise convergence of biased gradient ascent.
+- **Asymptotic covariance of linear SA with Markov noise** ([markov-sa-covariance.md](docs/markov-sa-covariance.md))
+  - [CovarianceRecursion.lean](RLTheory/StochasticApproximation/CovarianceRecursion.lean), [MarkovNoiseCovariance.lean](RLTheory/StochasticApproximation/MarkovNoiseCovariance.lean) — **`tendsto_secondMoment_of_markov_noise`**: `β_k⁻¹ E[θ_k θ_kᵀ]` converges to the solution of the Lyapunov equation.
+  - [PoissonNoise.lean](RLTheory/StochasticApproximation/PoissonNoise.lean), [TraceMoments.lean](RLTheory/StochasticApproximation/TraceMoments.lean) — finite-chain and trace-driven noise (**`tendsto_secondMoment_of_trace_noise_stationary`**).
+  - [MultiplicativeNoiseCovariance.lean](RLTheory/StochasticApproximation/MultiplicativeNoiseCovariance.lean) — multiplicative Markov noise.
+- **Two-time-scale SA** ([two-time-scale-covariance.md](docs/two-time-scale-covariance.md))
+  - [TwoTimeScaleRecursion.lean](RLTheory/StochasticApproximation/TwoTimeScaleRecursion.lean), [TwoTimeScaleCovariance.lean](RLTheory/StochasticApproximation/TwoTimeScaleCovariance.lean) — **`tendsto_two_time_scale_covariance`**, **`tendsto_tts_perturbed`**.
+  - [TwoTimeScaleMultiplicative.lean](RLTheory/StochasticApproximation/TwoTimeScaleMultiplicative.lean), [TwoTimeScaleTrace.lean](RLTheory/StochasticApproximation/TwoTimeScaleTrace.lean) — multiplicative and trace-driven noise.
+- **Actor-critic versus actor-only** ([actor-critic-rates.md](docs/actor-critic-rates.md))
+  - Linearization (Assumption 2.2 from the nonlinear iteration):
+    - [Linearization.lean](RLTheory/StochasticApproximation/Linearization.lean) — **`hasFDerivAt_implicit`** (Lemma 2.1), **`tendsto_secondMoment_of_dissipative_markov`**.
+    - [TwoTimeScaleNonlinear.lean](RLTheory/StochasticApproximation/TwoTimeScaleNonlinear.lean), [TwoTimeScaleMoments.lean](RLTheory/StochasticApproximation/TwoTimeScaleMoments.lean), [TwoTimeScaleMarkov.lean](RLTheory/StochasticApproximation/TwoTimeScaleMarkov.lean) — **`tendsto_tts_taylor`**, fourth-moment bounds **`moment_bounds_tts_markov`**, **`tendsto_tts_dissipative_markov`**.
+  - θ-dependent sampling:
+    - [ParamMarkovNoise.lean](RLTheory/StochasticApproximation/ParamMarkovNoise.lean) — the noise decomposition with a lagged parameter.
+    - [DoeblinPoisson.lean](RLTheory/StochasticApproximation/DoeblinPoisson.lean) — Lipschitz Poisson pairs for Doeblin chains.
+    - [DoeblinCovariance.lean](RLTheory/StochasticApproximation/DoeblinCovariance.lean) — law and covariance convergence under a moving kernel, **`tendsto_secondMoment_of_doeblin_chain_auto`**.
+    - [TwoTimeScaleParam.lean](RLTheory/StochasticApproximation/TwoTimeScaleParam.lean) — the two-time-scale version, **`tendsto_tts_param_chain_doeblin`**.
+  - The loss in expected reward: [RateComparison.lean](RLTheory/StochasticApproximation/RateComparison.lean) — **`tendsto_quadLoss`**, **`optLoss_mono`** (comparison principle).
+  - Critics:
+    - [CriticTheorems.lean](RLTheory/MarkovDecisionProcess/CriticTheorems.lean) — TD(1), compatible and value-function critics, and the gains of the tabular TD(0) and TD(λ) critics (**`ScoreChain.td0_gain`**, **`ScoreChain.tdlam_gain`**).
+    - [OrthogonalNoise.lean](RLTheory/StochasticApproximation/OrthogonalNoise.lean), [RestartProcess.lean](RLTheory/MarkovDecisionProcess/RestartProcess.lean) — the martingale step: the restart chain is state-driven before the action, and orthogonal noises add their covariances.
+    - [LookbackMonotone.lean](RLTheory/StochasticApproximation/LookbackMonotone.lean) — the centered critic trace and Loewner monotonicity of its covariance in λ.
+    - [LambdaMonotone.lean](RLTheory/MarkovDecisionProcess/LambdaMonotone.lean) — **`ScoreChain.restart_actor_loss_mono`**: Theorem 4.7, shorter traces give a smaller actor covariance and loss, end to end for the restart chain. TD(0) is the best tabular critic, and TD(1) (REINFORCE) the worst.
+
+Not formalized: replacing global dissipativity by a localization argument, existence of Poisson
+solutions for general irreducible chains, and the numerical observations in
+[`experiments/`](experiments/README.md).
 
 ## Main Results 
 

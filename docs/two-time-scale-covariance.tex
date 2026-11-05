@@ -422,8 +422,14 @@ under small steps is \texttt{inv\_shift\_le}.
 %======================================================================
 
 \begin{itemize}
-\item \emph{Nonlinear algorithms.} The transfer to the actual actor-critic iteration is left as
-  an explicit hypothesis.
+\item \emph{Nonlinear algorithms.} The transfer to the actual two-time-scale iteration is now
+  Section~2 of \texttt{actor-critic-rates}: Theorem~2.5 (\texttt{tendsto\_tts\_taylor}), the fourth-moment
+  bounds of Theorems~2.6--2.7 (\texttt{moment\_bounds\_tts}, \texttt{moment\_bounds\_tts\_markov}), and
+  $\theta$-dependent sampling with the noise covariances derived under a Doeblin kernel
+  (\texttt{tendsto\_tts\_param\_chain\_doeblin}). Remainders of order $\gamma_k$ are allowed in both
+  components, which covers an actor whose noise depends on the critic.
+\item \emph{Global dissipativity.} Those results assume a globally dissipative drift. A local
+  theory, by localization, is not formalized.
 \end{itemize}
 
 \begin{thebibliography}{9}

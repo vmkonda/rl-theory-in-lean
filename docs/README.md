@@ -15,6 +15,26 @@ GitHub. PDFs, with the same theorem and equation numbering, are built locally wi
 Results are labelled as theorems (proved), *cited facts* (used without proof), or
 *observations* (supported only by computation; code in [`../experiments`](../experiments)).
 
+## Checking the proofs
+
+Each formalized statement is followed by a *Lean* note that names the theorem in `RLTheory/`.
+To check it:
+
+1. Build the library from the repository root: `lake exe cache get && lake build`. The build
+   fails on any error, and a `sorry` shows up as a warning.
+2. Check that a theorem rests only on the standard axioms. Put this in a scratch file and run
+   `lake env lean <file>`:
+   ```lean
+   import RLTheory.Basic
+   #print axioms StochasticApproximation.ScoreChain.restart_actor_loss_mono
+   ```
+   The expected output is `[propext, Classical.choice, Quot.sound]`.
+3. Compare the Lean statement with the write-up. The hypotheses of the Lean theorem are the
+   assumptions of the result; anything a chapter does not name as formalized is proved on paper only.
+
+The actor-critic chapter ends with a section *What is checked in Lean* that lists what is
+formalized and what is not.
+
 ## Rebuilding
 
 Edit the `.tex` file, then run `./build.sh` (or `./build.sh <name>`), which regenerates

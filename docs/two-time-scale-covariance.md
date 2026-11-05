@@ -314,7 +314,9 @@ The proof of Theorem [2.1](#thm:main) goes through for such perturbed iteration
 
 ## 5 What remains
 
-- *Nonlinear algorithms.* The transfer to the actual actor-critic iteration is left as an explicit hypothesis.
+- *Nonlinear algorithms.* The transfer to the actual two-time-scale iteration is now Section 2 of `actor-critic-rates`: Theorem 2.5 (`tendsto_tts_taylor`), the fourth-moment bounds of Theorems 2.6–2.7 (`moment_bounds_tts`, `moment_bounds_tts_markov`), and $`\theta`$-dependent sampling with the noise covariances derived under a Doeblin kernel (`tendsto_tts_param_chain_doeblin`). Remainders of order $`\gamma_k`$ are allowed in both components, which covers an actor whose noise depends on the critic.
+
+- *Global dissipativity.* Those results assume a globally dissipative drift. A local theory, by localization, is not formalized.
 
 # References
 
