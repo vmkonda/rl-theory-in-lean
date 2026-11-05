@@ -3,6 +3,7 @@ SPDX-License-Identifier: MIT
 -/
 import RLTheory.StochasticApproximation.ParamMarkovNoise
 import RLTheory.StochasticApproximation.TwoTimeScaleMarkov
+import RLTheory.StochasticApproximation.DoeblinCovariance
 
 /-!
 # Two time scales with a parameter-dependent chain
@@ -194,6 +195,70 @@ lemma tts_remainder_le {β γ : ℕ → ℝ} {βbar : ℝ} (hβ : StepSizeRate �
       _ ≤ LV₀ * (CH₀ * (Rβ * Bq + Rγ) * γ (j + 1)) := this
       _ = _ := by ring
 
+set_option maxHeartbeats 4000000 in
+/-- **The two-time-scale decomposition along the process.** Both components split as
+`F_i + M^i + r^i + h^i_k - h^i_{k+1}`, with `M^i` bounded martingale differences, `h^i` bounded
+and known at time `k`, and `r^i = O(γ_k)`. -/
+lemma tts_param_facts {β γ : ℕ → ℝ} {βbar : ℝ} (hβ : StepSizeRate β βbar)
+    (hγ : StepSizeRate γ 0) (hβγ : Tendsto (fun k => β k / γ k) atTop (𝓝 0))
+    (ℱ : MeasureTheory.Filtration ℕ m0) {x : ℕ → Ω → E d₁} {y : ℕ → Ω → E d₂} {ξ : ℕ → Ω → S}
+    {F₁ : E d₁ → E d₂ → E d₁} {F₂ : E d₁ → E d₂ → E d₂}
+    {H₁ U₁ V₁ : E d₁ → E d₂ → S → E d₁} {H₂ U₂ V₂ : E d₁ → E d₂ → S → E d₂}
+    {P : E d₁ → E d₂ → S → S → ℝ} {CU CV CH LV : ℝ}
+    (hx : ∀ k ω, x (k + 1) ω = x k ω + β k • H₁ (x k ω) (y k ω) (ξ (k + 1) ω))
+    (hy : ∀ k ω, y (k + 1) ω = y k ω + γ k • H₂ (x k ω) (y k ω) (ξ (k + 1) ω))
+    (hxm : ∀ k, StronglyMeasurable[ℱ k] (x k)) (hym : ∀ k, StronglyMeasurable[ℱ k] (y k))
+    (hξm : ∀ k, Measurable[ℱ k] (ξ k))
+    (hlaw : ∀ k s, μ[{ω | ξ (k + 1) ω = s}.indicator (fun _ => (1 : ℝ)) | ℱ k] =ᵐ[μ]
+      fun ω => P (x k ω) (y k ω) (ξ k ω) s)
+    (hpois₁ : ∀ u w s, U₁ u w s - V₁ u w s = H₁ u w s - F₁ u w)
+    (hpois₂ : ∀ u w s, U₂ u w s - V₂ u w s = H₂ u w s - F₂ u w)
+    (hV₁ : ∀ u w s, V₁ u w s = ∑ s', P u w s s' • U₁ u w s')
+    (hV₂ : ∀ u w s, V₂ u w s = ∑ s', P u w s s' • U₂ u w s')
+    (hU₁c : ∀ s, Continuous fun p : E d₁ × E d₂ => U₁ p.1 p.2 s)
+    (hV₁c : ∀ s, Continuous fun p : E d₁ × E d₂ => V₁ p.1 p.2 s)
+    (hU₂c : ∀ s, Continuous fun p : E d₁ × E d₂ => U₂ p.1 p.2 s)
+    (hV₂c : ∀ s, Continuous fun p : E d₁ × E d₂ => V₂ p.1 p.2 s)
+    (hU₁b : ∀ u w s, ‖U₁ u w s‖ ≤ CU) (hV₁b : ∀ u w s, ‖V₁ u w s‖ ≤ CV)
+    (hU₂b : ∀ u w s, ‖U₂ u w s‖ ≤ CU) (hV₂b : ∀ u w s, ‖V₂ u w s‖ ≤ CV)
+    (hV₁L : ∀ u w u' w' s, ‖V₁ u w s - V₁ u' w' s‖ ≤ LV * (‖u - u'‖ + ‖w - w'‖))
+    (hV₂L : ∀ u w u' w' s, ‖V₂ u w s - V₂ u' w' s‖ ≤ LV * (‖u - u'‖ + ‖w - w'‖))
+    (hH₁b : ∀ u w s, ‖H₁ u w s‖ ≤ CH) (hH₂b : ∀ u w s, ‖H₂ u w s‖ ≤ CH) :
+    (∀ k ω, x (k + 1) ω = x k ω + β k • (F₁ (x k ω) (y k ω) + ttsM U₁ V₁ x y ξ (k + 1) ω
+      + ttsR V₁ x y ξ k ω + ttsH V₁ x y ξ k ω - ttsH V₁ x y ξ (k + 1) ω)) ∧
+    (∀ k ω, y (k + 1) ω = y k ω + γ k • (F₂ (x k ω) (y k ω) + ttsM U₂ V₂ x y ξ (k + 1) ω
+      + ttsR V₂ x y ξ k ω + ttsH V₂ x y ξ k ω - ttsH V₂ x y ξ (k + 1) ω)) ∧
+    (∀ k, StronglyMeasurable[ℱ k] (ttsH V₁ x y ξ k)) ∧ (∀ k ω, ‖ttsH V₁ x y ξ k ω‖ ≤ CV) ∧
+    (∀ k, StronglyMeasurable[ℱ k] (ttsH V₂ x y ξ k)) ∧ (∀ k ω, ‖ttsH V₂ x y ξ k ω‖ ≤ CV) ∧
+    (∀ k, StronglyMeasurable[ℱ k] (ttsR V₁ x y ξ k)) ∧
+    (∀ k, StronglyMeasurable[ℱ k] (ttsR V₂ x y ξ k)) ∧
+    (∃ Cr, (∀ k ω, ‖ttsR V₁ x y ξ k ω‖ ≤ Cr * γ k) ∧ ∀ k ω, ‖ttsR V₂ x y ξ k ω‖ ≤ Cr * γ k) ∧
+    (∀ k, StronglyMeasurable[ℱ (k + 1)] (ttsM U₁ V₁ x y ξ (k + 1))) ∧
+    (∀ k ω, ‖ttsM U₁ V₁ x y ξ (k + 1) ω‖ ≤ CU + CV) ∧
+    (∀ k j, μ[fun ω => ttsM U₁ V₁ x y ξ (k + 1) ω j | ℱ k] =ᵐ[μ] 0) ∧
+    (∀ k, StronglyMeasurable[ℱ (k + 1)] (ttsM U₂ V₂ x y ξ (k + 1))) ∧
+    (∀ k ω, ‖ttsM U₂ V₂ x y ξ (k + 1) ω‖ ≤ CU + CV) ∧
+    (∀ k j, μ[fun ω => ttsM U₂ V₂ x y ξ (k + 1) ω j | ℱ k] =ᵐ[μ] 0) := by
+  obtain ⟨hhm, hhb, hr₁m, hM₁m, hM₁b⟩ := tts_decomp_facts ℱ hxm hym hξm hU₁c hV₁c hU₁b hV₁b
+  obtain ⟨hgm, hgb, hr₂m, hM₂m, hM₂b⟩ := tts_decomp_facts ℱ hxm hym hξm hU₂c hV₂c hU₂b hV₂b
+  obtain ⟨Cr₁, hr₁b⟩ := tts_remainder_le hβ hγ hβγ hx hy hH₁b hH₂b hV₁L
+  obtain ⟨Cr₂, hr₂b⟩ := tts_remainder_le hβ hγ hβγ hx hy hH₁b hH₂b hV₂L
+  have hp : ∀ k, StronglyMeasurable[ℱ k] (fun ω => (x k ω, y k ω)) := fun k =>
+    (hxm k).prodMk (hym k)
+  refine ⟨fun k ω => by rw [hx k ω, tts_noise_decomp hpois₁ k ω],
+    fun k ω => by rw [hy k ω, tts_noise_decomp hpois₂ k ω], hhm, hhb, hgm, hgb, hr₁m, hr₂m,
+    ⟨max Cr₁ Cr₂, fun k ω => (hr₁b k ω).trans (mul_le_mul_of_nonneg_right (le_max_left _ _)
+      (hγ.pos k).le), fun k ω => (hr₂b k ω).trans (mul_le_mul_of_nonneg_right (le_max_right _ _)
+      (hγ.pos k).le)⟩, hM₁m, hM₁b, fun k j => ?_, hM₂m, hM₂b, fun k j => ?_⟩
+  · exact condExp_poisson_eq_zero (μ := μ) ℱ k (hp k) (hξm k) (hξm (k + 1))
+      (P := fun p : E d₁ × E d₂ => P p.1 p.2) (hlaw k) (U := fun p => U₁ p.1 p.2)
+      (V := fun p => V₁ p.1 p.2) (fun t s => hV₁ t.1 t.2 s) hU₁c hV₁c
+      (fun t s => hU₁b t.1 t.2 s) (fun t s => hV₁b t.1 t.2 s) j
+  · exact condExp_poisson_eq_zero (μ := μ) ℱ k (hp k) (hξm k) (hξm (k + 1))
+      (P := fun p : E d₁ × E d₂ => P p.1 p.2) (hlaw k) (U := fun p => U₂ p.1 p.2)
+      (V := fun p => V₂ p.1 p.2) (fun t s => hV₂ t.1 t.2 s) hU₂c hV₂c
+      (fun t s => hU₂b t.1 t.2 s) (fun t s => hV₂b t.1 t.2 s) j
+
 set_option maxHeartbeats 8000000 in
 /-- **Two time scales with θ-dependent sampling.** Let
 `x_{k+1} = x_k + β_k H₁(x_k, y_k, ξ_{k+1})` and `y_{k+1} = y_k + γ_k H₂(x_k, y_k, ξ_{k+1})`, with the
@@ -261,36 +326,9 @@ theorem tendsto_tts_param_chain {β γ : ℕ → ℝ} {βbar : ℝ}
         atTop (𝓝 c) ∧
       Tendsto (fun k => (γ k)⁻¹ • secondMoment μ (fun ω => y k ω + matCLM D (x k ω))) atTop
         (𝓝 b) := by
-  obtain ⟨hhm, hhb, hr₁m, hM₁m, hM₁b⟩ := tts_decomp_facts ℱ hxm hym hξm hU₁c hV₁c hU₁b
-    hV₁b
-  obtain ⟨hgm, hgb, hr₂m, hM₂m, hM₂b⟩ := tts_decomp_facts ℱ hxm hym hξm hU₂c hV₂c hU₂b
-    hV₂b
-  obtain ⟨Cr₁, hr₁b⟩ := tts_remainder_le hβ hγ hβγ hx hy hH₁b hH₂b hV₁L
-  obtain ⟨Cr₂, hr₂b⟩ := tts_remainder_le hβ hγ hβγ hx hy hH₁b hH₂b hV₂L
-  set Cr := max Cr₁ Cr₂
-  have hr₁b' : ∀ k ω, ‖ttsR V₁ x y ξ k ω‖ ≤ Cr * γ k := fun k ω =>
-    (hr₁b k ω).trans (mul_le_mul_of_nonneg_right (le_max_left _ _) (hγ.pos k).le)
-  have hr₂b' : ∀ k ω, ‖ttsR V₂ x y ξ k ω‖ ≤ Cr * γ k := fun k ω =>
-    (hr₂b k ω).trans (mul_le_mul_of_nonneg_right (le_max_right _ _) (hγ.pos k).le)
-  have hp : ∀ k, StronglyMeasurable[ℱ k] (fun ω => (x k ω, y k ω)) := fun k =>
-    (hxm k).prodMk (hym k)
-  have hmart₁ : ∀ k j, μ[fun ω => ttsM U₁ V₁ x y ξ (k + 1) ω j | ℱ k] =ᵐ[μ] 0 := fun k j =>
-    condExp_poisson_eq_zero (μ := μ) ℱ k (hp k) (hξm k) (hξm (k + 1))
-      (P := fun p : E d₁ × E d₂ => P p.1 p.2) (hlaw k) (U := fun p => U₁ p.1 p.2)
-      (V := fun p => V₁ p.1 p.2) (fun t s => hV₁ t.1 t.2 s) hU₁c hV₁c
-      (fun t s => hU₁b t.1 t.2 s) (fun t s => hV₁b t.1 t.2 s) j
-  have hmart₂ : ∀ k j, μ[fun ω => ttsM U₂ V₂ x y ξ (k + 1) ω j | ℱ k] =ᵐ[μ] 0 := fun k j =>
-    condExp_poisson_eq_zero (μ := μ) ℱ k (hp k) (hξm k) (hξm (k + 1))
-      (P := fun p : E d₁ × E d₂ => P p.1 p.2) (hlaw k) (U := fun p => U₂ p.1 p.2)
-      (V := fun p => V₂ p.1 p.2) (fun t s => hV₂ t.1 t.2 s) hU₂c hV₂c
-      (fun t s => hU₂b t.1 t.2 s) (fun t s => hV₂b t.1 t.2 s) j
-  have hx' : ∀ k ω, x (k + 1) ω = x k ω + β k • (F₁ (x k ω) (y k ω) + ttsM U₁ V₁ x y ξ (k + 1) ω
-      + ttsR V₁ x y ξ k ω + ttsH V₁ x y ξ k ω - ttsH V₁ x y ξ (k + 1) ω) := fun k ω => by
-    rw [hx k ω, tts_noise_decomp hpois₁ k ω]
-  have hy' : ∀ k ω, y (k + 1) ω = y k ω + γ k • (F₂ (x k ω) (y k ω) + ttsM U₂ V₂ x y ξ (k + 1) ω
-      + ttsR V₂ x y ξ k ω + ttsH V₂ x y ξ k ω - ttsH V₂ x y ξ (k + 1) ω) := fun k ω => by
-    rw [hy k ω, tts_noise_decomp hpois₂ k ω]
-  -- the covariance deviations, with `C = 0`
+  obtain ⟨hx', hy', hhm, hhb, hgm, hgb, hr₁m, hr₂m, ⟨Cr, hr₁b', hr₂b'⟩, hM₁m, hM₁b, hmart₁, hM₂m,
+    hM₂b, hmart₂⟩ := tts_param_facts hβ hγ hβγ ℱ hx hy hxm hym hξm hlaw hpois₁ hpois₂ hV₁ hV₂
+      hU₁c hV₁c hU₂c hV₂c hU₁b hV₁b hU₂b hV₂b hV₁L hV₂L hH₁b hH₂b
   exact tendsto_tts_dissipative_markov hβ hγ hβγ hγβ hc₀ hc₀η hratio hK hL hLF A₁₁ A₁₂ A₂₁ A₂₂ D
     hD hη' hΔ hA₂₂ ℱ hF₁in hF₁g hF₂in hF₂g hF₁L hF₂L hF₁ hF₂ hF₁c hF₂c hx' hy' hxm hym hx0 hy0
     hhm (Ch := max CV CV) (fun k ω => (hhb k ω).trans (le_max_left _ _)) hgm
@@ -302,6 +340,173 @@ theorem tendsto_tts_param_chain {β γ : ℕ → ℝ} {βbar : ℝ}
     (fun _ => norm_nonneg _) (fun _ => norm_nonneg _) (fun _ => norm_nonneg _)
     (tendsto_iff_norm_sub_tendsto_zero.mp hΓ₁₁)
     (tendsto_iff_norm_sub_tendsto_zero.mp hΓ₁₂) (tendsto_iff_norm_sub_tendsto_zero.mp hΓ₂₂) (fun k => by simp) (fun k => by simp) (fun k => by simp)
+
+
+set_option maxHeartbeats 16000000 in
+/-- **Two time scales with θ-dependent Doeblin sampling, with the covariances derived.** As
+`tendsto_tts_param_chain`, without the hypotheses on the noise covariances. Instead, the kernel at
+the limit `(0, 0)` is Doeblin with stationary law `π`, the kernels are Lipschitz in total
+variation, and `U₁`, `U₂` are Lipschitz at `(0, 0)`. The moment bounds of
+`moment_bounds_tts_markov` give `E‖x_k‖, E‖y_k‖ → 0`, the law of `ξ_k` converges to `π`
+(`tendsto_law_moving`), and the covariances converge to their stationary values at `(0, 0)`
+(`tendsto_crossMoment_pairM`). -/
+theorem tendsto_tts_param_chain_doeblin {β γ : ℕ → ℝ} {βbar : ℝ}
+    (hβ : StepSizeRate β βbar) (hγ : StepSizeRate γ 0)
+    (hβγ : Tendsto (fun k => β k / γ k) atTop (𝓝 0))
+    (hγβ : Tendsto (fun k => γ k ^ 2 / β k) atTop (𝓝 0)) {η c₀ K L LF CU CV CH LV : ℝ}
+    (hc₀ : 0 ≤ c₀) (hc₀η : c₀ < η) (hratio : ∀ᶠ k in atTop, γ k / γ (k + 1) ≤ 1 + c₀ * β k)
+    (hK : 0 ≤ K) (hL : 0 ≤ L) (hLF : 0 ≤ LF)
+    (A₁₁ : Matrix (Fin d₁) (Fin d₁) ℝ) (A₁₂ : Matrix (Fin d₁) (Fin d₂) ℝ)
+    (A₂₁ : Matrix (Fin d₂) (Fin d₁) ℝ) (A₂₂ : Matrix (Fin d₂) (Fin d₂) ℝ)
+    (D : Matrix (Fin d₂) (Fin d₁) ℝ) (hD : A₂₂ * D = A₂₁) {η' : ℝ} (hη' : 0 < η')
+    (hΔ : ∀ x, η' * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A₁₁ - A₁₂ * D - (βbar / 2) • 1) *ᵥ x))
+    (hA₂₂ : ∀ x, η' * (x ⬝ᵥ x) ≤ x ⬝ᵥ (A₂₂ *ᵥ x))
+    (ℱ : MeasureTheory.Filtration ℕ m0) {x : ℕ → Ω → E d₁} {y : ℕ → Ω → E d₂} {ξ : ℕ → Ω → S}
+    {F₁ : E d₁ → E d₂ → E d₁} {F₂ : E d₁ → E d₂ → E d₂}
+    (hF₁in : ∀ u w, ⟪u, F₁ u w⟫_ℝ ≤ -η * ‖u‖ ^ 2 + K * ‖u‖ * ‖w + matCLM D u‖)
+    (hF₁g : ∀ u w, ‖F₁ u w‖ ≤ K * (‖u‖ + ‖w + matCLM D u‖))
+    (hF₂in : ∀ u w, ⟪w + matCLM D u, F₂ u w⟫_ℝ ≤ -η * ‖w + matCLM D u‖ ^ 2)
+    (hF₂g : ∀ u w, ‖F₂ u w‖ ≤ K * (‖u‖ + ‖w + matCLM D u‖))
+    (hF₁L : ∀ u w u' w', ‖F₁ u w - F₁ u' w'‖ ≤ LF * (‖u - u'‖ + ‖w - w'‖))
+    (hF₂L : ∀ u w u' w', ‖F₂ u w - F₂ u' w'‖ ≤ LF * (‖u - u'‖ + ‖w - w'‖))
+    (hF₁ : ∀ u w, ‖F₁ u w + (matCLM A₁₁ u + matCLM A₁₂ w)‖ ≤ L * (‖u‖ ^ 2 + ‖w‖ ^ 2))
+    (hF₂ : ∀ u w, ‖F₂ u w + (matCLM A₂₁ u + matCLM A₂₂ w)‖ ≤ L * (‖u‖ ^ 2 + ‖w‖ ^ 2))
+    (hF₁c : Continuous fun p : E d₁ × E d₂ => F₁ p.1 p.2)
+    (hF₂c : Continuous fun p : E d₁ × E d₂ => F₂ p.1 p.2)
+    {H₁ U₁ V₁ : E d₁ → E d₂ → S → E d₁} {H₂ U₂ V₂ : E d₁ → E d₂ → S → E d₂}
+    {P : E d₁ → E d₂ → S → S → ℝ}
+    (hx : ∀ k ω, x (k + 1) ω = x k ω + β k • H₁ (x k ω) (y k ω) (ξ (k + 1) ω))
+    (hy : ∀ k ω, y (k + 1) ω = y k ω + γ k • H₂ (x k ω) (y k ω) (ξ (k + 1) ω))
+    (hxm : ∀ k, StronglyMeasurable[ℱ k] (x k)) (hym : ∀ k, StronglyMeasurable[ℱ k] (y k))
+    (hξm : ∀ k, Measurable[ℱ k] (ξ k))
+    (hx0 : ∃ C, ∀ ω, ‖x 0 ω‖ ≤ C) (hy0 : ∃ C, ∀ ω, ‖y 0 ω‖ ≤ C)
+    (hlaw : ∀ k s, μ[{ω | ξ (k + 1) ω = s}.indicator (fun _ => (1 : ℝ)) | ℱ k] =ᵐ[μ]
+      fun ω => P (x k ω) (y k ω) (ξ k ω) s)
+    (hpois₁ : ∀ u w s, U₁ u w s - V₁ u w s = H₁ u w s - F₁ u w)
+    (hpois₂ : ∀ u w s, U₂ u w s - V₂ u w s = H₂ u w s - F₂ u w)
+    (hV₁ : ∀ u w s, V₁ u w s = ∑ s', P u w s s' • U₁ u w s')
+    (hV₂ : ∀ u w s, V₂ u w s = ∑ s', P u w s s' • U₂ u w s')
+    (hU₁c : ∀ s, Continuous fun p : E d₁ × E d₂ => U₁ p.1 p.2 s)
+    (hV₁c : ∀ s, Continuous fun p : E d₁ × E d₂ => V₁ p.1 p.2 s)
+    (hU₂c : ∀ s, Continuous fun p : E d₁ × E d₂ => U₂ p.1 p.2 s)
+    (hV₂c : ∀ s, Continuous fun p : E d₁ × E d₂ => V₂ p.1 p.2 s)
+    (hU₁b : ∀ u w s, ‖U₁ u w s‖ ≤ CU) (hV₁b : ∀ u w s, ‖V₁ u w s‖ ≤ CV)
+    (hU₂b : ∀ u w s, ‖U₂ u w s‖ ≤ CU) (hV₂b : ∀ u w s, ‖V₂ u w s‖ ≤ CV)
+    (hV₁L : ∀ u w u' w' s, ‖V₁ u w s - V₁ u' w' s‖ ≤ LV * (‖u - u'‖ + ‖w - w'‖))
+    (hV₂L : ∀ u w u' w' s, ‖V₂ u w s - V₂ u' w' s‖ ≤ LV * (‖u - u'‖ + ‖w - w'‖))
+    (hH₁b : ∀ u w s, ‖H₁ u w s‖ ≤ CH) (hH₂b : ∀ u w s, ‖H₂ u w s‖ ≤ CH)
+    (hCU : 0 ≤ CU) (hCV : 0 ≤ CV) {LU LP α : ℝ} (hLU : 0 ≤ LU) (hLV : 0 ≤ LV) (hLP : 0 ≤ LP)
+    (hU₁L : ∀ u w s, ‖U₁ u w s - U₁ 0 0 s‖ ≤ LU * (‖u‖ + ‖w‖))
+    (hU₂L : ∀ u w s, ‖U₂ u w s - U₂ 0 0 s‖ ≤ LU * (‖u‖ + ‖w‖))
+    {ν : S → ℝ} {Q : S → S → ℝ} (hα0 : 0 < α) (hα1 : α ≤ 1)
+    (hQ0 : ∀ s s', 0 ≤ Q s s') (hQ1 : ∀ s, ∑ s', Q s s' = 1)
+    (hPh : ∀ s s', P 0 0 s s' = α * ν s' + (1 - α) * Q s s')
+    (hP0 : ∀ s s', 0 ≤ P 0 0 s s') (hP1 : ∀ s, ∑ s', P 0 0 s s' = 1)
+    (hPL : ∀ u w s, ∑ s', |P u w s s' - P 0 0 s s'| ≤ LP * (‖u‖ + ‖w‖))
+    {pst : S → ℝ} (hpst : ∀ s', ∑ s, pst s * P 0 0 s s' = pst s') (hpst1 : ∑ s, pst s = 1) :
+    ∃ a c b, lyapOp A₂₂ b = ((EuclideanSpace.equiv (Fin d₂ × Fin d₂) ℝ).symm fun ij => ∑ s₀, pst s₀ * ∑ s, P 0 0 s₀ s *
+        ((U₂ 0 0 s - V₂ 0 0 s₀) ij.1 * (U₂ 0 0 s - V₂ 0 0 s₀) ij.2)) ∧ rmul A₂₂ c + lmul A₁₂ b =
+      ((EuclideanSpace.equiv (Fin d₁ × Fin d₂) ℝ).symm fun ij => ∑ s₀, pst s₀ * ∑ s, P 0 0 s₀ s *
+        ((U₁ 0 0 s - V₁ 0 0 s₀) ij.1 * (U₂ 0 0 s - V₂ 0 0 s₀) ij.2)) ∧
+      lyapOp (A₁₁ - A₁₂ * D - (βbar / 2) • 1) a + coupleCLM A₁₂ c =
+      ((EuclideanSpace.equiv (Fin d₁ × Fin d₁) ℝ).symm fun ij => ∑ s₀, pst s₀ * ∑ s, P 0 0 s₀ s *
+        ((U₁ 0 0 s - V₁ 0 0 s₀) ij.1 * (U₁ 0 0 s - V₁ 0 0 s₀) ij.2)) ∧
+      Tendsto (fun k => (β k)⁻¹ • secondMoment μ (x k)) atTop (𝓝 a) ∧
+      Tendsto (fun k => (β k)⁻¹ • crossMoment μ (x k) (fun ω => y k ω + matCLM D (x k ω)))
+        atTop (𝓝 c) ∧
+      Tendsto (fun k => (γ k)⁻¹ • secondMoment μ (fun ω => y k ω + matCLM D (x k ω))) atTop
+        (𝓝 b) := by
+  obtain ⟨hx', hy', hhm, hhb, hgm, hgb, hr₁m, hr₂m, ⟨Cr, hr₁b, hr₂b⟩, hM₁m, hM₁b, hmart₁, hM₂m,
+    hM₂b, hmart₂⟩ := tts_param_facts hβ hγ hβγ ℱ hx hy hxm hym hξm hlaw hpois₁ hpois₂ hV₁ hV₂
+      hU₁c hV₁c hU₂c hV₂c hU₁b hV₁b hU₂b hV₂b hV₁L hV₂L hH₁b hH₂b
+  obtain ⟨hbd, W, hW⟩ := moment_bounds_tts_markov (μ := μ) hβ hγ hβγ hγβ hc₀ hc₀η hratio hK hLF ℱ
+    D hF₁in hF₁g hF₂in hF₂g hF₁L hF₂L hF₁c hF₂c hx' hy' hxm hym hx0 hy0 hhm hhb hgm hgb hr₁m hr₁b
+    hr₂m hr₂b hM₁m hM₁b hmart₁ hM₂m hM₂b hmart₂
+  -- the parameter `θ_k = (x_k, y_k)` converges to `0` in mean
+  set θ : ℕ → Ω → E d₁ × E d₂ := fun k ω => (x k ω, y k ω) with hθ
+  have hθm : ∀ k, StronglyMeasurable[ℱ k] (θ k) := fun k => (hxm k).prodMk (hym k)
+  have hint : ∀ {n : ℕ} (f : ℕ → Ω → E n), (∀ k, StronglyMeasurable[ℱ k] (f k)) →
+      (∀ k, ∃ C, ∀ ω, ‖f k ω‖ ≤ C) → ∀ (p : ℕ) k, Integrable (fun ω => ‖f k ω‖ ^ p) μ := by
+    intro n f hfm hfb p k
+    obtain ⟨C, hC⟩ := hfb k
+    refine (memLp_top_of_bound (((hfm k).mono (ℱ.le k)).aestronglyMeasurable.norm.pow p)
+      (max C 0 ^ p) (Eventually.of_forall fun ω => ?_)).integrable le_top
+    show ‖‖f k ω‖ ^ p‖ ≤ _
+    rw [Real.norm_eq_abs, abs_of_nonneg (by positivity)]
+    exact pow_le_pow_left₀ (norm_nonneg _) ((hC ω).trans (le_max_left _ _)) p
+  have hxb : ∀ k, ∃ C, ∀ ω, ‖x k ω‖ ≤ C := fun k => by
+    obtain ⟨C, hC⟩ := hbd k; exact ⟨C, fun ω => (hC ω).1⟩
+  have hyb : ∀ k, ∃ C, ∀ ω, ‖y k ω‖ ≤ C := fun k => by
+    obtain ⟨C, hC⟩ := hbd k; exact ⟨C, fun ω => (hC ω).2⟩
+  have hx1 := tendsto_integral_norm_of_four (X := x) hγ.tendsto_zero
+    (fun k => by simpa using hint x hxm hxb 1 k) (hint x hxm hxb 4) (fun k => (hW k).1)
+  have hy1 := tendsto_integral_norm_of_four (X := y) hγ.tendsto_zero
+    (fun k => by simpa using hint y hym hyb 1 k) (hint y hym hyb 4) (fun k => (hW k).2)
+  have hθi : ∀ k, Integrable (fun ω => ‖θ k ω - (0 : E d₁ × E d₂)‖) μ := fun k => by
+    obtain ⟨C, hC⟩ := hbd k
+    refine (memLp_top_of_bound (((hθm k).sub stronglyMeasurable_const).mono
+      (ℱ.le k)).aestronglyMeasurable.norm C (Eventually.of_forall fun ω => ?_)).integrable le_top
+    show ‖‖θ k ω - 0‖‖ ≤ C
+    rw [Real.norm_eq_abs, abs_of_nonneg (norm_nonneg _), sub_zero]
+    exact max_le (hC ω).1 (hC ω).2
+  have hθc : Tendsto (fun k => ∫ ω, ‖θ k ω - (0 : E d₁ × E d₂)‖ ∂μ) atTop (𝓝 0) := by
+    refine squeeze_zero (fun k => integral_nonneg fun _ => norm_nonneg _) (fun k => ?_)
+      (by simpa using hx1.add hy1)
+    rw [← integral_add (by simpa using hint x hxm hxb 1 k) (by simpa using hint y hym hyb 1 k)]
+    refine integral_mono (hθi k) ((by simpa using hint x hxm hxb 1 k : Integrable _ μ).add
+      (by simpa using hint y hym hyb 1 k)) fun ω => ?_
+    rw [sub_zero]
+    exact max_le (le_add_of_nonneg_right (norm_nonneg _)) (le_add_of_nonneg_left (norm_nonneg _))
+  -- the Lipschitz bounds at `(0, 0)` in the product norm
+  have hn : ∀ t : E d₁ × E d₂, ‖t.1‖ + ‖t.2‖ ≤ 2 * ‖t - (0 : E d₁ × E d₂)‖ := fun t => by
+    rw [sub_zero]
+    linarith [norm_fst_le t, norm_snd_le t]
+  have hL2 : ∀ {c a : ℝ} (t : E d₁ × E d₂), 0 ≤ c → a ≤ c * (‖t.1‖ + ‖t.2‖) →
+      a ≤ (2 * c) * ‖t - (0 : E d₁ × E d₂)‖ := fun t hc ha => by
+    have := mul_le_mul_of_nonneg_left (hn t) hc
+    linarith
+  have hPL' : ∀ (t : E d₁ × E d₂) s, ∑ s', |P t.1 t.2 s s' - P 0 0 s s'| ≤
+      (2 * LP) * ‖t - (0 : E d₁ × E d₂)‖ := fun t s => hL2 t hLP (hPL t.1 t.2 s)
+  have hlawc := tendsto_law_moving (μ := μ) ℱ (θ := θ) hξm (P := fun t => P t.1 t.2) hlaw hα0 hα1
+    hQ0 hQ1 hPh hPL' hpst hpst1 hθi hθc
+  have hU₁L' : ∀ (t : E d₁ × E d₂) s, ‖U₁ t.1 t.2 s - U₁ 0 0 s‖ ≤
+      (2 * LU) * ‖t - (0 : E d₁ × E d₂)‖ := fun t s => hL2 t hLU (hU₁L t.1 t.2 s)
+  have hU₂L' : ∀ (t : E d₁ × E d₂) s, ‖U₂ t.1 t.2 s - U₂ 0 0 s‖ ≤
+      (2 * LU) * ‖t - (0 : E d₁ × E d₂)‖ := fun t s => hL2 t hLU (hU₂L t.1 t.2 s)
+  have hV₁L' : ∀ (t : E d₁ × E d₂) s, ‖V₁ t.1 t.2 s - V₁ 0 0 s‖ ≤
+      (2 * LV) * ‖t - (0 : E d₁ × E d₂)‖ := fun t s =>
+    hL2 t hLV (by simpa using hV₁L t.1 t.2 0 0 s)
+  have hV₂L' : ∀ (t : E d₁ × E d₂) s, ‖V₂ t.1 t.2 s - V₂ 0 0 s‖ ≤
+      (2 * LV) * ‖t - (0 : E d₁ × E d₂)‖ := fun t s =>
+    hL2 t hLV (by simpa using hV₂L t.1 t.2 0 0 s)
+  have hΓ₁₁ : Tendsto (fun k => secondMoment μ (ttsM U₁ V₁ x y ξ (k + 1))) atTop
+      (𝓝 ((EuclideanSpace.equiv (Fin d₁ × Fin d₁) ℝ).symm fun ij => ∑ s₀, pst s₀ * ∑ s, P 0 0 s₀ s *
+        ((U₁ 0 0 s - V₁ 0 0 s₀) ij.1 * (U₁ 0 0 s - V₁ 0 0 s₀) ij.2))) :=
+    tendsto_crossMoment_pairM (μ := μ) ℱ hθm hξm (θh := 0) (P := fun t => P t.1 t.2) hlaw
+    (U₁ := fun t => U₁ t.1 t.2) (V₁ := fun t => V₁ t.1 t.2) (U₂ := fun t => U₁ t.1 t.2)
+    (V₂ := fun t => V₁ t.1 t.2) hCU hCV hU₁c hV₁c hU₁c hV₁c (fun t s => hU₁b _ _ _)
+    (fun t s => hV₁b _ _ _) (fun t s => hU₁b _ _ _) (fun t s => hV₁b _ _ _) hU₁L' hV₁L' hU₁L'
+    hV₁L' hP0 hP1 hPL' hlawc hθi hθc
+  have hΓ₁₂ : Tendsto (fun k => crossMoment μ (ttsM U₁ V₁ x y ξ (k + 1)) (ttsM U₂ V₂ x y ξ (k + 1))) atTop
+      (𝓝 ((EuclideanSpace.equiv (Fin d₁ × Fin d₂) ℝ).symm fun ij => ∑ s₀, pst s₀ * ∑ s, P 0 0 s₀ s *
+        ((U₁ 0 0 s - V₁ 0 0 s₀) ij.1 * (U₂ 0 0 s - V₂ 0 0 s₀) ij.2))) :=
+    tendsto_crossMoment_pairM (μ := μ) ℱ hθm hξm (θh := 0) (P := fun t => P t.1 t.2) hlaw
+    (U₁ := fun t => U₁ t.1 t.2) (V₁ := fun t => V₁ t.1 t.2) (U₂ := fun t => U₂ t.1 t.2)
+    (V₂ := fun t => V₂ t.1 t.2) hCU hCV hU₁c hV₁c hU₂c hV₂c (fun t s => hU₁b _ _ _)
+    (fun t s => hV₁b _ _ _) (fun t s => hU₂b _ _ _) (fun t s => hV₂b _ _ _) hU₁L' hV₁L' hU₂L'
+    hV₂L' hP0 hP1 hPL' hlawc hθi hθc
+  have hΓ₂₂ : Tendsto (fun k => secondMoment μ (ttsM U₂ V₂ x y ξ (k + 1))) atTop
+      (𝓝 ((EuclideanSpace.equiv (Fin d₂ × Fin d₂) ℝ).symm fun ij => ∑ s₀, pst s₀ * ∑ s, P 0 0 s₀ s *
+        ((U₂ 0 0 s - V₂ 0 0 s₀) ij.1 * (U₂ 0 0 s - V₂ 0 0 s₀) ij.2))) :=
+    tendsto_crossMoment_pairM (μ := μ) ℱ hθm hξm (θh := 0) (P := fun t => P t.1 t.2) hlaw
+    (U₁ := fun t => U₂ t.1 t.2) (V₁ := fun t => V₂ t.1 t.2) (U₂ := fun t => U₂ t.1 t.2)
+    (V₂ := fun t => V₂ t.1 t.2) hCU hCV hU₂c hV₂c hU₂c hV₂c (fun t s => hU₂b _ _ _)
+    (fun t s => hV₂b _ _ _) (fun t s => hU₂b _ _ _) (fun t s => hV₂b _ _ _) hU₂L' hV₂L' hU₂L'
+    hV₂L' hP0 hP1 hPL' hlawc hθi hθc
+  exact tendsto_tts_param_chain hβ hγ hβγ hγβ hc₀ hc₀η hratio hK hL hLF A₁₁ A₁₂ A₂₁ A₂₂ D hD hη' hΔ
+    hA₂₂ ℱ hF₁in hF₁g hF₂in hF₂g hF₁L hF₂L hF₁ hF₂ hF₁c hF₂c hx hy hxm hym hξm hx0 hy0 hlaw
+    hpois₁ hpois₂ hV₁ hV₂ hU₁c hV₁c hU₂c hV₂c hU₁b hV₁b hU₂b hV₂b hV₁L hV₂L hH₁b hH₂b hΓ₁₁ hΓ₁₂
+    hΓ₂₂
 
 end TTS
 

@@ -470,13 +470,20 @@ since the actor's noise depends on the critic. Since $\gamma^2/\beta \to 0$, an 
 negligible against the $\sqrt\beta$ fluctuations. Theorem~\ref{thm:ttsmarkov} and \texttt{tendsto\_tts\_taylor}
 were stated for this. \emph{Lean:} \texttt{tts\_noise\_decomp}, \texttt{tts\_decomp\_facts},
 \texttt{tts\_remainder\_le}, \texttt{condExp\_poisson\_eq\_zero} (any parameter space), and end to end
-\texttt{tendsto\_tts\_param\_chain}. It assumes the limits of the three noise covariances.
+\texttt{tendsto\_tts\_param\_chain}, which assumes the limits of the three noise covariances.
+\texttt{tendsto\_tts\_param\_chain\_doeblin} derives them as in Proposition~\ref{prop:doeblincov}:
+\begin{itemize}
+\item the moment bounds of Theorem~\ref{thm:ttsmarkov} give $\E\|x_k\|, \E\|y_k\| \to 0$;
+\item the law converges under the moving kernel, \texttt{tendsto\_law\_moving}, now for a parameter in
+  any normed space;
+\item the cross moments of two Poisson pairs converge, \texttt{tendsto\_crossMoment\_pairM}, to
+  $\sum_{s_0}\pi(s_0)\sum_sP_0(s_0, s)(U_1(s) - V_1(s_0))(U_2(s) - V_2(s_0))^\top$ at $(x, y) = (0, 0)$.
+\end{itemize}
+The hypotheses are a Doeblin kernel at the limit, kernels Lipschitz in total variation, and $U_i$
+Lipschitz.
 
 Not formalized:
 \begin{itemize}
-\item the convergence of the two-time-scale noise covariances under moving Doeblin sampling, as in
-  Proposition~\ref{prop:doeblincov}. It needs the cross-moment version of
-  \texttt{tendsto\_secondMoment\_paramM} and the parameter $(x, y)$;
 \item global dissipativity, which is a strong assumption, would be replaced in a local theory by a
   localization argument.
 \end{itemize}

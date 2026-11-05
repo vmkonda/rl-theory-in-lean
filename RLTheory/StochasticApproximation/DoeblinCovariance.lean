@@ -78,11 +78,12 @@ variable {S : Type*} [Fintype S] [DecidableEq S] [MeasurableSpace S] [Measurable
 
 omit [DecidableEq S] in
 /-- **The law converges under a moving Doeblin kernel.** -/
-theorem tendsto_law_moving (ℱ : MeasureTheory.Filtration ℕ m0) {θ : ℕ → Ω → E d}
-    {ξ : ℕ → Ω → S} (hξm : ∀ k, Measurable[ℱ k] (ξ k)) {P : E d → S → S → ℝ}
+theorem tendsto_law_moving (ℱ : MeasureTheory.Filtration ℕ m0) {T : Type*} [NormedAddCommGroup T]
+    {θ : ℕ → Ω → T}
+    {ξ : ℕ → Ω → S} (hξm : ∀ k, Measurable[ℱ k] (ξ k)) {P : T → S → S → ℝ}
     (hlaw : ∀ k s, μ[{ω | ξ (k + 1) ω = s}.indicator (fun _ => (1 : ℝ)) | ℱ k] =ᵐ[μ]
       fun ω => P (θ k ω) (ξ k ω) s)
-    {θh : E d} {LP α : ℝ} {ν : S → ℝ} {Q : S → S → ℝ} (hα0 : 0 < α) (hα1 : α ≤ 1)
+    {θh : T} {LP α : ℝ} {ν : S → ℝ} {Q : S → S → ℝ} (hα0 : 0 < α) (hα1 : α ≤ 1)
     (hQ0 : ∀ s s', 0 ≤ Q s s') (hQ1 : ∀ s, ∑ s', Q s s' = 1)
     (hPh : ∀ s s', P θh s s' = α * ν s' + (1 - α) * Q s s')
     (hPL : ∀ t s, ∑ s', |P t s s' - P θh s s'| ≤ LP * ‖t - θh‖)
@@ -180,57 +181,70 @@ theorem tendsto_law_moving (ℱ : MeasureTheory.Filtration ℕ m0) {θ : ℕ →
   simp only [hdd, sub_add_cancel, zero_add] at this
   exact this
 
+/-- The martingale part `U_{θ_{m-1}}(ξ_m) - V_{θ_{m-1}}(ξ_{m-1})`, for a parameter in any space. -/
+noncomputable def pairM {T : Type*} {n : ℕ} (U V : T → S → E n) (θ : ℕ → Ω → T) (ξ : ℕ → Ω → S)
+    (m : ℕ) (ω : Ω) : E n :=
+  U (θ (m - 1) ω) (ξ m ω) - V (θ (m - 1) ω) (ξ (m - 1) ω)
+
 omit [DecidableEq S] [MeasurableSpace S] [MeasurableSingletonClass S] [IsProbabilityMeasure μ] in
-/-- The conditional second moment `g(t, s₀) = Σ_s P_t(s₀, s) (U_t s - V_t s₀)_i (U_t s - V_t s₀)_j`
-is Lipschitz in `t` at `θ*`. -/
-lemma abs_condCov_sub_le {P : E d → S → S → ℝ} {U V : E d → S → E d} {θh t : E d} (s₀ : S)
-    (i j : Fin d) {CU CV LU LV LP : ℝ} (hCU : 0 ≤ CU) (hCV : 0 ≤ CV)
-    (hUb : ∀ t s, ‖U t s‖ ≤ CU) (hVb : ∀ t s, ‖V t s‖ ≤ CV)
-    (hUL : ∀ t s, ‖U t s - U θh s‖ ≤ LU * ‖t - θh‖) (hVL : ∀ t s, ‖V t s - V θh s‖ ≤ LV * ‖t - θh‖)
+/-- The conditional cross moment
+`g(t, s₀) = Σ_s P_t(s₀, s) (U₁ t s - V₁ t s₀)_i (U₂ t s - V₂ t s₀)_j` is Lipschitz in `t` at `θ*`. -/
+lemma abs_condCross_sub_le {T : Type*} [NormedAddCommGroup T] {n₁ n₂ : ℕ}
+    {P : T → S → S → ℝ} {U₁ V₁ : T → S → E n₁} {U₂ V₂ : T → S → E n₂} {θh t : T} (s₀ : S)
+    (i : Fin n₁) (j : Fin n₂) {CU CV LU LV LP : ℝ} (hCU : 0 ≤ CU) (hCV : 0 ≤ CV)
+    (hU₁b : ∀ t s, ‖U₁ t s‖ ≤ CU) (hV₁b : ∀ t s, ‖V₁ t s‖ ≤ CV)
+    (hU₂b : ∀ t s, ‖U₂ t s‖ ≤ CU) (hV₂b : ∀ t s, ‖V₂ t s‖ ≤ CV)
+    (hU₁L : ∀ t s, ‖U₁ t s - U₁ θh s‖ ≤ LU * ‖t - θh‖)
+    (hV₁L : ∀ t s, ‖V₁ t s - V₁ θh s‖ ≤ LV * ‖t - θh‖)
+    (hU₂L : ∀ t s, ‖U₂ t s - U₂ θh s‖ ≤ LU * ‖t - θh‖)
+    (hV₂L : ∀ t s, ‖V₂ t s - V₂ θh s‖ ≤ LV * ‖t - θh‖)
     (hP0 : ∀ s s', 0 ≤ P θh s s') (hP1 : ∀ s, ∑ s', P θh s s' = 1)
     (hPL : ∀ t s, ∑ s', |P t s s' - P θh s s'| ≤ LP * ‖t - θh‖) :
-    |∑ s, P t s₀ s * ((U t s - V t s₀) i * (U t s - V t s₀) j)
-      - ∑ s, P θh s₀ s * ((U θh s - V θh s₀) i * (U θh s - V θh s₀) j)| ≤
+    |∑ s, P t s₀ s * ((U₁ t s - V₁ t s₀) i * (U₂ t s - V₂ t s₀) j)
+      - ∑ s, P θh s₀ s * ((U₁ θh s - V₁ θh s₀) i * (U₂ θh s - V₂ θh s₀) j)| ≤
       (LP * (CU + CV) ^ 2 + 2 * (CU + CV) * (LU + LV)) * ‖t - θh‖ := by
   set δ := ‖t - θh‖ with hδ
   set Ca := CU + CV
   have hCa : 0 ≤ Ca := add_nonneg hCU hCV
-  have ha : ∀ t' s (l : Fin d), |(U t' s - V t' s₀) l| ≤ Ca := fun t' s l => by
+  have ha : ∀ {n : ℕ} {U V : T → S → E n}, (∀ t s, ‖U t s‖ ≤ CU) → (∀ t s, ‖V t s‖ ≤ CV) →
+      ∀ t' s (l : Fin n), |(U t' s - V t' s₀) l| ≤ Ca := fun hUb hVb t' s l => by
     rw [← Real.norm_eq_abs]
     exact (PiLp.norm_apply_le _ l).trans ((norm_sub_le _ _).trans (add_le_add (hUb _ _) (hVb _ _)))
-  have hda : ∀ s (l : Fin d), |(U t s - V t s₀) l - (U θh s - V θh s₀) l| ≤ (LU + LV) * δ :=
-    fun s l => by
-      rw [← Real.norm_eq_abs, show (U t s - V t s₀) l - (U θh s - V θh s₀) l =
-        ((U t s - U θh s) - (V t s₀ - V θh s₀)) l by simp; ring]
-      refine (PiLp.norm_apply_le _ l).trans ((norm_sub_le _ _).trans ?_)
-      have := hUL t s; have := hVL t s₀
-      linarith
-  have hδ0 : 0 ≤ δ := norm_nonneg _
-  have hLa : 0 ≤ (LU + LV) * δ := (abs_nonneg _).trans (hda s₀ i)
+  have hda : ∀ {n : ℕ} {U V : T → S → E n}, (∀ t s, ‖U t s - U θh s‖ ≤ LU * ‖t - θh‖) →
+      (∀ t s, ‖V t s - V θh s‖ ≤ LV * ‖t - θh‖) →
+      ∀ s (l : Fin n), |(U t s - V t s₀) l - (U θh s - V θh s₀) l| ≤ (LU + LV) * δ := by
+    intro n U V hUL hVL s l
+    rw [← Real.norm_eq_abs, show (U t s - V t s₀) l - (U θh s - V θh s₀) l =
+      ((U t s - U θh s) - (V t s₀ - V θh s₀)) l by simp; ring]
+    refine (PiLp.norm_apply_le _ l).trans ((norm_sub_le _ _).trans ?_)
+    have := hUL t s; have := hVL t s₀
+    linarith
+  have hda₁ := hda hU₁L hV₁L
+  have hda₂ := hda hU₂L hV₂L
   rw [← sum_sub_distrib]
-  have hterm : ∀ s, |P t s₀ s * ((U t s - V t s₀) i * (U t s - V t s₀) j)
-      - P θh s₀ s * ((U θh s - V θh s₀) i * (U θh s - V θh s₀) j)| ≤
+  have hterm : ∀ s, |P t s₀ s * ((U₁ t s - V₁ t s₀) i * (U₂ t s - V₂ t s₀) j)
+      - P θh s₀ s * ((U₁ θh s - V₁ θh s₀) i * (U₂ θh s - V₂ θh s₀) j)| ≤
       |P t s₀ s - P θh s₀ s| * Ca ^ 2 + P θh s₀ s * (2 * Ca * ((LU + LV) * δ)) := fun s => by
-    set a := (U t s - V t s₀) i
-    set b := (U t s - V t s₀) j
-    set a' := (U θh s - V θh s₀) i
-    set b' := (U θh s - V θh s₀) j
+    set a := (U₁ t s - V₁ t s₀) i
+    set b := (U₂ t s - V₂ t s₀) j
+    set a' := (U₁ θh s - V₁ θh s₀) i
+    set b' := (U₂ θh s - V₂ θh s₀) j
     have e : P t s₀ s * (a * b) - P θh s₀ s * (a' * b') =
         (P t s₀ s - P θh s₀ s) * (a * b) + P θh s₀ s * (a * (b - b') + b' * (a - a')) := by ring
     rw [e]
     refine (abs_add_le _ _).trans (add_le_add ?_ ?_)
     · rw [abs_mul, abs_mul]
-      have := ha t s i; have := ha t s j
+      have := ha hU₁b hV₁b t s i; have := ha hU₂b hV₂b t s j
       exact mul_le_mul_of_nonneg_left (by nlinarith [abs_nonneg a, abs_nonneg b]) (abs_nonneg _)
     · rw [abs_mul, abs_of_nonneg (hP0 _ _)]
       refine mul_le_mul_of_nonneg_left ?_ (hP0 _ _)
       refine (abs_add_le _ _).trans ?_
       rw [abs_mul, abs_mul]
-      have h1 := mul_le_mul (ha t s i) (hda s j) (abs_nonneg _) hCa
-      have h2 := mul_le_mul (ha θh s j) (hda s i) (abs_nonneg _) hCa
+      have h1 := mul_le_mul (ha hU₁b hV₁b t s i) (hda₂ s j) (abs_nonneg _) hCa
+      have h2 := mul_le_mul (ha hU₂b hV₂b θh s j) (hda₁ s i) (abs_nonneg _) hCa
       linarith
-  calc |∑ s, (P t s₀ s * ((U t s - V t s₀) i * (U t s - V t s₀) j)
-        - P θh s₀ s * ((U θh s - V θh s₀) i * (U θh s - V θh s₀) j))|
+  calc |∑ s, (P t s₀ s * ((U₁ t s - V₁ t s₀) i * (U₂ t s - V₂ t s₀) j)
+        - P θh s₀ s * ((U₁ θh s - V₁ θh s₀) i * (U₂ θh s - V₂ θh s₀) j))|
       ≤ ∑ s, (|P t s₀ s - P θh s₀ s| * Ca ^ 2 + P θh s₀ s * (2 * Ca * ((LU + LV) * δ))) :=
         (abs_sum_le_sum_abs _ _).trans (sum_le_sum fun s _ => hterm s)
     _ = (∑ s, |P t s₀ s - P θh s₀ s|) * Ca ^ 2 + (∑ s, P θh s₀ s) * (2 * Ca * ((LU + LV) * δ)) := by
@@ -240,30 +254,37 @@ lemma abs_condCov_sub_le {P : E d → S → S → ℝ} {U V : E d → S → E d}
         exact add_le_add_right (mul_le_mul_of_nonneg_right (hPL t s₀) (sq_nonneg _)) _
     _ = _ := by ring
 
-set_option maxHeartbeats 4000000 in
-/-- **The noise covariance converges.** Under a moving Doeblin kernel, with `U`, `V` bounded,
-continuous, and Lipschitz at `θ*`, the kernels Lipschitz at `θ*` in total variation, the law of
-`ξ_k` converging to `π`, and `E‖θ_k - θ*‖ → 0`, the second moment of
-`M_{k+1} = U_{θ_k}(ξ_{k+1}) - V_{θ_k}(ξ_k)` converges to
-`Γ* = Σ_{s₀} π(s₀) Σ_s P_{θ*}(s₀, s) (U_{θ*} s - V_{θ*} s₀)(U_{θ*} s - V_{θ*} s₀)ᵀ`. -/
-theorem tendsto_secondMoment_paramM (ℱ : MeasureTheory.Filtration ℕ m0) {θ : ℕ → Ω → E d}
-    {ξ : ℕ → Ω → S} (hθm : ∀ k, StronglyMeasurable[ℱ k] (θ k)) (hξm : ∀ k, Measurable[ℱ k] (ξ k))
-    {P : E d → S → S → ℝ}
+set_option maxHeartbeats 8000000 in
+/-- **The noise cross moment converges.** Under a moving Doeblin kernel, for two Poisson pairs
+`(U₁, V₁)`, `(U₂, V₂)` that are bounded, continuous, and Lipschitz at `θ*`, with the kernels
+Lipschitz at `θ*` in total variation, the law of `ξ_k` converging to `π`, and
+`E‖θ_k - θ*‖ → 0`, the cross moment of the martingale parts converges to
+`Σ_{s₀} π(s₀) Σ_s P_{θ*}(s₀, s) (U₁ s - V₁ s₀)(U₂ s - V₂ s₀)ᵀ` at `θ*`. -/
+theorem tendsto_crossMoment_pairM (ℱ : MeasureTheory.Filtration ℕ m0) {T : Type*}
+    [NormedAddCommGroup T] {θ : ℕ → Ω → T} {ξ : ℕ → Ω → S}
+    (hθm : ∀ k, StronglyMeasurable[ℱ k] (θ k)) (hξm : ∀ k, Measurable[ℱ k] (ξ k))
+    {P : T → S → S → ℝ}
     (hlaw : ∀ k s, μ[{ω | ξ (k + 1) ω = s}.indicator (fun _ => (1 : ℝ)) | ℱ k] =ᵐ[μ]
       fun ω => P (θ k ω) (ξ k ω) s)
-    {U V : E d → S → E d} {θh : E d} {CU CV LU LV LP : ℝ} (hCU : 0 ≤ CU) (hCV : 0 ≤ CV)
-    (hUc : ∀ s, Continuous fun t => U t s) (hVc : ∀ s, Continuous fun t => V t s)
-    (hUb : ∀ t s, ‖U t s‖ ≤ CU) (hVb : ∀ t s, ‖V t s‖ ≤ CV)
-    (hUL : ∀ t s, ‖U t s - U θh s‖ ≤ LU * ‖t - θh‖) (hVL : ∀ t s, ‖V t s - V θh s‖ ≤ LV * ‖t - θh‖)
+    {n₁ n₂ : ℕ} {U₁ V₁ : T → S → E n₁} {U₂ V₂ : T → S → E n₂} {θh : T} {CU CV LU LV LP : ℝ}
+    (hCU : 0 ≤ CU) (hCV : 0 ≤ CV)
+    (hU₁c : ∀ s, Continuous fun t => U₁ t s) (hV₁c : ∀ s, Continuous fun t => V₁ t s)
+    (hU₂c : ∀ s, Continuous fun t => U₂ t s) (hV₂c : ∀ s, Continuous fun t => V₂ t s)
+    (hU₁b : ∀ t s, ‖U₁ t s‖ ≤ CU) (hV₁b : ∀ t s, ‖V₁ t s‖ ≤ CV)
+    (hU₂b : ∀ t s, ‖U₂ t s‖ ≤ CU) (hV₂b : ∀ t s, ‖V₂ t s‖ ≤ CV)
+    (hU₁L : ∀ t s, ‖U₁ t s - U₁ θh s‖ ≤ LU * ‖t - θh‖)
+    (hV₁L : ∀ t s, ‖V₁ t s - V₁ θh s‖ ≤ LV * ‖t - θh‖)
+    (hU₂L : ∀ t s, ‖U₂ t s - U₂ θh s‖ ≤ LU * ‖t - θh‖)
+    (hV₂L : ∀ t s, ‖V₂ t s - V₂ θh s‖ ≤ LV * ‖t - θh‖)
     (hP0 : ∀ s s', 0 ≤ P θh s s') (hP1 : ∀ s, ∑ s', P θh s s' = 1)
     (hPL : ∀ t s, ∑ s', |P t s s' - P θh s s'| ≤ LP * ‖t - θh‖) {pst : S → ℝ}
     (hlawc : ∀ s, Tendsto (fun k => ∫ ω, {ω | ξ k ω = s}.indicator (fun _ => (1 : ℝ)) ω ∂μ)
       atTop (𝓝 (pst s)))
     (hθi : ∀ k, Integrable (fun ω => ‖θ k ω - θh‖) μ)
     (hθc : Tendsto (fun k => ∫ ω, ‖θ k ω - θh‖ ∂μ) atTop (𝓝 0)) :
-    Tendsto (fun k => secondMoment μ (paramM U V θ ξ (k + 1))) atTop
-      (𝓝 ((EuclideanSpace.equiv (Fin d × Fin d) ℝ).symm fun ij => ∑ s₀, pst s₀ *
-        ∑ s, P θh s₀ s * ((U θh s - V θh s₀) ij.1 * (U θh s - V θh s₀) ij.2))) := by
+    Tendsto (fun k => crossMoment μ (pairM U₁ V₁ θ ξ (k + 1)) (pairM U₂ V₂ θ ξ (k + 1))) atTop
+      (𝓝 ((EuclideanSpace.equiv (Fin n₁ × Fin n₂) ℝ).symm fun ij => ∑ s₀, pst s₀ *
+        ∑ s, P θh s₀ s * ((U₁ θh s - V₁ θh s₀) ij.1 * (U₂ θh s - V₂ θh s₀) ij.2))) := by
   refine tendsto_euclid_of_coord fun ij => ?_
   obtain ⟨i, j⟩ := ij
   set Lg := LP * (CU + CV) ^ 2 + 2 * (CU + CV) * (LU + LV)
@@ -271,50 +292,54 @@ theorem tendsto_secondMoment_paramM (ℱ : MeasureTheory.Filtration ℕ m0) {θ 
     hξm k (measurableSet_singleton s)
   have hIi : ∀ k s, Integrable ({ω | ξ k ω = s}.indicator fun _ => (1 : ℝ)) μ := fun k s =>
     (integrable_const (1 : ℝ)).indicator (ℱ.le k _ (hset k s))
-  have hcoordb : ∀ t s s₀ (l : Fin d), |(U t s - V t s₀) l| ≤ CU + CV := fun t s s₀ l => by
+  have hcoordb : ∀ {n : ℕ} {U V : T → S → E n}, (∀ t s, ‖U t s‖ ≤ CU) → (∀ t s, ‖V t s‖ ≤ CV) →
+      ∀ t s s₀ (l : Fin n), |(U t s - V t s₀) l| ≤ CU + CV := fun hUb hVb t s s₀ l => by
     rw [← Real.norm_eq_abs]
     exact (PiLp.norm_apply_le _ l).trans ((norm_sub_le _ _).trans (add_le_add (hUb _ _) (hVb _ _)))
-  -- the entry is `E[g(θ_k, ξ_k)]`
-  have hentry : ∀ k, Integrable (fun ω => ∑ s, P (θ k ω) (ξ k ω) s *
-      ((U (θ k ω) s - V (θ k ω) (ξ k ω)) i * (U (θ k ω) s - V (θ k ω) (ξ k ω)) j)) μ ∧
-      (secondMoment μ (paramM U V θ ξ (k + 1))) (i, j) =
-      ∫ ω, ∑ s, P (θ k ω) (ξ k ω) s * ((U (θ k ω) s - V (θ k ω) (ξ k ω)) i *
-        (U (θ k ω) s - V (θ k ω) (ξ k ω)) j) ∂μ := fun k => by
-    have hMm : StronglyMeasurable[ℱ (k + 1)] (paramM U V θ ξ (k + 1)) := by
+  have hMfacts : ∀ {n : ℕ} {U V : T → S → E n}, (∀ s, Continuous fun t => U t s) →
+      (∀ s, Continuous fun t => V t s) → (∀ t s, ‖U t s‖ ≤ CU) → (∀ t s, ‖V t s‖ ≤ CV) →
+      ∀ k, MemLp (pairM U V θ ξ (k + 1)) 2 μ := by
+    intro n U V hUc hVc hUb hVb k
+    have hMm : StronglyMeasurable[ℱ (k + 1)] (pairM U V θ ξ (k + 1)) := by
       show StronglyMeasurable[ℱ (k + 1)] fun ω => U (θ k ω) (ξ (k + 1) ω) - V (θ k ω) (ξ k ω)
       exact (stronglyMeasurable_comp_finite ((hθm k).mono (ℱ.mono k.le_succ)) (hξm (k + 1))
         hUc).sub ((stronglyMeasurable_comp_finite (hθm k) (hξm k) hVc).mono (ℱ.mono k.le_succ))
-    have hML : MemLp (paramM U V θ ξ (k + 1)) 2 μ :=
-      MemLp.of_bound (hMm.mono (ℱ.le (k + 1))).aestronglyMeasurable (CU + CV)
-        (Eventually.of_forall fun ω => by
-          show ‖U (θ k ω) (ξ (k + 1) ω) - V (θ k ω) (ξ k ω)‖ ≤ _
-          exact (norm_sub_le _ _).trans (add_le_add (hUb _ _) (hVb _ _)))
-    rw [secondMoment, crossMoment_apply hML hML]
-    have hGm : ∀ s, StronglyMeasurable[ℱ k] (fun ω => (U (θ k ω) s - V (θ k ω) (ξ k ω)) i *
-        (U (θ k ω) s - V (θ k ω) (ξ k ω)) j) := fun s => by
-      have hW : StronglyMeasurable[ℱ k] (fun ω => U (θ k ω) s - V (θ k ω) (ξ k ω)) :=
-        ((hUc s).comp_stronglyMeasurable (hθm k)).sub
-          (stronglyMeasurable_comp_finite (hθm k) (hξm k) hVc)
-      exact ((EuclideanSpace.proj (𝕜 := ℝ) i).continuous.comp_stronglyMeasurable hW).mul
-        ((EuclideanSpace.proj (𝕜 := ℝ) j).continuous.comp_stronglyMeasurable hW)
+    exact MemLp.of_bound (hMm.mono (ℱ.le (k + 1))).aestronglyMeasurable (CU + CV)
+      (Eventually.of_forall fun ω => (norm_sub_le _ _).trans (add_le_add (hUb _ _) (hVb _ _)))
+  -- the entry is `E[g(θ_k, ξ_k)]`
+  have hentry : ∀ k, Integrable (fun ω => ∑ s, P (θ k ω) (ξ k ω) s *
+      ((U₁ (θ k ω) s - V₁ (θ k ω) (ξ k ω)) i * (U₂ (θ k ω) s - V₂ (θ k ω) (ξ k ω)) j)) μ ∧
+      (crossMoment μ (pairM U₁ V₁ θ ξ (k + 1)) (pairM U₂ V₂ θ ξ (k + 1))) (i, j) =
+      ∫ ω, ∑ s, P (θ k ω) (ξ k ω) s * ((U₁ (θ k ω) s - V₁ (θ k ω) (ξ k ω)) i *
+        (U₂ (θ k ω) s - V₂ (θ k ω) (ξ k ω)) j) ∂μ := fun k => by
+    rw [crossMoment_apply (hMfacts hU₁c hV₁c hU₁b hV₁b k) (hMfacts hU₂c hV₂c hU₂b hV₂b k)]
+    have hW : ∀ {n : ℕ} {U V : T → S → E n}, (∀ s, Continuous fun t => U t s) →
+        (∀ s, Continuous fun t => V t s) → ∀ s,
+        StronglyMeasurable[ℱ k] (fun ω => U (θ k ω) s - V (θ k ω) (ξ k ω)) := fun hUc hVc s =>
+      ((hUc s).comp_stronglyMeasurable (hθm k)).sub
+        (stronglyMeasurable_comp_finite (hθm k) (hξm k) hVc)
+    have hGm : ∀ s, StronglyMeasurable[ℱ k] (fun ω => (U₁ (θ k ω) s - V₁ (θ k ω) (ξ k ω)) i *
+        (U₂ (θ k ω) s - V₂ (θ k ω) (ξ k ω)) j) := fun s =>
+      ((EuclideanSpace.proj (𝕜 := ℝ) i).continuous.comp_stronglyMeasurable (hW hU₁c hV₁c s)).mul
+        ((EuclideanSpace.proj (𝕜 := ℝ) j).continuous.comp_stronglyMeasurable (hW hU₂c hV₂c s))
     have hmix := condExp_finite_mix (μ := μ) ℱ k ((hξm (k + 1)).mono (ℱ.le (k + 1)) le_rfl)
-      (hlaw k) (G := fun s ω => (U (θ k ω) s - V (θ k ω) (ξ k ω)) i *
-        (U (θ k ω) s - V (θ k ω) (ξ k ω)) j) hGm
+      (hlaw k) (G := fun s ω => (U₁ (θ k ω) s - V₁ (θ k ω) (ξ k ω)) i *
+        (U₂ (θ k ω) s - V₂ (θ k ω) (ξ k ω)) j) hGm
       (fun s => ⟨(CU + CV) * (CU + CV), fun ω => by
-        show |(U (θ k ω) s - V (θ k ω) (ξ k ω)) i * (U (θ k ω) s - V (θ k ω) (ξ k ω)) j| ≤ _
+        show |(U₁ (θ k ω) s - V₁ (θ k ω) (ξ k ω)) i * (U₂ (θ k ω) s - V₂ (θ k ω) (ξ k ω)) j| ≤ _
         rw [abs_mul]
-        exact mul_le_mul (hcoordb (θ k ω) s (ξ k ω) i) (hcoordb (θ k ω) s (ξ k ω) j)
-          (abs_nonneg _) (add_nonneg hCU hCV)⟩)
+        exact mul_le_mul (hcoordb hU₁b hV₁b (θ k ω) s (ξ k ω) i)
+          (hcoordb hU₂b hV₂b (θ k ω) s (ξ k ω) j) (abs_nonneg _) (add_nonneg hCU hCV)⟩)
     refine ⟨integrable_condExp.congr hmix, ?_⟩
-    calc ∫ ω, paramM U V θ ξ (k + 1) ω i * paramM U V θ ξ (k + 1) ω j ∂μ
-        = ∫ ω, (fun ω => (U (θ k ω) (ξ (k + 1) ω) - V (θ k ω) (ξ k ω)) i *
-            (U (θ k ω) (ξ (k + 1) ω) - V (θ k ω) (ξ k ω)) j) ω ∂μ := by
+    calc ∫ ω, pairM U₁ V₁ θ ξ (k + 1) ω i * pairM U₂ V₂ θ ξ (k + 1) ω j ∂μ
+        = ∫ ω, (fun ω => (U₁ (θ k ω) (ξ (k + 1) ω) - V₁ (θ k ω) (ξ k ω)) i *
+            (U₂ (θ k ω) (ξ (k + 1) ω) - V₂ (θ k ω) (ξ k ω)) j) ω ∂μ := by
           rfl
-      _ = ∫ ω, (μ[fun ω => (U (θ k ω) (ξ (k + 1) ω) - V (θ k ω) (ξ k ω)) i *
-            (U (θ k ω) (ξ (k + 1) ω) - V (θ k ω) (ξ k ω)) j | ℱ k]) ω ∂μ :=
+      _ = ∫ ω, (μ[fun ω => (U₁ (θ k ω) (ξ (k + 1) ω) - V₁ (θ k ω) (ξ k ω)) i *
+            (U₂ (θ k ω) (ξ (k + 1) ω) - V₂ (θ k ω) (ξ k ω)) j | ℱ k]) ω ∂μ :=
           (integral_condExp (ℱ.le k)).symm
       _ = _ := integral_congr_ae hmix
-  set gs : S → ℝ := fun s₀ => ∑ s, P θh s₀ s * ((U θh s - V θh s₀) i * (U θh s - V θh s₀) j)
+  set gs : S → ℝ := fun s₀ => ∑ s, P θh s₀ s * ((U₁ θh s - V₁ θh s₀) i * (U₂ θh s - V₂ θh s₀) j)
     with hgs
   have hgsi : ∀ k, Integrable (fun ω => gs (ξ k ω)) μ := fun k =>
     (memLp_top_of_bound ((StronglyMeasurable.of_discrete (f := gs)).comp_measurable
@@ -335,15 +360,17 @@ theorem tendsto_secondMoment_paramM (ℱ : MeasureTheory.Filtration ℕ m0) {θ 
     rw [show ∑ s₀, gs s₀ * pst s₀ = ∑ s₀, pst s₀ * gs s₀ from
       sum_congr rfl fun _ _ => mul_comm _ _] at h
     exact h.congr fun k => (hgs_eq k).symm
-  have hdiff : ∀ k, |(∫ ω, ∑ s, P (θ k ω) (ξ k ω) s * ((U (θ k ω) s - V (θ k ω) (ξ k ω)) i *
-      (U (θ k ω) s - V (θ k ω) (ξ k ω)) j) ∂μ) - ∫ ω, gs (ξ k ω) ∂μ| ≤
+  have hdiff : ∀ k, |(∫ ω, ∑ s, P (θ k ω) (ξ k ω) s * ((U₁ (θ k ω) s - V₁ (θ k ω) (ξ k ω)) i *
+      (U₂ (θ k ω) s - V₂ (θ k ω) (ξ k ω)) j) ∂μ) - ∫ ω, gs (ξ k ω) ∂μ| ≤
       Lg * ∫ ω, ‖θ k ω - θh‖ ∂μ := fun k => by
     rw [← integral_sub (hentry k).1 (hgsi k), ← integral_const_mul]
     refine abs_integral_le_integral_abs.trans (integral_mono ((hentry k).1.sub (hgsi k)).abs
       ((hθi k).const_mul Lg) fun ω => ?_)
-    exact abs_condCov_sub_le (ξ k ω) i j hCU hCV hUb hVb hUL hVL hP0 hP1 hPL
-  have h0 : Tendsto (fun k => (∫ ω, ∑ s, P (θ k ω) (ξ k ω) s * ((U (θ k ω) s - V (θ k ω) (ξ k ω)) i
-      * (U (θ k ω) s - V (θ k ω) (ξ k ω)) j) ∂μ) - ∫ ω, gs (ξ k ω) ∂μ) atTop (𝓝 0) :=
+    exact abs_condCross_sub_le (ξ k ω) i j hCU hCV hU₁b hV₁b hU₂b hV₂b hU₁L hV₁L hU₂L hV₂L hP0
+      hP1 hPL
+  have h0 : Tendsto (fun k => (∫ ω, ∑ s, P (θ k ω) (ξ k ω) s *
+      ((U₁ (θ k ω) s - V₁ (θ k ω) (ξ k ω)) i * (U₂ (θ k ω) s - V₂ (θ k ω) (ξ k ω)) j) ∂μ)
+      - ∫ ω, gs (ξ k ω) ∂μ) atTop (𝓝 0) :=
     squeeze_zero_norm (a := fun k => Lg * ∫ ω, ‖θ k ω - θh‖ ∂μ)
       (fun k => (Real.norm_eq_abs _).trans_le (hdiff k)) (by simpa using hθc.const_mul Lg)
   have := h0.add hgs_t
@@ -351,6 +378,29 @@ theorem tendsto_secondMoment_paramM (ℱ : MeasureTheory.Filtration ℕ m0) {θ 
   refine this.congr fun k => ?_
   exact ((hentry k).2).symm
 
+set_option maxHeartbeats 4000000 in
+/-- **The noise covariance converges** (one Poisson pair): `tendsto_crossMoment_pairM` with
+`U₁ = U₂`, `V₁ = V₂`. -/
+theorem tendsto_secondMoment_paramM (ℱ : MeasureTheory.Filtration ℕ m0) {θ : ℕ → Ω → E d}
+    {ξ : ℕ → Ω → S} (hθm : ∀ k, StronglyMeasurable[ℱ k] (θ k)) (hξm : ∀ k, Measurable[ℱ k] (ξ k))
+    {P : E d → S → S → ℝ}
+    (hlaw : ∀ k s, μ[{ω | ξ (k + 1) ω = s}.indicator (fun _ => (1 : ℝ)) | ℱ k] =ᵐ[μ]
+      fun ω => P (θ k ω) (ξ k ω) s)
+    {U V : E d → S → E d} {θh : E d} {CU CV LU LV LP : ℝ} (hCU : 0 ≤ CU) (hCV : 0 ≤ CV)
+    (hUc : ∀ s, Continuous fun t => U t s) (hVc : ∀ s, Continuous fun t => V t s)
+    (hUb : ∀ t s, ‖U t s‖ ≤ CU) (hVb : ∀ t s, ‖V t s‖ ≤ CV)
+    (hUL : ∀ t s, ‖U t s - U θh s‖ ≤ LU * ‖t - θh‖) (hVL : ∀ t s, ‖V t s - V θh s‖ ≤ LV * ‖t - θh‖)
+    (hP0 : ∀ s s', 0 ≤ P θh s s') (hP1 : ∀ s, ∑ s', P θh s s' = 1)
+    (hPL : ∀ t s, ∑ s', |P t s s' - P θh s s'| ≤ LP * ‖t - θh‖) {pst : S → ℝ}
+    (hlawc : ∀ s, Tendsto (fun k => ∫ ω, {ω | ξ k ω = s}.indicator (fun _ => (1 : ℝ)) ω ∂μ)
+      atTop (𝓝 (pst s)))
+    (hθi : ∀ k, Integrable (fun ω => ‖θ k ω - θh‖) μ)
+    (hθc : Tendsto (fun k => ∫ ω, ‖θ k ω - θh‖ ∂μ) atTop (𝓝 0)) :
+    Tendsto (fun k => secondMoment μ (paramM U V θ ξ (k + 1))) atTop
+      (𝓝 ((EuclideanSpace.equiv (Fin d × Fin d) ℝ).symm fun ij => ∑ s₀, pst s₀ *
+        ∑ s, P θh s₀ s * ((U θh s - V θh s₀) ij.1 * (U θh s - V θh s₀) ij.2))) :=
+  tendsto_crossMoment_pairM ℱ hθm hξm hlaw hCU hCV hUc hVc hUc hVc hUb hVb hUb hVb hUL hVL hUL
+    hVL hP0 hP1 hPL hlawc hθi hθc
 
 end Law
 
