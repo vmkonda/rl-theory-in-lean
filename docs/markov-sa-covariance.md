@@ -411,6 +411,8 @@ H(y,z) - \mathbb{E}\big[H(Y_1, z_1)\mid Y_0 = y, z_0 = z\big] = \bar F(y)z + \ba
 
 </div>
 
+*Lean:* `condExp_traceMart_eq_zero`, in the equivalent conditional form: if $`U(y) = \sum_{y'}Q(y,y')\big(F(y,y') + c(y')U(y')\big)`$ and $`\hat h(y) = \sum_{y'}Q(y,y')\big(e(y,y') + U(y')\phi(y') + \hat h(y')\big)`$, then $`M_{k+1} = f_k + H(Y_{k+1}, z_{k+1}) - H(Y_k, z_k)`$ is a martingale difference, for traces that are adapted and bounded. The trace recursion is $`z_{k+1} = c(Y_{k+1})z_k + \phi(Y_{k+1})`$ and $`F(y, y')`$ is a linear map.
+
 <div id="cor:trace" class="corollary">
 
 **Corollary 4.5**. *With $`h_k = H(Y_k,z_k)`$ and $`M_{k+1} = f_k - \mathbb{E}[f_k\mid\mathcal{F}_k] + H(Y_{k+1},z_{k+1}) -
@@ -423,6 +425,8 @@ H(y,z) - \mathbb{E}\big[H(Y_1, z_1)\mid Y_0 = y, z_0 = z\big] = \bar F(y)z + \ba
 *Proof.* The decomposition $`f_k = M_{k+1} + h_k - h_{k+1}`$ and the martingale property follow from Lemma [4.4](#lem:trace-poisson) exactly as in Lemma [4.1](#lem:poisson). The identification of $`\Gamma`$ follows as in Lemma [4.2](#lem:lrc), using that the trace forgets its initial value geometrically. ◻
 
 </div>
+
+*Lean:* `tendsto_secondMoment_of_trace_noise`: Theorem [2.1](#thm:main) for trace-driven noise with bounded traces, with $`\Gamma = \lim\mathbb{E}[M_{k+1}M_{k+1}^\top]`$ as a hypothesis (its identification with the closed form is not formalized).
 
 <div class="remark">
 

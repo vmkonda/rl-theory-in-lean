@@ -36,7 +36,7 @@ lemma euclidean_sum_apply {ι : Type*} (s : Finset ι) (f : ι → E d) (j : Fin
   (∑ i ∈ s, f i) j = ∑ i ∈ s, f i j :=
   map_sum (EuclideanSpace.proj (𝕜 := ℝ) j) f s
 
-lemma clm_apply_eq_sum (L : E d →L[ℝ] E d) (x : E d) (j : Fin d) :
+lemma clm_apply_eq_sum {n : ℕ} (L : E n →L[ℝ] E d) (x : E n) (j : Fin d) :
   L x j = ∑ i, x i * L (EuclideanSpace.single i 1) j := by
   have hx : x = ∑ i, x i • EuclideanSpace.single i (1 : ℝ) := by
     ext k
@@ -46,8 +46,8 @@ lemma clm_apply_eq_sum (L : E d →L[ℝ] E d) (x : E d) (j : Fin d) :
   rw [map_sum, euclidean_sum_apply]
   simp [map_smul]
 
-lemma stronglyMeasurable_clm_apply {m : MeasurableSpace Ω} {L : Ω → E d →L[ℝ] E d}
-  {x : Ω → E d} (hL : StronglyMeasurable[m] L) (hx : StronglyMeasurable[m] x) :
+lemma stronglyMeasurable_clm_apply {n : ℕ} {m : MeasurableSpace Ω} {L : Ω → E n →L[ℝ] E d}
+  {x : Ω → E n} (hL : StronglyMeasurable[m] L) (hx : StronglyMeasurable[m] x) :
   StronglyMeasurable[m] fun ω => L ω (x ω) :=
   isBoundedBilinearMap_apply.continuous.comp_stronglyMeasurable (hL.prodMk hx)
 
