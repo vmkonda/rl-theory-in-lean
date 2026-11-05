@@ -271,6 +271,8 @@ A_{12}\Sigma_{12}^\top + \Sigma_{12}A_{12}^\top
 and by [(??eq:s22)](#eq:s22), $`A_{22}^{-1}\Sigma_{22} + \Sigma_{22}A_{22}^{-\top}
 = A_{22}^{-1}(\Sigma_{22}A_{22}^\top + A_{22}\Sigma_{22})A_{22}^{-\top} = A_{22}^{-1}\Gamma_{22}A_{22}^{-\top}`$. Substituting in [(??eq:s11)](#eq:s11) gives the equation for $`\Sigma_{11}`$. The effective noise $`V_k - A_{12}A_{22}^{-1}W_k`$ has the Poisson decomposition with martingale part $`M_{k+1} - A_{12}A_{22}^{-1}M'_{k+1}`$, whose covariance tends to $`\tilde\Gamma`$.  ◻
 
+*Lean:* `effective_lyapunov` (the algebra, using that $`\Sigma_{22}`$ is symmetric, `transCLM_eq_of_lyapOp`) and `tendsto_two_time_scale_slow` (the corollary as a limit statement, with $`A_{22}^{-1}`$ given as a matrix $`G`$ with $`GA_{22} = I`$).
+
 ## 4 What remains
 
 - *Multiplicative noise on two time scales.* In actor-critic both $`A_{12}`$ (the critic enters the actor through the features) and $`A_{22}`$ (the TD matrix) are random. Section 3 of the single-time-scale note shows how to absorb such terms; the same shift applies here.

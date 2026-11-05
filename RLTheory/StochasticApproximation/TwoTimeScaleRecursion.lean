@@ -73,6 +73,53 @@ lemma rmul_apply (B : Matrix (Fin p) (Fin n) ℝ) (X : Rect m n) (ij : Fin m × 
 
 lemma transCLM_apply (X : Rect m n) (ij : Fin n × Fin m) : transCLM X ij = X (ij.2, ij.1) := rfl
 
+section Algebra
+
+variable {q r : ℕ}
+
+lemma lmul_lmul (A : Matrix (Fin m) (Fin n) ℝ) (B : Matrix (Fin n) (Fin p) ℝ) (X : Rect p q) :
+    lmul A (lmul B X) = lmul (A * B) X := by
+  ext ij
+  simp only [lmul_apply, Matrix.mul_apply, mul_sum, sum_mul]
+  rw [sum_comm]
+  exact sum_congr rfl fun _ _ => sum_congr rfl fun _ _ => by ring
+
+lemma rmul_rmul (A : Matrix (Fin r) (Fin q) ℝ) (B : Matrix (Fin q) (Fin n) ℝ) (X : Rect m n) :
+    rmul A (rmul B X) = rmul (A * B) X := by
+  ext ij
+  simp only [rmul_apply, Matrix.mul_apply, mul_sum, sum_mul]
+  rw [sum_comm]
+  exact sum_congr rfl fun _ _ => sum_congr rfl fun _ _ => by ring
+
+lemma lmul_rmul_comm (A : Matrix (Fin m) (Fin n) ℝ) (B : Matrix (Fin q) (Fin p) ℝ)
+    (X : Rect n p) : lmul A (rmul B X) = rmul B (lmul A X) := by
+  ext ij
+  simp only [lmul_apply, rmul_apply, mul_sum, sum_mul]
+  rw [sum_comm]
+  exact sum_congr rfl fun _ _ => sum_congr rfl fun _ _ => by ring
+
+lemma transCLM_lmul (A : Matrix (Fin m) (Fin n) ℝ) (X : Rect n p) :
+    transCLM (lmul A X) = rmul A (transCLM X) := by
+  ext ij
+  simp only [transCLM_apply, lmul_apply, rmul_apply]
+  exact sum_congr rfl fun _ _ => by ring
+
+lemma transCLM_rmul (B : Matrix (Fin p) (Fin n) ℝ) (X : Rect m n) :
+    transCLM (rmul B X) = lmul B (transCLM X) := by
+  ext ij
+  simp only [transCLM_apply, lmul_apply, rmul_apply]
+  exact sum_congr rfl fun _ _ => by ring
+
+lemma rmul_one (X : Rect m n) : rmul (1 : Matrix (Fin n) (Fin n) ℝ) X = X := by
+  ext ij
+  simp [rmul_apply, Matrix.one_apply]
+
+lemma lmul_one (X : Rect m n) : lmul (1 : Matrix (Fin m) (Fin m) ℝ) X = X := by
+  ext ij
+  simp [lmul_apply, Matrix.one_apply]
+
+end Algebra
+
 /-- `lyapOp A = lmul A + rmul A`. -/
 lemma lyapOp_eq (A : Matrix (Fin n) (Fin n) ℝ) (X : Mat n) :
     lyapOp A X = lmul A X + rmul A X := rfl
@@ -638,5 +685,49 @@ theorem tendsto_two_time_scale_moments {d₁ d₂ : ℕ} {β γ : ℕ → ℝ} {
   · rw [hea] at ha'; exact tendsto_sub_nhds_zero_iff.mp ha'
   · rw [hec] at hc'; exact tendsto_sub_nhds_zero_iff.mp hc'
   · rw [heb] at hb'; exact tendsto_sub_nhds_zero_iff.mp hb'
+
+/-! ### The effective noise -/
+
+/-- The solution of a Lyapunov equation with symmetric right-hand side is symmetric. -/
+lemma transCLM_eq_of_lyapOp {d : ℕ} (A : Matrix (Fin d) (Fin d) ℝ) {η : ℝ} (hη : 0 < η)
+    (hA : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ (A *ᵥ x)) {Γ b : Mat d} (hΓ : transCLM Γ = Γ)
+    (hb : lyapOp A b = Γ) : transCLM b = b := by
+  have h1 : lyapOp A (transCLM b) = Γ := by
+    rw [lyapOp_eq, ← transCLM_rmul, ← transCLM_lmul, add_comm, ← map_add, ← lyapOp_eq, hb, hΓ]
+  have h2 : lyapOp A (transCLM b - b) = 0 := by rw [map_sub, h1, hb, sub_self]
+  have := lyapOp_coercive A hA (transCLM b - b)
+  rw [h2, inner_zero_left] at this
+  have h3 : ‖transCLM b - b‖ ^ 2 ≤ 0 := by nlinarith [sq_nonneg ‖transCLM b - b‖]
+  exact sub_eq_zero.mp (norm_eq_zero.mp (by nlinarith [norm_nonneg (transCLM b - b)]))
+
+/-- Corollary 2.2 of `docs/two-time-scale-covariance.md`: eliminating `Σ₁₂` and `Σ₂₂`, the slow
+covariance solves the Lyapunov equation with the covariance
+`Γ₁₁ - F Γ₂₁ - Γ₁₂ Fᵀ + F Γ₂₂ Fᵀ` of the effective noise `V - F W`, `F = A₁₂ A₂₂⁻¹`. -/
+theorem effective_lyapunov {d₁ d₂ : ℕ} (A₁₂ : Matrix (Fin d₁) (Fin d₂) ℝ)
+    (A₂₂ G : Matrix (Fin d₂) (Fin d₂) ℝ) (hG : G * A₂₂ = 1) (L : Mat d₁ →L[ℝ] Mat d₁)
+    {Γ₁₁ : Mat d₁} {Γ₁₂ : Rect d₁ d₂} {Γ₂₂ : Mat d₂} {a : Mat d₁} {c : Rect d₁ d₂} {b : Mat d₂}
+    (hbsym : transCLM b = b) (hb : lyapOp A₂₂ b = Γ₂₂) (hc : rmul A₂₂ c + lmul A₁₂ b = Γ₁₂)
+    (ha : L a + coupleCLM A₁₂ c = Γ₁₁) :
+    L a = Γ₁₁ - lmul (A₁₂ * G) (transCLM Γ₁₂) - rmul (A₁₂ * G) Γ₁₂
+      + lmul (A₁₂ * G) (rmul (A₁₂ * G) Γ₂₂) := by
+  have hF : A₁₂ * G * A₂₂ = A₁₂ := by rw [Matrix.mul_assoc, hG, Matrix.mul_one]
+  have hc' : c = rmul G Γ₁₂ - lmul A₁₂ (rmul G b) := by
+    have h1 : rmul A₂₂ c = Γ₁₂ - lmul A₁₂ b := by rw [← hc]; abel
+    calc c = rmul (G * A₂₂) c := by rw [hG, rmul_one]
+      _ = rmul G (rmul A₂₂ c) := (rmul_rmul G A₂₂ c).symm
+      _ = _ := by rw [h1, map_sub, lmul_rmul_comm]
+  have t2 : lmul A₁₂ (transCLM c) = lmul (A₁₂ * G) (transCLM Γ₁₂)
+      - rmul A₁₂ (lmul (A₁₂ * G) b) := by
+    rw [hc', map_sub, transCLM_rmul, transCLM_lmul, transCLM_rmul, hbsym, map_sub, lmul_lmul,
+      lmul_rmul_comm, lmul_lmul]
+  have t3 : rmul A₁₂ c = rmul (A₁₂ * G) Γ₁₂ - lmul A₁₂ (rmul (A₁₂ * G) b) := by
+    rw [hc', map_sub, rmul_rmul, ← lmul_rmul_comm, rmul_rmul]
+  have t4 : lmul (A₁₂ * G) (rmul (A₁₂ * G) Γ₂₂) =
+      lmul A₁₂ (rmul (A₁₂ * G) b) + rmul A₁₂ (lmul (A₁₂ * G) b) := by
+    rw [← hb, lyapOp_eq, map_add, map_add, rmul_rmul, hF, lmul_rmul_comm (A₁₂ * G) (A₁₂ * G),
+      lmul_lmul, hF, lmul_rmul_comm, lmul_rmul_comm A₁₂ (A₁₂ * G)]
+  have hL : L a = Γ₁₁ - coupleCLM A₁₂ c := by rw [← ha]; abel
+  rw [hL, coupleCLM_apply, t2, t3, t4]
+  abel
 
 end StochasticApproximation

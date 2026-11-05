@@ -352,6 +352,11 @@ $V_k - A_{12}A_{22}^{-1}W_k$ has the Poisson decomposition with martingale part
 $M_{k+1} - A_{12}A_{22}^{-1}M'_{k+1}$, whose covariance tends to $\tilde\Gamma$.
 \qed
 
+\noindent\emph{Lean:} \texttt{effective\_lyapunov} (the algebra, using that $\Sigma_{22}$ is
+symmetric, \texttt{transCLM\_eq\_of\_lyapOp}) and \texttt{tendsto\_two\_time\_scale\_slow}
+(the corollary as a limit statement, with $A_{22}^{-1}$ given as a matrix $G$ with
+$GA_{22} = I$).
+
 %======================================================================
 \section{What remains}
 %======================================================================

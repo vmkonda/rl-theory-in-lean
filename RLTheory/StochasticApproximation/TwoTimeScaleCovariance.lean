@@ -1927,4 +1927,56 @@ theorem tendsto_two_time_scale_covariance [IsProbabilityMeasure μ] {β γ : ℕ
     rw [add_zero] at this
     exact this.congr fun k => by abel
 
+/-- **Corollary 2.2 of `docs/two-time-scale-covariance.md`** (Konda 2002, Thm 7.8, for Markov
+noise). The slow iterate of the two-time-scale iteration has the asymptotic covariance of the
+single-time-scale iteration `x' = x - β Δ x + β (V - F W)` with `F = A₁₂ A₂₂⁻¹`:
+`β⁻¹ E[x xᵀ] → Σ` with `(Δ - β̄/2) Σ + Σ (Δ - β̄/2)ᵀ = Γ₁₁ - F Γ₂₁ - Γ₁₂ Fᵀ + F Γ₂₂ Fᵀ`. -/
+theorem tendsto_two_time_scale_slow [IsProbabilityMeasure μ] {β γ : ℕ → ℝ} {βbar : ℝ}
+    (hβ : StepSizeRate β βbar) (hγ : StepSizeRate γ 0)
+    (hβγ : Tendsto (fun k => β k / γ k) atTop (𝓝 0))
+    (hγβ : Tendsto (fun k => γ k ^ 2 / β k) atTop (𝓝 0))
+    (A₁₁ : Matrix (Fin d₁) (Fin d₁) ℝ) (A₁₂ : Matrix (Fin d₁) (Fin d₂) ℝ)
+    (A₂₁ : Matrix (Fin d₂) (Fin d₁) ℝ) (A₂₂ G : Matrix (Fin d₂) (Fin d₂) ℝ)
+    (hG : G * A₂₂ = 1) {η : ℝ} (hη : 0 < η)
+    (hΔ : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A₁₁ - A₁₂ * (G * A₂₁) - (βbar / 2) • 1) *ᵥ x))
+    (hA₂₂ : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ (A₂₂ *ᵥ x))
+    (ℱ : MeasureTheory.Filtration ℕ m0) {x M h : ℕ → Ω → E d₁} {y M' g : ℕ → Ω → E d₂}
+    (hrec : TTSRecursion A₁₁ A₁₂ A₂₁ A₂₂ β γ x M h y M' g)
+    (hx0 : StronglyMeasurable[ℱ 0] (x 0)) (hx0L : MemLp (x 0) 2 μ)
+    (hy0 : StronglyMeasurable[ℱ 0] (y 0)) (hy0L : MemLp (y 0) 2 μ)
+    (hh : ∀ k, StronglyMeasurable[ℱ k] (h k)) (hhL : ∀ k, MemLp (h k) 2 μ)
+    (hhB : ∃ C, ∀ k, ∫ ω, ‖h k ω‖ ^ 2 ∂μ ≤ C)
+    (hg : ∀ k, StronglyMeasurable[ℱ k] (g k)) (hgL : ∀ k, MemLp (g k) 2 μ)
+    (hgB : ∃ C, ∀ k, ∫ ω, ‖g k ω‖ ^ 2 ∂μ ≤ C)
+    (hM : ∀ k, StronglyMeasurable[ℱ (k + 1)] (M (k + 1))) (hML : ∀ k, MemLp (M (k + 1)) 2 μ)
+    (hMB : ∃ C, ∀ k, ∫ ω, ‖M (k + 1) ω‖ ^ 2 ∂μ ≤ C)
+    (hM' : ∀ k, StronglyMeasurable[ℱ (k + 1)] (M' (k + 1)))
+    (hM'L : ∀ k, MemLp (M' (k + 1)) 2 μ) (hM'B : ∃ C, ∀ k, ∫ ω, ‖M' (k + 1) ω‖ ^ 2 ∂μ ≤ C)
+    (hmart : ∀ k j, μ[fun ω => M (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
+    (hmart' : ∀ k j, μ[fun ω => M' (k + 1) ω j | ℱ k] =ᵐ[μ] 0)
+    {Γ₁₁ : Mat d₁} {Γ₁₂ : Rect d₁ d₂} {Γ₂₂ : Mat d₂}
+    (hΓ₁₁ : Tendsto (fun k => secondMoment μ (M (k + 1))) atTop (𝓝 Γ₁₁))
+    (hΓ₁₂ : Tendsto (fun k => crossMoment μ (M (k + 1)) (M' (k + 1))) atTop (𝓝 Γ₁₂))
+    (hΓ₂₂ : Tendsto (fun k => secondMoment μ (M' (k + 1))) atTop (𝓝 Γ₂₂)) :
+    ∃ Sig, lyapOp (A₁₁ - A₁₂ * (G * A₂₁) - (βbar / 2) • 1) Sig =
+        Γ₁₁ - lmul (A₁₂ * G) (transCLM Γ₁₂) - rmul (A₁₂ * G) Γ₁₂
+          + lmul (A₁₂ * G) (rmul (A₁₂ * G) Γ₂₂) ∧
+      Tendsto (fun k => (β k)⁻¹ • secondMoment μ (x k)) atTop (𝓝 Sig) := by
+  have hD : A₂₂ * (G * A₂₁) = A₂₁ := by
+    have hG' : A₂₂ * G = 1 := Matrix.mul_eq_one_comm.mp hG
+    rw [← Matrix.mul_assoc, hG', Matrix.one_mul]
+  obtain ⟨a, c, b, hb, hc, ha, hlim, -, -⟩ := tendsto_two_time_scale_covariance hβ hγ hβγ hγβ
+    A₁₁ A₁₂ A₂₁ A₂₂ (G * A₂₁) hD hη hΔ hA₂₂ ℱ hrec hx0 hx0L hy0 hy0L hh hhL hhB hg hgL hgB hM hML
+    hMB hM' hM'L hM'B hmart hmart' hΓ₁₁ hΓ₁₂ hΓ₂₂
+  have hΓsym : transCLM Γ₂₂ = Γ₂₂ := by
+    have h1 : Tendsto (fun k => transCLM (secondMoment μ (M' (k + 1)))) atTop
+        (𝓝 (transCLM Γ₂₂)) := (transCLM.continuous.tendsto _).comp hΓ₂₂
+    have h2 : (fun k => transCLM (secondMoment μ (M' (k + 1)))) =
+        fun k => secondMoment μ (M' (k + 1)) := by
+      funext k; exact (crossMoment_swap (hM'L k) (hM'L k)).symm
+    rw [h2] at h1
+    exact tendsto_nhds_unique h1 hΓ₂₂
+  have hbsym := transCLM_eq_of_lyapOp A₂₂ hη hA₂₂ hΓsym hb
+  exact ⟨a, effective_lyapunov A₁₂ A₂₂ G hG _ hbsym hb hc ha, hlim⟩
+
 end StochasticApproximation
