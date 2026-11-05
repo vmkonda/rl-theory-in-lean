@@ -163,8 +163,10 @@ For a chain sampled under $`\pi_{\theta_k}`$, the noise is decomposed with the P
 
 **Theorem 2.5** (Two time scales). Consider the actor-critic iteration in the deviations $`x_k = \theta_k - \hat\theta`$ and $`y_k = r_k - \hat r`$:
 ``` math
-x_{k+1} = x_k + \beta_k\big(F_1(x_k,y_k) + m_{k+1} + r^1_k + h_k - h_{k+1}\big),\qquad
-  y_{k+1} = y_k + \gamma_k\big(F_2(x_k,y_k) + m'_{k+1} + r^2_k + g_k - g_{k+1}\big).
+\begin{align*}
+  x_{k+1} &= x_k + \beta_k\big(F_1(x_k,y_k) + m_{k+1} + r^1_k + h_k - h_{k+1}\big),\\
+  y_{k+1} &= y_k + \gamma_k\big(F_2(x_k,y_k) + m'_{k+1} + r^2_k + g_k - g_{k+1}\big).
+\end{align*}
 ```
 Suppose that:
 

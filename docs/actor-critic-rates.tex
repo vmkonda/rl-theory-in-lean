@@ -231,10 +231,10 @@ perturbation $c_k$ with $\E\|c_k\|^2 = O(\beta_k^4)$, and the shift does not cha
 
 \begin{theorem}[Two time scales]\label{thm:lintts}
 Consider the actor-critic iteration in the deviations $x_k = \theta_k - \hat\theta$ and $y_k = r_k - \hat r$:
-\[
-  x_{k+1} = x_k + \beta_k\big(F_1(x_k,y_k) + m_{k+1} + r^1_k + h_k - h_{k+1}\big),\qquad
-  y_{k+1} = y_k + \gamma_k\big(F_2(x_k,y_k) + m'_{k+1} + r^2_k + g_k - g_{k+1}\big).
-\]
+\begin{align*}
+  x_{k+1} &= x_k + \beta_k\big(F_1(x_k,y_k) + m_{k+1} + r^1_k + h_k - h_{k+1}\big),\\
+  y_{k+1} &= y_k + \gamma_k\big(F_2(x_k,y_k) + m'_{k+1} + r^2_k + g_k - g_{k+1}\big).
+\end{align*}
 Suppose that:
 \begin{itemize}
 \item $F(x,y) = -A(x,y) + O(\|x\|^2 + \|y\|^2)$;
