@@ -4,6 +4,7 @@ SPDX-License-Identifier: MIT
 import RLTheory.MarkovDecisionProcess.CriticTheorems
 import RLTheory.MarkovDecisionProcess.RestartProcess
 import RLTheory.StochasticApproximation.LookbackMonotone
+import RLTheory.StochasticApproximation.RateComparison
 
 /-!
 # Theorem 4.7 for the restart chain
@@ -30,6 +31,10 @@ noise plus `δ W_k` (`tdlam_noise_split`, with the gain of `tdlam_gain`).
 * `restart_actor_one`, `restart_actor_covariance_mono`: the merged theorem. The linearized actor
   with the TD(`λ`) critic noise has `β_k⁻¹ E[θ_k θ_kᵀ] → Σ_λ`, the Lyapunov solution for
   `Γ̃(λ) = Γ_M + Γ_D(λ)`, and `Γ̃(λ₁) ≼ Γ̃(λ₂)`.
+* `exists_preaction_poisson`: the TD(0) noise splits into a martingale part and a Poisson shift
+  known before the action, when its stationary mean is zero.
+* `restart_actor_loss_mono`: Theorem 4.7 from the model, with the loss: `Γ̃(λ₁) ≼ Γ̃(λ₂)` and
+  `ℓ*(λ₁) ≤ ℓ*(λ₂)` (through `optLoss_mono_of_quad`).
 -/
 
 open Finset Real Filter Topology MeasureTheory RLTheory Matrix
@@ -479,6 +484,43 @@ theorem stationary_unique_restart (hpol : ∀ s, ∑ a, M.pol s a = 1)
   simp only [hdd] at this
   linarith
 
+omit [DecidableEq S] [DecidableEq Ac] [MeasurableSpace S] [DiscreteMeasurableSpace S]
+  [MeasurableSpace Ac] [DiscreteMeasurableSpace Ac] [IsProbabilityMeasure μ] in
+/-- A limit of second moments is symmetric. -/
+lemma symm_of_tendsto_secondMoment {n : ℕ} {f : ℕ → Ω → E n} (hL : ∀ k, MemLp (f k) 2 μ)
+    {Γ : Mat n} (h : Tendsto (fun k => secondMoment μ (f k)) atTop (𝓝 Γ)) (i j : Fin n) :
+    Γ (i, j) = Γ (j, i) := by
+  have h1 := ((EuclideanSpace.proj (𝕜 := ℝ) (i, j)).continuous.tendsto _).comp h
+  have h2 := ((EuclideanSpace.proj (𝕜 := ℝ) (j, i)).continuous.tendsto _).comp h
+  refine tendsto_nhds_unique h1 (h2.congr fun k => ?_)
+  show secondMoment μ (f k) (j, i) = secondMoment μ (f k) (i, j)
+  rw [secondMoment, crossMoment_apply (hL k) (hL k), crossMoment_apply (hL k) (hL k)]
+  exact integral_congr_ae (Eventually.of_forall fun ω => mul_comm _ _)
+
+omit [Fintype S] [Fintype Ac] [DecidableEq S] [DecidableEq Ac] [MeasurableSpace S]
+  [DiscreteMeasurableSpace S] [MeasurableSpace Ac] [DiscreteMeasurableSpace Ac]
+  [IsProbabilityMeasure μ] in
+/-- **The loss comparison.** If `Γ₂ - Γ₁` is symmetric with nonnegative quadratic form, then the
+optimal-gain loss of Proposition 4.3 is smaller for `Γ₁`, for every `H_J ⪰ 0`. -/
+lemma optLoss_mono_of_quad {n : ℕ} {Γ₁ Γ₂ : Mat n}
+    (hsym : ∀ i j, Γ₂ (i, j) - Γ₁ (i, j) = Γ₂ (j, i) - Γ₁ (j, i))
+    (hq : ∀ v : Fin n → ℝ, ∑ i, ∑ j, v i * v j * Γ₁ (i, j) ≤ ∑ i, ∑ j, v i * v j * Γ₂ (i, j))
+    {HJ Hinv : Matrix (Fin n) (Fin n) ℝ} (hHJ : HJ.PosSemidef) :
+    optLoss HJ Hinv (Matrix.of fun i j => Γ₁ (i, j)) ≤
+      optLoss HJ Hinv (Matrix.of fun i j => Γ₂ (i, j)) := by
+  refine optLoss_mono hHJ ⟨?_, fun x => ?_⟩
+  · ext i j
+    simp only [conjTranspose_apply, sub_apply, of_apply, star_trivial]
+    exact (hsym j i)
+  · have e : star x ⬝ᵥ ((Matrix.of fun i j => Γ₂ (i, j)) - Matrix.of fun i j => Γ₁ (i, j)) *ᵥ x
+        = ∑ i, ∑ j, x i * x j * Γ₂ (i, j) - ∑ i, ∑ j, x i * x j * Γ₁ (i, j) := by
+      simp only [star_trivial, dotProduct, mulVec, sub_apply, of_apply, mul_sum,
+        ← sum_sub_distrib]
+      exact sum_congr rfl fun i _ => sum_congr rfl fun j _ => by ring
+    rw [e]
+    linarith [hq x]
+
+
 set_option maxHeartbeats 8000000 in
 /-- **One actor iteration with the TD(`λ`) critic.** The linearized actor
 `θ_{k+1} = θ_k - β_k A θ_k + β_k (V(s_k) ψ_k + δ_{k+1} (z^ψ_k - K_λ z^e_k))`, with the gain
@@ -690,6 +732,7 @@ theorem restart_actor_covariance_mono {𝒢 ℋ : MeasureTheory.Filtration ℕ m
       Tendsto (fun k => (β k)⁻¹ • secondMoment μ (θ₁ k)) atTop (𝓝 Sig₁) ∧
       lyapOp (A - (βbar / 2) • 1) Sig₂ = ΓM + Γ₂ ∧
       Tendsto (fun k => (β k)⁻¹ • secondMoment μ (θ₂ k)) atTop (𝓝 Sig₂) ∧
+      (∀ i j, Γ₁ (i, j) = Γ₁ (j, i)) ∧ (∀ i j, Γ₂ (i, j) = Γ₂ (j, i)) ∧
       ∀ v : Fin n → ℝ, 0 ≤ ∑ i, ∑ j, v i * v j * Γ₁ (i, j) ∧
         ∑ i, ∑ j, v i * v j * Γ₁ (i, j) ≤ ∑ i, ∑ j, v i * v j * Γ₂ (i, j) := by
   obtain ⟨ν', hν', hνm', hlaw'⟩ := M.tendsto_law_restart hY hkap0 hpol0 hpol hrest hγ0 hγ1 hγ
@@ -733,8 +776,191 @@ theorem restart_actor_covariance_mono {𝒢 ℋ : MeasureTheory.Filtration ℕ m
   obtain ⟨Sig₂, hS₂, hT₂⟩ := M.restart_actor_one hc hflag hc0 hcf0 hcf1 ψ b V δ Φ hΦ hδ hh hhL
     hhB hN0 hβ A hη hA (hl0.trans hl12) hl2 hz0₂ hze0₂ hzψ₂ hze₂ hθ0₂ hθ0L₂ hθ₂ hΓM hm0₂ hconv₂
     hΓ₂
-  exact ⟨_, Γ₁, Γ₂, Sig₁, Sig₂, hS₁, hT₁, hS₂, hT₂, hmono⟩
+  have hDL : ∀ (W : ℕ → Ω → E n), (∀ k, StronglyMeasurable[𝒢 k] (W k)) →
+      (∀ k, ∃ C, ∀ ω, ‖W k ω‖ ≤ C) →
+      ∀ k, MemLp (fun ω => δ ((fs k ω).2, a k ω, fs (k + 1) ω) • W k ω) 2 μ := by
+    intro W hWm hWB k
+    obtain ⟨C, hC⟩ := hWB k
+    refine MemLp.of_bound (((hσ.stronglyMeasurable_obs δ k).smul
+      ((hWm k).mono (𝒢.mono k.le_succ))).mono (𝒢.le (k + 1))).aestronglyMeasurable
+      ((∑ x, |δ x|) * C) (Eventually.of_forall fun ω => ?_)
+    rw [norm_smul, Real.norm_eq_abs]
+    exact mul_le_mul (single_le_sum (f := fun x => |δ x|) (fun _ _ => abs_nonneg _)
+      (mem_univ _)) (hC ω) (norm_nonneg _) (sum_nonneg fun _ _ => abs_nonneg _)
+  exact ⟨_, Γ₁, Γ₂, Sig₁, Sig₂, hS₁, hT₁, hS₂, hT₂,
+    symm_of_tendsto_secondMoment (hDL _ hW₁m hW₁B) hΓ₁,
+    symm_of_tendsto_secondMoment (hDL _ hW₂m hW₂B) hΓ₂, hmono⟩
 
+
+omit [DecidableEq S] [DecidableEq Ac] [MeasurableSpace S] [DiscreteMeasurableSpace S]
+  [MeasurableSpace Ac] [DiscreteMeasurableSpace Ac] [IsProbabilityMeasure μ] in
+lemma sum_kap_one (hQ1 : ∀ y, ∑ y', M.Q y y' = 1) (hpol : ∀ s, ∑ a, M.pol s a = 1)
+    (y : Bool × S × Ac) : ∑ f, ∑ s', M.kap y f s' = 1 := by
+  rw [← hQ1 y, sum_prod3]
+  refine sum_congr rfl fun f _ => sum_congr rfl fun s' _ => ?_
+  simp only [Q, ← mul_sum, hpol, mul_one]
+
+omit [DecidableEq Ac] [MeasurableSpace S] [DiscreteMeasurableSpace S] [MeasurableSpace Ac]
+  [DiscreteMeasurableSpace Ac] [IsProbabilityMeasure μ] in
+/-- Vector sums against the pre-action kernel. -/
+lemma sum_preaction_kernel_smul {n : ℕ} (s : S) (G : S × Ac × (Bool × S) → E n) :
+    ∑ x, ((if x.1 = s then 1 else 0) * (M.pol s x.2.1 * M.kap (false, s, x.2.1) x.2.2.1 x.2.2.2))
+      • G x = ∑ a, ∑ f, ∑ s', (M.pol s a * M.kap (false, s, a) f s') • G (s, a, (f, s')) := by
+  simp only [Fintype.sum_prod_type]
+  rw [Finset.sum_eq_single s (fun s₀ _ h => by simp [h]) (by simp)]
+  simp
+
+omit [DecidableEq Ac] [MeasurableSpace S] [DiscreteMeasurableSpace S] [MeasurableSpace Ac]
+  [DiscreteMeasurableSpace Ac] [IsProbabilityMeasure μ] in
+/-- **The Poisson equation of the pre-action chain.** For a function `G(s_k, a_k, f_{k+1}, s_{k+1})`
+with stationary mean zero, there is `ĥ : S → E n` with `ĥ(s) = E[G + ĥ(s_{k+1}) | s_k = s]`. It
+comes from `exists_poisson_h` on the chain of pairs, averaged over the action: the Poisson
+solution does not depend on the flag when the step law does not. -/
+theorem exists_preaction_poisson (hkap0 : ∀ y f s, 0 ≤ M.kap y f s)
+    (hpol0 : ∀ s a, 0 ≤ M.pol s a) (hpol : ∀ s, ∑ a, M.pol s a = 1)
+    (hrest : ∀ y₁ y₂ s, M.kap y₁ true s = M.kap y₂ true s)
+    (hflag : ∀ f₁ f₂ s a, M.kap (f₁, s, a) = M.kap (f₂, s, a)) {γ : ℝ} (hγ1 : γ < 1)
+    (hγ : ∀ y, ∑ s', M.kap y false s' ≤ γ)
+    {ν : Bool × S × Ac → ℝ} (hν : ∀ y', ∑ y, ν y * M.Q y y' = ν y') (hνm : ∑ y, ν y = 1)
+    {n : ℕ} (G : S × Ac × (Bool × S) → E n)
+    (hmean : ∑ y, ν y • ∑ y', M.Q y y' • G (y.2.1, y.2.2, (y'.1, y'.2.1)) = 0) :
+    ∃ hS : S → E n, ∀ s, hS s = ∑ x : S × Ac × (Bool × S), ((if x.1 = s then 1 else 0) *
+      (M.pol s x.2.1 * M.kap (false, s, x.2.1) x.2.2.1 x.2.2.2)) • (G x + hS x.2.2.2) := by
+  obtain ⟨hh, hhh⟩ := M.exists_poisson_h hkap0 hpol0 hpol hrest hγ1 hγ hν hνm (p := 0)
+    (fun _ => 0) (fun y y' => G (y.2.1, y.2.2, (y'.1, y'.2.1))) 0 (by simpa using hmean)
+  have hh' : ∀ y, hh y = ∑ y', M.Q y y' • (G (y.2.1, y.2.2, (y'.1, y'.2.1)) + hh y') := fun y => by
+    simpa using hhh y
+  -- `hh` does not depend on the flag
+  have hQf : ∀ f s a y', M.Q (f, s, a) y' = M.Q (false, s, a) y' := fun f s a y' => by
+    simp only [Q, hflag f false s a]
+  have hhf : ∀ f s a, hh (f, s, a) = hh (false, s, a) := fun f s a => by
+    rw [hh' (f, s, a), hh' (false, s, a)]
+    exact sum_congr rfl fun y' _ => by rw [hQf]
+  refine ⟨fun s => ∑ a, M.pol s a • hh (false, s, a), fun s => ?_⟩
+  rw [M.sum_preaction_kernel_smul s (fun x => G x + ∑ a, M.pol x.2.2.2 a • hh (false, x.2.2.2, a))]
+  refine sum_congr rfl fun a _ => ?_
+  rw [hh' (false, s, a), smul_sum, sum_prod3]
+  refine sum_congr rfl fun f _ => sum_congr rfl fun s₁ _ => ?_
+  dsimp only
+  calc ∑ a₁, M.pol s a • M.Q (false, s, a) (f, s₁, a₁) • (G (s, a, f, s₁) + hh (f, s₁, a₁))
+      = ∑ a₁, (M.pol s a * M.kap (false, s, a) f s₁) • (M.pol s₁ a₁ •
+          (G (s, a, f, s₁) + hh (false, s₁, a₁))) := sum_congr rfl fun a₁ _ => by
+        rw [hhf, smul_smul, smul_smul, Q]
+        congr 1
+        ring
+    _ = (M.pol s a * M.kap (false, s, a) f s₁) • (G (s, a, f, s₁)
+          + ∑ a₁, M.pol s₁ a₁ • hh (false, s₁, a₁)) := by
+        rw [← smul_sum]
+        congr 1
+        rw [sum_congr rfl fun a₁ _ => smul_add _ _ _, sum_add_distrib, ← sum_smul, hpol, one_smul]
+
+
+
+
+set_option maxHeartbeats 16000000 in
+/-- **Theorem 4.7 from the model, with the loss.** As `restart_actor_covariance_mono`, but the
+decomposition of the TD(0) noise `V ψ + δ (ψ + b(s))` into a martingale part and a Poisson shift
+is derived (`exists_preaction_poisson`) from its stationary mean being zero, which holds at
+the actor's stationary point `θ*`. Then `Γ̃(λ₁) ≼ Γ̃(λ₂)`, and the optimal-gain loss of
+Proposition 4.3 is nondecreasing in `λ`: `ℓ*(λ₁) ≤ ℓ*(λ₂)` for every `H_J ⪰ 0`. -/
+theorem restart_actor_loss_mono {𝒢 ℋ : MeasureTheory.Filtration ℕ m0}
+    {fs : ℕ → Ω → Bool × S} {a : ℕ → Ω → Ac} (hc : TwoStageChain μ 𝒢 ℋ fs a M.pol M.kap)
+    (hY : FiniteMarkov μ ℋ (fun k ω => ((fs k ω).1, (fs k ω).2, a k ω)) M.Q)
+    (hkap0 : ∀ y f s, 0 ≤ M.kap y f s) (hpol0 : ∀ s a, 0 ≤ M.pol s a)
+    (hpol : ∀ s, ∑ a, M.pol s a = 1) (hrest : ∀ y₁ y₂ s, M.kap y₁ true s = M.kap y₂ true s)
+    (hpos : ∀ y s, 0 < M.kap y true s)
+    (hflag : ∀ f₁ f₂ s a, M.kap (f₁, s, a) = M.kap (f₂, s, a))
+    (hc0 : ∀ s, M.c true s = 0) (hcf0 : ∀ s, 0 ≤ M.c false s) (hcf1 : ∀ s, M.c false s ≤ 1)
+    {γ : ℝ} (hγ0 : 0 ≤ γ) (hγ1 : γ < 1) (hγ : ∀ y, ∑ s', M.kap y false s' ≤ γ)
+    {n : ℕ} (ψ : S → Ac → E n) (V : S → ℝ) (δ : S × Ac × (Bool × S) → ℝ)
+    {ν : Bool × S × Ac → ℝ} (hν : ∀ y', ∑ y, ν y * M.Q y y' = ν y') (hνm : ∑ y, ν y = 1)
+    {mZ : Bool × S × Ac → E n} (hmZ : M.TraceMoment ν 1 (fun y => ψ y.2.1 y.2.2) mZ)
+    (hδ : ∀ s, ∑ x : S × Ac × (Bool × S), ((if x.1 = s then 1 else 0) *
+      (M.pol s x.2.1 * M.kap (false, s, x.2.1) x.2.2.1 x.2.2.2)) * δ x = 0)
+    (hmean : ∑ y, ν y • ∑ y', M.Q y y' •
+      (V y.2.1 • ψ y.2.1 y.2.2 + δ (y.2.1, y.2.2, (y'.1, y'.2.1)) •
+        (ψ y.2.1 y.2.2 + carryMean ν (fun y => ψ y.2.1 y.2.2) mZ y.2.1)) = 0)
+    {β : ℕ → ℝ} {βbar : ℝ} (hβ : StepSizeRate β βbar) (A : Matrix (Fin n) (Fin n) ℝ) {η : ℝ}
+    (hη : 0 < η) (hA : ∀ x, η * (x ⬝ᵥ x) ≤ x ⬝ᵥ ((A - (βbar / 2) • 1) *ᵥ x))
+    {l₁ l₂ : ℝ} (hl0 : 0 ≤ l₁) (hl12 : l₁ ≤ l₂) (hl2 : l₂ ≤ 1)
+    {zψ₁ zψ₂ : ℕ → Ω → E n} {ze₁ ze₂ : ℕ → Ω → S → ℝ}
+    (hz0₁ : ∀ ω, zψ₁ 0 ω = ψ (fs 0 ω).2 (a 0 ω))
+    (hze0₁ : ∀ ω t, ze₁ 0 ω t = if (fs 0 ω).2 = t then 1 else 0)
+    (hzψ₁ : ∀ k ω, zψ₁ (k + 1) ω = ψ (fs (k + 1) ω).2 (a (k + 1) ω)
+      + (l₁ * M.c (fs (k + 1) ω).1 (fs (k + 1) ω).2) • zψ₁ k ω)
+    (hze₁ : ∀ k ω t, ze₁ (k + 1) ω t = (if (fs (k + 1) ω).2 = t then 1 else 0)
+      + l₁ * M.c (fs (k + 1) ω).1 (fs (k + 1) ω).2 * ze₁ k ω t)
+    (hz0₂ : ∀ ω, zψ₂ 0 ω = ψ (fs 0 ω).2 (a 0 ω))
+    (hze0₂ : ∀ ω t, ze₂ 0 ω t = if (fs 0 ω).2 = t then 1 else 0)
+    (hzψ₂ : ∀ k ω, zψ₂ (k + 1) ω = ψ (fs (k + 1) ω).2 (a (k + 1) ω)
+      + (l₂ * M.c (fs (k + 1) ω).1 (fs (k + 1) ω).2) • zψ₂ k ω)
+    (hze₂ : ∀ k ω t, ze₂ (k + 1) ω t = (if (fs (k + 1) ω).2 = t then 1 else 0)
+      + l₂ * M.c (fs (k + 1) ω).1 (fs (k + 1) ω).2 * ze₂ k ω t)
+    {θ₁ θ₂ : ℕ → Ω → E n}
+    (hθ0₁ : StronglyMeasurable[𝒢 0] (θ₁ 0)) (hθ0L₁ : MemLp (θ₁ 0) 2 μ)
+    (hθ₁ : ∀ k ω, θ₁ (k + 1) ω = θ₁ k ω - β k • matCLM A (θ₁ k ω) + β k •
+      (V (fs k ω).2 • ψ (fs k ω).2 (a k ω) + δ ((fs k ω).2, a k ω, fs (k + 1) ω) •
+        (zψ₁ k ω - ∑ t, ze₁ k ω t • (-(1 - l₁) • carryMean ν (fun y => ψ y.2.1 y.2.2) mZ t))))
+    (hθ0₂ : StronglyMeasurable[𝒢 0] (θ₂ 0)) (hθ0L₂ : MemLp (θ₂ 0) 2 μ)
+    (hθ₂ : ∀ k ω, θ₂ (k + 1) ω = θ₂ k ω - β k • matCLM A (θ₂ k ω) + β k •
+      (V (fs k ω).2 • ψ (fs k ω).2 (a k ω) + δ ((fs k ω).2, a k ω, fs (k + 1) ω) •
+        (zψ₂ k ω - ∑ t, ze₂ k ω t • (-(1 - l₂) • carryMean ν (fun y => ψ y.2.1 y.2.2) mZ t)))) :
+    ∃ ΓM Γ₁ Γ₂ Sig₁ Sig₂ : Mat n,
+      lyapOp (A - (βbar / 2) • 1) Sig₁ = ΓM + Γ₁ ∧
+      Tendsto (fun k => (β k)⁻¹ • secondMoment μ (θ₁ k)) atTop (𝓝 Sig₁) ∧
+      lyapOp (A - (βbar / 2) • 1) Sig₂ = ΓM + Γ₂ ∧
+      Tendsto (fun k => (β k)⁻¹ • secondMoment μ (θ₂ k)) atTop (𝓝 Sig₂) ∧
+      (∀ v : Fin n → ℝ, ∑ i, ∑ j, v i * v j * (ΓM + Γ₁) (i, j) ≤
+        ∑ i, ∑ j, v i * v j * (ΓM + Γ₂) (i, j)) ∧
+      ∀ HJ Hinv : Matrix (Fin n) (Fin n) ℝ, HJ.PosSemidef →
+        optLoss HJ Hinv (Matrix.of fun i j => (ΓM + Γ₁) (i, j)) ≤
+          optLoss HJ Hinv (Matrix.of fun i j => (ΓM + Γ₂) (i, j)) := by
+  set b := carryMean ν (fun y => ψ y.2.1 y.2.2) mZ with hb
+  set G : S × Ac × (Bool × S) → E n := fun x => V x.1 • ψ x.1 x.2.1 + δ x • (ψ x.1 x.2.1 + b x.1)
+    with hG
+  obtain ⟨hS, hhS⟩ := M.exists_preaction_poisson hkap0 hpol0 hpol hrest hflag hγ1 hγ hν hνm G hmean
+  have hP1 : ∀ s, ∑ x : S × Ac × (Bool × S), (if x.1 = s then 1 else 0) *
+      (M.pol s x.2.1 * M.kap (false, s, x.2.1) x.2.2.1 x.2.2.2) = 1 := fun s => by
+    have := M.sum_preaction_kernel s (fun _ => 1)
+    simp only [mul_one] at this
+    rw [this]
+    calc ∑ a', ∑ f, ∑ s', M.pol s a' * M.kap (false, s, a') f s'
+        = ∑ a', M.pol s a' * ∑ f, ∑ s', M.kap (false, s, a') f s' := sum_congr rfl fun a' _ => by
+          simp only [mul_sum]
+      _ = 1 := by
+          simp only [M.sum_kap_one hY.stochastic hpol, mul_one, hpol]
+  set Φ : S → S × Ac × (Bool × S) → E n := fun s x => G x + hS x.2.2.2 - hS s with hΦd
+  have hΦ : ∀ s, ∑ x : S × Ac × (Bool × S), ((if x.1 = s then 1 else 0) *
+      (M.pol s x.2.1 * M.kap (false, s, x.2.1) x.2.2.1 x.2.2.2)) • Φ s x = 0 := fun s => by
+    simp only [hΦd, smul_sub, sum_sub_distrib, ← sum_smul, hP1, one_smul]
+    rw [← hhS s, sub_self]
+  set CS := ∑ t, ‖hS t‖ with hCS
+  have hSb : ∀ t, ‖hS t‖ ≤ CS := fun t =>
+    single_le_sum (f := fun t => ‖hS t‖) (fun _ _ => norm_nonneg _) (mem_univ t)
+  have hhm : ∀ k, StronglyMeasurable[𝒢 k] (fun ω => hS (fs k ω).2) := fun k =>
+    (StronglyMeasurable.of_discrete (f := hS)).comp_measurable (measurable_snd.comp (hc.meas_fs k))
+  have hhL : ∀ k, MemLp (fun ω => hS (fs k ω).2) 2 μ := fun k =>
+    MemLp.of_bound ((hhm k).mono (𝒢.le k)).aestronglyMeasurable CS
+      (Eventually.of_forall fun ω => hSb _)
+  have hhB : ∃ Ch, ∀ k, ∫ ω, ‖hS (fs k ω).2‖ ^ 2 ∂μ ≤ Ch :=
+    ⟨CS ^ 2, fun k => integral_sq_le_of_bound fun ω => hSb _⟩
+  have hN0 : ∀ k ω, V (fs k ω).2 • ψ (fs k ω).2 (a k ω) + δ ((fs k ω).2, a k ω, fs (k + 1) ω) •
+      (ψ (fs k ω).2 (a k ω) + b (fs k ω).2) =
+        Φ (fs k ω).2 ((fs k ω).2, a k ω, fs (k + 1) ω) + hS (fs k ω).2 - hS (fs (k + 1) ω).2 :=
+    fun k ω => by simp only [hΦd, hG]; abel
+  obtain ⟨ΓM, Γ₁, Γ₂, Sig₁, Sig₂, hS₁, hT₁, hS₂, hT₂, hsym₁, hsym₂, hmono⟩ :=
+    M.restart_actor_covariance_mono hc hY hkap0 hpol0 hpol hrest hpos hflag hc0 hcf0 hcf1 hγ0 hγ1
+      hγ ψ V δ hν hνm hmZ Φ hΦ hδ hhm hhL hhB hN0 hβ A hη hA hl0 hl12 hl2 hz0₁ hze0₁ hzψ₁ hze₁
+      hz0₂ hze0₂ hzψ₂ hze₂ hθ0₁ hθ0L₁ hθ₁ hθ0₂ hθ0L₂ hθ₂
+  have hq : ∀ v : Fin n → ℝ, ∑ i, ∑ j, v i * v j * (ΓM + Γ₁) (i, j) ≤
+      ∑ i, ∑ j, v i * v j * (ΓM + Γ₂) (i, j) := fun v => by
+    simp only [PiLp.add_apply, mul_add, sum_add_distrib]
+    linarith [(hmono v).2]
+  refine ⟨ΓM, Γ₁, Γ₂, Sig₁, Sig₂, hS₁, hT₁, hS₂, hT₂, hq, fun HJ Hinv hHJ => ?_⟩
+  refine optLoss_mono_of_quad (fun i j => ?_) hq hHJ
+  simp only [PiLp.add_apply]
+  rw [hsym₁ i j, hsym₂ i j]
+  ring
 
 end Process
 

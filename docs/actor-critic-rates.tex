@@ -828,6 +828,13 @@ semidefinite too.
   state (the Bellman equation for $\delta$). $\Gamma_M$ is computed from the law. The stationary law
   $\nu$ is unique (\texttt{stationary\_unique\_restart}), so stating the recursions with
   $b = \texttt{carryMean}$ hides no choice.
+\item from the model, with the loss: \texttt{ScoreChain.restart\_actor\_loss\_mono}. The decomposition of
+  the TD(0) noise is derived (\texttt{exists\_preaction\_poisson}, from \texttt{exists\_poisson\_h}) from its
+  stationary mean being zero, which holds at $\theta^*$. The Poisson solution of the chain on pairs does
+  not depend on the flag, so its policy average is a function of the state, known before the
+  action. The conclusion includes $\ell^*(\lambda_1) \le \ell^*(\lambda_2)$ for every $H_J \succeq 0$
+  (Proposition~\ref{prop:compare}, through \texttt{optLoss\_mono\_of\_quad}). The remaining hypotheses are the
+  chain model, the Bellman equation for $\delta$, and the stability of $A - (\bar\beta/2)I$.
 \end{itemize}
 With \texttt{StateDriven.tendsto\_secondMoment\_of\_centered\_split} (with $B_k = X_{\lambda,k}$),
 $\tilde\Gamma(\lambda) = \tilde\Gamma(0) + \Gamma_D(\lambda)$, which proves the theorem.
