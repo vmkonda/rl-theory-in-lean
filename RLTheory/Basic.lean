@@ -19,5 +19,6 @@ import RLTheory.StochasticApproximation.TraceMoments
 import RLTheory.StochasticApproximation.TwoTimeScaleTrace
 import RLTheory.StochasticApproximation.OrthogonalNoise
 import RLTheory.StochasticApproximation.Linearization
+import RLTheory.StochasticApproximation.TwoTimeScaleNonlinear
 import RLTheory.MarkovDecisionProcess.CriticTheorems
 import RLTheory.MarkovDecisionProcess.RestartProcess

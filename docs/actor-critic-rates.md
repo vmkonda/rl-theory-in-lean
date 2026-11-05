@@ -143,15 +143,64 @@ and the other terms are $`O(\beta_k^3)`$. The deterministic part of Theorem 2.1
 
 - Lemma [2.1](#lem:delta) is `hasFDerivAt_implicit`, in the form of continuous linear maps: if $`\bar G(\theta, r^*(\theta)) = 0`$ and $`r^*`$ is differentiable, then $`\partial_\theta r^* = -A_{22}^{-1}A_{21}`$ and $`f'(\hat\theta) = -(A_{11} - A_{12}A_{22}^{-1}A_{21})`$.
 
-What remains of Assumption [2.2](#ass:lin) is not formalized:
+<div id="thm:linmarkov" class="theorem">
 
-- Markov noise, through its Poisson decomposition, in the nonlinear iteration;
+**Theorem 2.4** (Markov noise and state-dependent sampling). *Theorem [2.3](#thm:linearize) holds when the noise is $`M_{k+1} + h_k - h_{k+1} + r_k`$, where $`h_k`$ is a bounded $`\mathcal F_k`$-measurable Poisson shift and $`r_k`$ an $`\mathcal F_k`$-measurable remainder with $`\|r_k\| \le C_r\beta_k`$.*
 
-- the dependence of the sampling law on $`\theta_k`$;
+</div>
 
-- the two-time-scale coupling with the critic.
+For a chain sampled under $`\pi_{\theta_k}`$, the noise is decomposed with the Poisson solution at the current parameter, and $`r_k`$ is what the telescoping leaves. Its size is $`O(\beta_k)`$ when the Poisson solution is Lipschitz in $`\theta`$ and the steps are bounded.
 
-The first two add remainder terms of the same order, $`O(\|\theta_k - \hat\theta\|^2)`$ in the drift and $`O(\beta_k\|\theta_k - \hat\theta\|)`$ in the noise, and should yield to the same moment argument.
+<div class="proof">
+
+*Proof.* *Moments.* The shifted iterate $`x_k = \theta_k - \hat\theta + \beta_{k-1}h_k`$ satisfies $`x_{k+1} = u_k + \beta_kM_{k+1}`$, where $`u_k = x_k + \beta_kf(\theta_k) + (\beta_k - \beta_{k-1})h_k + \beta_kr_k`$ is $`\mathcal F_k`$-measurable. Dissipativity, with $`\big|\|x_k\| - \|\theta_k - \hat\theta\|\big| \le C\beta_k`$, gives $`\|u_k\|^2 \le (1 - 2\eta\beta_k + \kappa\beta_k^2)\|x_k\|^2 + G\beta_k^2`$. The moment argument of Theorem [2.3](#thm:linearize) then applies to $`x_k`$.
+
+*Covariance.* The shifted iterate $`\theta_k - \hat\theta + \beta_kh_k`$ follows the linear recursion up to a perturbation $`c_k`$ with $`\mathbb{E}\|c_k\|^2 = O(\beta_k^4)`$, and the shift does not change the normalized limit. ◻
+
+</div>
+
+<div id="thm:lintts" class="theorem">
+
+**Theorem 2.5** (Two time scales). Consider the actor-critic iteration in the deviations $`x_k = \theta_k - \hat\theta`$ and $`y_k = r_k - \hat r`$:
+``` math
+x_{k+1} = x_k + \beta_k\big(F_1(x_k,y_k) + m_{k+1} + r^1_k + h_k - h_{k+1}\big),\qquad
+  y_{k+1} = y_k + \gamma_k\big(F_2(x_k,y_k) + m'_{k+1} + r^2_k + g_k - g_{k+1}\big).
+```
+Suppose that:
+
+- *$`F(x,y) = -A(x,y) + O(\|x\|^2 + \|y\|^2)`$;*
+
+- *the sampling remainders satisfy $`\|r^1_k\| \le C_r\beta_k`$ and $`\|r^2_k\| \le C_r\gamma_k`$;*
+
+- *$`m, m'`$ are martingale differences whose covariances are within $`\delta_k + C(R_k + R_k^2)`$ of $`\Gamma`$, where $`R_k = \operatorname{rms}x_k + \operatorname{rms}y_k`$ and $`\delta_k \to 0`$;*
+
+- *$`\mathbb{E}\|x_k\|^4 = O(\beta_k^2)`$ and $`\mathbb{E}\|y_k\|^4 = O(\gamma_k^2)`$.*
+
+*Then the conclusions of Theorem 2.1 of the two-time-scale note hold. In particular the slow iterate has the covariance of Corollary 2.2.*
+
+</div>
+
+<div class="proof">
+
+*Proof.* The remainder $`\rho = F + A(x,y) + r`$ has $`\mathbb{E}\|\rho_k\|^2 \le 4L^2(\mathbb{E}\|x_k\|^4 + \mathbb{E}\|y_k\|^4) + 2C_r^2\beta_k^2 = O(\gamma_k^2)`$. The perturbed two-time-scale theorem of that note allows a remainder of this size. Its two structural hypotheses, a one-step bound on $`R_{k+1}`$ and control of $`R_k`$ by the shifted iterates, follow from Minkowski’s inequality. ◻
+
+</div>
+
+*Lean:* `tendsto_secondMoment_of_dissipative_markov` for Theorem [2.4](#thm:linmarkov), built on:
+
+- `moment_bounds_of_dissipative_markov`, `moment_bounds_of_contraction` and `shifted_drift_scalar` for the moments;
+
+- `tendsto_secondMoment_of_nonlinear_markov` for the covariance, through `tendsto_secondMoment_of_small_perturbation` and `tendsto_secondMoment_of_shift`.
+
+`tendsto_tts_taylor` for Theorem [2.5](#thm:lintts), through `tendsto_tts_nonlinear`.
+
+Not formalized:
+
+- the fourth-moment bounds for two time scales, which Theorem [2.5](#thm:lintts) assumes; they need a coupled version of the moment argument;
+
+- the derivation of the decomposition $`M + h - h' + r`$, with $`r = O(\beta)`$, from a parameter-dependent finite chain;
+
+- global dissipativity, which is a strong assumption, would be replaced in a local theory by a localization argument.
 
 ## 3 The loss in expected reward
 
@@ -545,7 +594,7 @@ A large critic with rarely visited states and a small critic step lengthens the 
 
   The centering condition is the stationary mean of the noise, $`\sum_{y,y'}Q(y,y')(F(y,y')m(y) + \nu(y)e(y,y')) = 0`$ (`centering_eq_noise_mean`). At the root of the mean direction this holds by definition.
 
-- Lemma [2.1](#lem:delta): formalized (`hasFDerivAt_implicit`). Assumption [2.2](#ass:lin): proved for one time scale with bounded martingale noise and a dissipative drift (Theorem [2.3](#thm:linearize)); with Markov noise, $`\theta`$-dependent sampling and two time scales it remains a hypothesis.
+- Lemma [2.1](#lem:delta): formalized (`hasFDerivAt_implicit`). Assumption [2.2](#ass:lin): proved for one time scale with a dissipative drift, Markov noise and state-dependent sampling (Theorems [2.3](#thm:linearize) and [2.4](#thm:linmarkov)), and for two time scales given fourth-moment bounds (Theorem [2.5](#thm:lintts)).
 
 # References
 
