@@ -275,7 +275,7 @@ N^{\text{AO}}_k \simeq N^{\text{AC}}_k + D_k,\qquad D_k = \delta_k(B_k - b(s_k))
 
 - $`\mathbb{E}[(B_k - b(s))1\{s_k = s\}] \to 0`$.
 
-Under these, $`D`$ is a martingale difference orthogonal to every function of $`(s_k, Y_{k+1})`$, and the limit covariances add. Two things are not formalized: that the restart chain with the filtration $`(\mathcal G_k)`$ satisfies these hypotheses, and the factored form of $`\mathbb{E}[DD^\top]`$.
+Under these, $`D`$ is a martingale difference orthogonal to every function of $`(s_k, Y_{k+1})`$, and the limit covariances add. `TwoStageChain.stateDriven` (in `RestartProcess.lean`) verifies the first hypothesis for the sampling chain, described by its two stages: the action is drawn from the policy given $`\mathcal G_k`$, and the next flag and state are drawn from $`\kappa(Y_k,\cdot)`$ given $`\mathcal G_k \vee \sigma(a_k)`$. When the step law does not depend on the flag, the next observation $`\xi_{k+1} = (s_k, a_k, f_{k+1}, s_{k+1})`$ has law $`1\{s_0 = s_k\}\pi(a\mid s_k)\kappa((s_k, a), f', s')`$ given $`\mathcal G_k`$. The proof composes the two stages by the tower property, using `condExp_pair_of_law`. The condition $`\mathbb{E}[\delta\mid\mathcal G_k] = 0`$ is then the Bellman equation of $`V^\pi`$. Not formalized: the factored form of $`\mathbb{E}[DD^\top]`$.
 
 <div id="lem:gain" class="lemma">
 
