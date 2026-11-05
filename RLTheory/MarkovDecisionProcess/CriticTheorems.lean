@@ -17,6 +17,9 @@ formalizes those identities in a finite model.
 * Trace moments `m y = E[z_k 1{Y_k = y}]` enter through their recursion
   `m y' = ν y' φ y' + λ c y' Σ_y Q y y' m y`; `ScoreChain.tendsto_traceMoment` derives it from
   the process: the moments of the trace along the chain converge to a solution.
+* `restart_contraction`, `tendsto_law_restart`, `tendsto_traceMoment_of_restart`: for the restart
+  chain the contraction holds, the law converges to a stationary `ν`, and the trace moments
+  converge, from the model alone.
 * `ScoreChain.sum_Q_c_eq_zero`, `ScoreChain.sum_mul_trace_eq`: the two facts behind all proofs,
   both consequences of the score having mean zero over actions.
 * `compatible_critic_direction`, `compatible_critic_noise`: Theorem 4.2.
@@ -542,6 +545,87 @@ theorem tendsto_traceMoment_restart [MeasurableSpace (Bool × S × Ac)]
   M.tendsto_traceMoment hY (M.Q_nonneg hkap hpol0) (M.restart_contraction hkap hpol hc0 hc1 hγ lam)
     (mul_nonneg (abs_nonneg _) hγ0)
     (lt_of_le_of_lt (mul_le_of_le_one_left hγ0 hlam) hγ1) hz hzB hzrec hlaw
+
+/-- **The law of the restart chain converges.** If the restart distribution does not depend on
+the current pair (`kap y true s` is the same for all `y`), the continuation probability is at
+most `γ < 1`, and the policy is a probability distribution, then `P(Y_k = y)` converges to a
+stationary law `ν` with total mass `1`, from any initial law. Restarts are a Doeblin minorization:
+`P(Y_{k+1} = ·) = L P(Y_k = ·) + b` with `L` the continuation part, an `ℓ¹` contraction by `γ`,
+and `b` the restart law. -/
+theorem tendsto_law_restart [MeasurableSpace (Bool × S × Ac)]
+    [DiscreteMeasurableSpace (Bool × S × Ac)] [DecidableEq S] [DecidableEq Ac] {Ω : Type*}
+    {m0 : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {ℱ : MeasureTheory.Filtration ℕ m0} {Y : ℕ → Ω → Bool × S × Ac} (hY : FiniteMarkov μ ℱ Y M.Q)
+    (hkap : ∀ y f s, 0 ≤ M.kap y f s) (hpol0 : ∀ s a, 0 ≤ M.pol s a)
+    (hpol : ∀ s, ∑ a, M.pol s a = 1) (hrest : ∀ y₁ y₂ s, M.kap y₁ true s = M.kap y₂ true s)
+    {γ : ℝ} (hγ0 : 0 ≤ γ) (hγ1 : γ < 1) (hγ : ∀ y, ∑ s', M.kap y false s' ≤ γ) :
+    ∃ ν : Bool × S × Ac → ℝ, (∀ y', ∑ y, ν y * M.Q y y' = ν y') ∧ ∑ y, ν y = 1 ∧
+      ∀ y, Tendsto (fun k => momAt μ Y (fun _ _ => 1) k y) atTop (𝓝 (ν y)) := by
+  set cc : Bool × S × Ac → ℝ := fun y => if y.1 then 0 else 1 with hcc
+  set b : Bool × S × Ac → ℝ := fun y => if y.1 then M.Q y y else 0 with hb
+  set P : ℕ → Bool × S × Ac → ℝ := fun k y => momAt μ Y (fun _ _ => 1) k y with hP
+  -- total mass one
+  have hmass : ∀ k, ∑ y, P k y = 1 := fun k => by
+    have := integral_eq_sum_momAt (μ := μ) hY (k := k) (W := fun _ => (1 : ℝ))
+      stronglyMeasurable_const ⟨1, fun _ => by simp⟩
+    simp only [integral_const, smul_eq_mul, mul_one, measureReal_univ_eq_one] at this
+    exact this.symm
+  -- the restart row does not depend on the current pair
+  have hQr : ∀ y s a, M.Q y (true, s, a) = M.Q (true, s, a) (true, s, a) := fun y s a => by
+    simp only [Q, hrest y (true, s, a) s]
+  -- the affine recursion
+  have hsplit : ∀ (x : Bool × S × Ac → ℝ) (y' : Bool × S × Ac),
+      ∑ y, M.Q y y' * x y = transfer M.Q cc x y' + b y' * ∑ y, x y := by
+    rintro x ⟨f, s, a⟩
+    cases f
+    · simp [transfer, hcc, hb]
+    · simp only [transfer, hcc, hb, if_true, zero_mul, mul_sum, sum_const_zero, zero_add]
+      exact sum_congr rfl fun y _ => by rw [hQr y s a]
+  have hrec : ∀ k y', P (k + 1) y' = transfer M.Q cc (P k) y' + b y' := fun k y' => by
+    simp only [hP]
+    rw [lawAt_succ hY k y', hsplit, show ∑ y, momAt μ Y (fun _ _ => 1) k y = 1 from hmass k,
+      mul_one]
+  -- continuation is a contraction
+  have hρ : ∀ y, ∑ y', M.Q y y' * |cc y'| ≤ γ := fun y => by
+    rw [sum_prod3, Fintype.sum_bool]
+    simp only [hcc, if_true, abs_zero, mul_zero, sum_const_zero, zero_add, Bool.false_eq_true,
+      if_false, abs_one, mul_one, Q]
+    refine le_trans (le_of_eq ?_) (hγ y)
+    exact sum_congr rfl fun s _ => by rw [← mul_sum, hpol, mul_one]
+  obtain ⟨ν, hν, hlim⟩ := tendsto_affine_transfer (M.Q_nonneg hkap hpol0) hρ hγ0 hγ1 hrec
+    (fun y => tendsto_const_nhds (x := b y))
+  have hνm : ∑ y, ν y = 1 := by
+    have h := tendsto_finset_sum (univ : Finset (Bool × S × Ac)) fun y _ => hlim y
+    have h1 : (fun k => ∑ y, P k y) = fun _ => (1 : ℝ) := funext hmass
+    simp only [hP] at h1
+    rw [h1] at h
+    exact (tendsto_nhds_unique tendsto_const_nhds h).symm
+  refine ⟨ν, fun y' => ?_, hνm, hlim⟩
+  have := hsplit ν y'
+  rw [hνm, mul_one] at this
+  rw [hν y', ← this]
+  exact sum_congr rfl fun y _ => mul_comm _ _
+
+/-- **Trace moments of the restart chain, from the model alone.** For the restart chain, the law
+of `Y_k` converges to a stationary `ν` (`tendsto_law_restart`) and the trace moments converge to
+a solution of the `TraceMoment` recursion for `ν`, for every `|λ| ≤ 1`. -/
+theorem tendsto_traceMoment_of_restart [MeasurableSpace (Bool × S × Ac)]
+    [DiscreteMeasurableSpace (Bool × S × Ac)] [DecidableEq S] [DecidableEq Ac] {Ω : Type*}
+    {m0 : MeasurableSpace Ω} {μ : Measure Ω} [IsProbabilityMeasure μ]
+    {ℱ : MeasureTheory.Filtration ℕ m0} {Y : ℕ → Ω → Bool × S × Ac} (hY : FiniteMarkov μ ℱ Y M.Q)
+    (hkap : ∀ y f s, 0 ≤ M.kap y f s) (hpol0 : ∀ s a, 0 ≤ M.pol s a)
+    (hpol : ∀ s, ∑ a, M.pol s a = 1) (hrest : ∀ y₁ y₂ s, M.kap y₁ true s = M.kap y₂ true s)
+    (hc0 : ∀ s, M.c true s = 0) (hc1 : ∀ s, |M.c false s| ≤ 1)
+    {γ : ℝ} (hγ0 : 0 ≤ γ) (hγ1 : γ < 1) (hγ : ∀ y, ∑ s', M.kap y false s' ≤ γ) {lam : ℝ}
+    (hlam : |lam| ≤ 1) {p : ℕ} {φ : Bool × S × Ac → E p} {z : ℕ → Ω → E p}
+    (hz : ∀ k, StronglyMeasurable[ℱ k] (z k)) (hzB : ∀ k, ∃ C, ∀ ω, ‖z k ω‖ ≤ C)
+    (hzrec : ∀ k ω, z (k + 1) ω = (lam * M.cY (Y (k + 1) ω)) • z k ω + φ (Y (k + 1) ω)) :
+    ∃ ν : Bool × S × Ac → ℝ, (∀ y', ∑ y, ν y * M.Q y y' = ν y') ∧ ∑ y, ν y = 1 ∧
+      ∃ m : Bool × S × Ac → E p, M.TraceMoment ν lam φ m ∧
+        ∀ y a, Tendsto (fun k => momAt μ Y (fun k ω => z k ω a) k y) atTop (𝓝 (m y a)) := by
+  obtain ⟨ν, hν, hνm, hlaw⟩ := M.tendsto_law_restart hY hkap hpol0 hpol hrest hγ0 hγ1 hγ
+  exact ⟨ν, hν, hνm, M.tendsto_traceMoment_restart hY hkap hpol0 hpol hc0 hc1 hγ0 hγ1 hγ hlam hz
+    hzB hzrec hlaw⟩
 
 end ScoreChain
 

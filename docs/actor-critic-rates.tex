@@ -488,8 +488,12 @@ the predicted covariances to about 5\%, supporting Assumption~\ref{ass:lin} in t
   derives this recursion from the process. Along the chain, the moments of the trace converge
   to a solution whenever the law of $Y_k$ converges and $\sum_{y'}Q(y,y')|\lambda c(y')| < 1$.
   For the restart chain this condition holds with bound $|\lambda|\gamma$
-  (\texttt{ScoreChain.restart\_contraction}), so \texttt{ScoreChain.tendsto\_traceMoment\_restart}
-  needs only the convergence of the law, for every $|\lambda| \le 1$.
+  (\texttt{ScoreChain.restart\_contraction}). The law converges too: restarts draw from a fixed
+  distribution with probability at least $1 - \gamma$, so the law satisfies
+  $P_{k+1} = LP_k + b$, with $L$ an $\ell^1$ contraction by $\gamma$. Its limit is a stationary
+  $\nu$ (\texttt{ScoreChain.tendsto\_law\_restart}). Hence
+  \texttt{ScoreChain.tendsto\_traceMoment\_of\_restart} rests on the model alone, for every
+  $|\lambda| \le 1$.
 \item The noise covariance $\tilde\Gamma$ of Theorem~\ref{thm:cov}, for trace-driven noise, is the limit
   computed from the stationary first and second trace moments
   (\texttt{tendsto\_secondMoment\_of\_trace\_noise\_stationary}, in the companion note). It is no
