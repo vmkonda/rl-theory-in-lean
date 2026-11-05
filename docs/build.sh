@@ -34,8 +34,9 @@ EOF
   pandoc "$tmp/$name.tex" -f latex -t gfm --wrap=none --lua-filter=tools/gfm.lua -o "$name.md"
 done
 
-# With no arguments, also collect the chapter PDFs into one (combined/all-notes.tex -> all-notes.pdf).
+# With no arguments, also build the book: the five chapters as one document (book/book.tex),
+# generated from the chapter sources by book/make_book.py, written to book.pdf.
 if [ $# -eq 0 ]; then
-  echo "== all-notes"
-  (cd combined && tectonic --chatter minimal --outdir .. all-notes.tex)
+  echo "== book"
+  (cd book && python3 make_book.py && tectonic --chatter minimal --outdir .. book.tex)
 fi

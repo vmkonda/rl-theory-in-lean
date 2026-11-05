@@ -38,7 +38,9 @@ formalized and what is not.
 ## Rebuilding
 
 Edit the `.tex` file, then run `./build.sh` (or `./build.sh <name>`), which regenerates
-both the PDF and the Markdown. With no arguments it also builds `all-notes.pdf`, the five chapters
-in one document with a contents page and bookmarks (source: [`combined/all-notes.tex`](combined/all-notes.tex)). It requires `tectonic` and `pandoc`
+both the PDF and the Markdown. With no arguments it also builds `book.pdf`, the five chapters as one book with continuous
+numbering (chapter.section.n), cross-references, a preface, a single bibliography and an appendix
+on checking the formalization. The book is generated from the chapter sources by
+[`book/make_book.py`](book/make_book.py), with front matter in [`book/book.tex`](book/book.tex). It requires `tectonic` and `pandoc`
 (`brew install tectonic pandoc`). The Markdown conversion uses the Pandoc filter
 [`tools/gfm.lua`](tools/gfm.lua).

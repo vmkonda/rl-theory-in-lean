@@ -1,0 +1,165 @@
+% Rates of Convergence of Actor-Critic Methods: the five write-ups in docs/ as one book.
+% The chapters are generated from docs/<name>.tex by make_book.py; edit those sources.
+% Build with docs/build.sh (no arguments), or from docs/book:
+%   python3 make_book.py && tectonic --outdir .. book.tex
+\documentclass[11pt,oneside]{book}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage[nottoc]{tocbibind}
+\usepackage[margin=1.1in]{geometry}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue,
+  bookmarksnumbered]{hyperref}
+\emergencystretch=3em
+\sloppy
+
+% Numbering: chapter.section.n, so Theorem 4.7 of a chapter's note is Theorem c.4.7 here.
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{fact}[theorem]{Cited Fact}
+\newtheorem{observation}[theorem]{Observation}
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\numberwithin{equation}{chapter}
+
+% The union of the chapters' macros.
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\F}{\mathcal{F}}
+\newcommand{\X}{\mathcal{S}}
+\newcommand{\U}{\mathcal{A}}
+\newcommand{\Y}{\mathcal{Y}}
+\newcommand{\Lop}{\mathcal{L}}
+\newcommand{\IV}{\mathrm{IV}}
+\newcommand{\one}{\mathbf{1}}
+\newcommand{\inner}[2]{\langle #1, #2\rangle}
+\DeclareMathOperator{\tr}{tr}
+\DeclareMathOperator{\spn}{span}
+\DeclareMathOperator{\adj}{adj}
+\DeclareMathOperator{\sgn}{sgn}
+\newcommand{\lean}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\leanref}[1]{\par{\raggedleft\small Lean:~\lean{#1}\par}}
+
+% The chapter's opening summary (the abstract of its note), and a pointer to its source.
+\newenvironment{chapterabstract}{\begin{quote}\small}{\end{quote}\medskip}
+\newcommand{\chaptersource}[1]{\noindent{\small\itshape Source: \texttt{docs/#1.tex}
+  (Markdown: \texttt{docs/#1.md}).}\par\medskip}
+
+\title{Rates of Convergence of Actor-Critic Methods\\[6pt]
+  \large Asymptotic covariances, critics and eligibility traces,\\
+  with a formalization in Lean~4}
+\author{Vijaymohan Konda}
+\date{November 2026}
+
+\begin{document}
+\pagenumbering{Alph}
+\maketitle
+\frontmatter
+
+\chapter{Preface}
+
+These notes study how fast actor-critic methods converge on finite discounted Markov
+decision processes, and how the rate depends on the critic: its features, and the trace
+parameter $\lambda$ of TD($\lambda$). The figure of merit is the loss in expected reward,
+$\E[J(\theta^*) - J(\theta_k)]$. To first order in the step size it is the asymptotic covariance of the
+actor's parameter, weighted by the Hessian of $J$. The comparison with actor-only methods
+(REINFORCE) is the thread through the book.
+
+\paragraph{Structure.}
+\begin{itemize}
+\item Chapter~\ref{ch:pg} proves the policy gradient theorem for finite MDPs and the regularity of
+  $\nabla J$ used later.
+\item Chapter~\ref{ch:td} studies TD($\lambda$) for policy evaluation: the bias of its limit and its
+  intrinsic variance, with closed forms for finite chains.
+\item Chapters~\ref{ch:cov} and~\ref{ch:tts} give the covariance theory. For linear stochastic
+  approximation with Markov noise, on one and on two time scales, $\beta_k^{-1}\E[\theta_k\theta_k^\top]$
+  converges to the solution of a Lyapunov equation.
+\item Chapter~\ref{ch:ac} puts these together:
+  \begin{itemize}
+  \item it linearizes the actual iterations, with Markov and $\theta$-dependent sampling;
+  \item it relates the covariance to the loss;
+  \item it compares critics. A TD(1) critic matches REINFORCE. A critic that represents the value
+    function is unbiased for every $\lambda$. For the tabular critic, shorter traces give smaller
+    noise, so TD(0) is the best tabular critic and TD(1) the worst.
+  \end{itemize}
+\end{itemize}
+Chapter~\ref{ch:ac} uses $\nabla J$ from Chapter~\ref{ch:pg} and the covariance theorems of
+Chapters~\ref{ch:cov} and~\ref{ch:tts}. The trace-driven noise of Chapter~\ref{ch:cov} uses the
+closed-form covariance of Chapter~\ref{ch:td}.
+
+\paragraph{Formalization.} Most results are machine-checked in Lean~4, in the
+\texttt{RLTheory/} library of the repository \texttt{github.com/vmkonda/rl-theory-in-lean}, a
+fork of \texttt{ShangtongZhang/rl-theory-in-lean}. A formalized statement is followed by a
+\emph{Lean} note naming its theorem. The hypotheses of the Lean theorem are the assumptions of
+the result. A statement without such a note is proved on paper only. Results marked
+\emph{cited facts} are used without proof. Results marked \emph{observations} rest on
+computation, with code in \texttt{experiments/}. Appendix~\ref{app:lean} explains how to check a
+theorem and lists the Lean modules by chapter. The last section of Chapter~\ref{ch:ac} lists what
+is and is not formalized. The main open item is global dissipativity, which a local theory would
+replace by a localization argument.
+
+\paragraph{Numbering.} Results are numbered chapter.section.n. Each chapter also exists as a
+standalone note in \texttt{docs/}, numbered section.n, which is the numbering used in the Lean
+docstrings. For example, Theorem~4.7 of \texttt{docs/actor-critic-rates.md} is
+Theorem~\ref{ac:thm:mono} here. References inside a chapter to ``the companion note'' or to
+another note mean the corresponding chapter of this book.
+
+\tableofcontents
+
+\mainmatter
+\input{build/ch-pg}
+\input{build/ch-td}
+\input{build/ch-cov}
+\input{build/ch-tts}
+\input{build/ch-ac}
+
+\appendix
+\chapter{Checking the Formalization}\label{app:lean}
+
+\paragraph{Building.} From the root of the repository, \texttt{lake exe cache get} fetches the
+compiled Mathlib, and \texttt{lake build} checks every file. The build fails on any error, and a
+\texttt{sorry} appears as a warning. The library builds with none.
+
+\paragraph{Axioms.} A theorem rests only on the standard axioms when
+\begin{verbatim}
+import RLTheory.Basic
+#print axioms StochasticApproximation.ScoreChain.restart_actor_loss_mono
+\end{verbatim}
+in a scratch file, run with \texttt{lake env lean <file>}, prints
+\texttt{[propext, Classical.choice, Quot.sound]}. Every theorem named in this book does.
+
+\paragraph{Modules by chapter.} All paths are under \texttt{RLTheory/}.
+
+\medskip
+\begin{tabular}{@{}lp{0.58\textwidth}@{}}
+\toprule
+Chapter & Modules \\
+\midrule
+\ref{ch:pg} & \texttt{MarkovDecisionProcess/PolicyFamily}, \texttt{PolicyGradient},
+  \texttt{PolicyGradientLipschitz}; \texttt{StochasticApproximation/GradientAscent} \\
+\ref{ch:td} & none: proved on paper, with numerics in \texttt{experiments/td\_lambda.py} \\
+\ref{ch:cov} & \texttt{StochasticApproximation/CovarianceRecursion}, \texttt{MarkovNoiseCovariance},
+  \texttt{PoissonNoise}, \texttt{TraceMoments}, \texttt{MultiplicativeNoiseCovariance} \\
+\ref{ch:tts} & \texttt{StochasticApproximation/TwoTimeScaleRecursion}, \texttt{TwoTimeScaleCovariance},
+  \texttt{TwoTimeScaleMultiplicative}, \texttt{TwoTimeScaleTrace} \\
+\ref{ch:ac} & \texttt{StochasticApproximation/Linearization}, \texttt{TwoTimeScaleNonlinear},
+  \texttt{TwoTimeScaleMoments}, \texttt{TwoTimeScaleMarkov}, \texttt{ParamMarkovNoise},
+  \texttt{DoeblinPoisson}, \texttt{DoeblinCovariance}, \texttt{TwoTimeScaleParam},
+  \texttt{RateComparison}, \texttt{OrthogonalNoise}, \texttt{LookbackMonotone};
+  \texttt{MarkovDecisionProcess/CriticTheorems}, \texttt{RestartProcess}, \texttt{LambdaMonotone} \\
+\bottomrule
+\end{tabular}
+
+\backmatter
+\input{build/bibliography}
+
+\end{document}

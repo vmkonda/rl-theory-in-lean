@@ -31,7 +31,8 @@ This fork extends the library toward the convergence-rate theory of actor-critic
 discounted MDPs: how fast actor-critic converges, for different critic features and trace parameters
 λ in TD(λ), compared with actor-only (REINFORCE) methods. The mathematics is written up in
 [`docs/`](docs/README.md) as theorem–proof chapters, each with LaTeX source and a GitHub-readable
-Markdown version; every formalized statement there names its Lean counterpart. Everything below
+Markdown version; every formalized statement there names its Lean counterpart. The chapters also build into one
+book, `docs/book.pdf`, with continuous numbering and a preface (run `docs/build.sh`). Everything below
 builds with no `sorry` and depends only on the standard axioms (`propext`, `Classical.choice`,
 `Quot.sound`).
 
