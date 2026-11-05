@@ -391,7 +391,7 @@ the predicted covariances to about 5\%, supporting Assumption~\ref{ass:lin} in t
   noise hypotheses verified for finite-chain and trace-driven noise.
 \item Propositions~\ref{prop:loss}, \ref{prop:dual} and~\ref{prop:compare}: formalized.
 \item Theorems~\ref{thm:td1}, \ref{thm:compat} and~\ref{thm:value}: formalized in
-  \texttt{RLTheory/MarkovDecisionProcess/CriticTheorems.lean} for a finite model of the sampling
+  \texttt{CriticTheorems.lean} for a finite model of the sampling
   chain, \texttt{ScoreChain}: a chain on (restart flag, state, action) whose next action is drawn from
   the policy given the next state. This covers the restart chain and any other such chain. Two
   facts carry all the proofs: a function with mean zero over actions has
